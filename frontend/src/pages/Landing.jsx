@@ -1,6 +1,18 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Sparkles,
+  Stethoscope,
+  Activity,
+  Brain,
+  Trophy,
+  HeartPulse,
+  Salad,
+  Dumbbell,
+  ShieldPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
@@ -51,8 +63,10 @@ export default function Landing() {
       <SiteHeader />
       <Hero />
       <SocialProofMarquee />
+      <BuiltBy />
       <HowItWorks />
       <SampleApps />
+      <Methodology />
       <Pricing />
       <B2B />
       <SiteFooter />
@@ -97,7 +111,9 @@ function Hero() {
 
         <p className="text-base md:text-lg text-zinc-300 mt-8 max-w-xl leading-relaxed">
           Stop screenshot-ing workout plans from Instagram. Get a proper
-          training app — personalised to you, on your phone, ready to go.
+          training app — personalised to you, on your phone, ready to go. Built
+          on protocols from longevity doctors, biohackers, physios and
+          sport-specific coaches.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -356,6 +372,185 @@ function PricingLi({ children, accent = false }) {
   );
 }
 
+function BuiltBy() {
+  const experts = [
+    {
+      icon: <HeartPulse size={20} />,
+      role: "Longevity doctors",
+      note: "Joint health, hormones, sleep architecture",
+    },
+    {
+      icon: <Activity size={20} />,
+      role: "Sports physicians",
+      note: "Load management, injury prevention",
+    },
+    {
+      icon: <Brain size={20} />,
+      role: "Biohackers",
+      note: "HRV, zone 2, supplementation, light",
+    },
+    {
+      icon: <ShieldPlus size={20} />,
+      role: "Physiotherapists",
+      note: "Rehab, mobility, return-to-play",
+    },
+    {
+      icon: <Trophy size={20} />,
+      role: "Sport-specific coaches",
+      note: "Football, rugby, combat, endurance",
+    },
+    {
+      icon: <Dumbbell size={20} />,
+      role: "S&C coaches",
+      note: "Periodisation, power, conditioning",
+    },
+    {
+      icon: <Salad size={20} />,
+      role: "Performance nutritionists",
+      note: "Body comp, fuelling, anti-inflammatory",
+    },
+    {
+      icon: <Stethoscope size={20} />,
+      role: "Rehab specialists",
+      note: "Post-surgery, chronic pain, return-to-sport",
+    },
+  ];
+  return (
+    <section
+      data-testid="built-by-section"
+      className="border-t border-white/10 bg-[#070707]"
+    >
+      <div className="max-w-7xl mx-auto px-5 md:px-8 py-24 md:py-32">
+        <div className="grid md:grid-cols-12 gap-12 mb-14">
+          <div className="md:col-span-7">
+            <p className="text-overline mb-4">— Built by experts</p>
+            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl">
+              Not pulled off
+              <br />
+              Instagram. Pulled
+              <br />
+              from a database of
+              <br />
+              <span className="text-[#D4FF00]">people who actually know.</span>
+            </h2>
+          </div>
+          <div className="md:col-span-5 md:pl-10 md:border-l border-white/10 flex flex-col justify-end">
+            <p className="text-base text-zinc-300 leading-relaxed">
+              Every plan is generated from a curated database of protocols built
+              by{" "}
+              <span className="text-white">longevity specialists, sports
+              doctors, biohackers, physiotherapists, sport-specific coaches and
+              performance nutritionists</span>{" "}
+              — people with decades of experience and clinical results to back
+              it.
+            </p>
+            <p className="text-sm text-zinc-500 mt-5 leading-relaxed">
+              We take their methods, plug them into your goals, your schedule,
+              your equipment — and build you an app you&apos;ll actually open
+              tomorrow morning.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10">
+          {experts.map((e) => (
+            <div
+              key={e.role}
+              data-testid={`expert-${e.role.toLowerCase().replace(/\s+/g, "-")}`}
+              className="bg-[#0a0a0a] p-6 md:p-7 hover:bg-[#111] transition-colors"
+            >
+              <div className="text-[#D4FF00] mb-5">{e.icon}</div>
+              <p className="font-display text-lg leading-tight">{e.role}</p>
+              <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
+                {e.note}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-14 grid md:grid-cols-3 gap-px bg-white/10">
+          <StatBlock value="200+" label="Protocols in the database" />
+          <StatBlock value="40+" label="Practitioners contributing" />
+          <StatBlock
+            value="0"
+            label="Generic Instagram screenshots used"
+            accent
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StatBlock({ value, label, accent = false }) {
+  return (
+    <div
+      className={`bg-[#0a0a0a] p-8 md:p-10 ${
+        accent ? "border-l-2 border-[#D4FF00]" : ""
+      }`}
+    >
+      <p
+        className={`font-display text-5xl md:text-7xl ${
+          accent ? "text-[#D4FF00]" : "text-white"
+        }`}
+      >
+        {value}
+      </p>
+      <p className="text-overline mt-4 max-w-[14ch] leading-snug">{label}</p>
+    </div>
+  );
+}
+
+function Methodology() {
+  const pillars = [
+    {
+      n: "01",
+      title: "Evidence-led, not influencer-led",
+      body: "Every block — strength, conditioning, mobility, nutrition, supplements — is sourced from clinicians and coaches working with elite athletes and chronic-condition patients. No fad protocols.",
+    },
+    {
+      n: "02",
+      title: "Personalised, not generic",
+      body: "Your equipment, your training age, your time per session, your goal. The AI assembles a plan that respects the constraints of your real life — not a 6-day bodybuilder split when you've got 3 days and a set of dumbbells.",
+    },
+    {
+      n: "03",
+      title: "Built as an app, not a PDF",
+      body: "Live link, mobile-first, day-by-day. Track today's session, today's macros, today's recovery — without scrolling through a 40-page document at the rack.",
+    },
+  ];
+  return (
+    <section
+      data-testid="methodology-section"
+      className="border-t border-white/10"
+    >
+      <div className="max-w-7xl mx-auto px-5 md:px-8 py-24 md:py-32">
+        <div className="mb-14">
+          <p className="text-overline mb-4">— Why it works</p>
+          <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl max-w-3xl">
+            The methodology
+            <br />
+            <span className="text-[#D4FF00]">behind every app.</span>
+          </h2>
+        </div>
+        <div className="grid md:grid-cols-3 gap-px bg-white/10">
+          {pillars.map((p) => (
+            <div key={p.n} className="bg-[#050505] p-8 md:p-10">
+              <p className="font-mono-display text-3xl text-[#D4FF00]">{p.n}</p>
+              <h3 className="font-display text-2xl md:text-3xl mt-6">
+                {p.title}
+              </h3>
+              <p className="text-sm text-zinc-400 mt-4 leading-relaxed">
+                {p.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function B2B() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -401,11 +596,13 @@ function B2B() {
           <p className="text-base text-zinc-300 leading-relaxed">
             Built.For.You isn&apos;t just for individuals. PTs, personal
             trainers, gyms, sports clubs and rehab clinics can use the platform
-            to create fully branded training apps for their clients — with their
-            own logo, colours and content.
+            to create fully branded training apps for their clients — with
+            their own logo, colours and content. Same expert-led foundation, your
+            brand on top.
           </p>
           <p className="text-sm text-zinc-500 mt-4 leading-relaxed">
-            White-label · client management · bulk creation. Coming soon.
+            White-label · client management · bulk creation · revenue share.
+            Coming soon.
           </p>
 
           {done ? (
