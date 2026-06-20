@@ -43,6 +43,19 @@ Web platform where anyone can get a personalised training app.
 - Mobile-first responsive design throughout
 - All interactive elements have `data-testid`s
 
+## Iteration 2 (2026-02)
+- Added "Built by experts" section (8-tile expert grid + 3-stat credibility row)
+- Added "Why it works" methodology section (3 pillars)
+- Sharpened hero subhead with expert-network angle
+
+## Iteration 3 (2026-02)
+- **Sprinter sample app** at `/app/sprinter` — 7-day split (Acceleration, Power, Tempo, Max Velocity, Posterior, Speed Endurance, Recovery), nutrition (3000 kcal · 200g protein), supplement stack with beta-alanine + beetroot, recovery protocols, sprint-specific morning routine
+- Landing samples grid expanded to 4 cards (Athlete · Longevity · Football · Sprinter)
+- **Admin login** at `/admin` — single password (env `ADMIN_PASSWORD`)
+- **Admin image manager** at `/admin/images` — 9 editable image slots (landing hero + 4 card images + 4 inside-app heroes). Upload files via Emergent object storage OR paste URL. Per-slot reset to default.
+- Backend image endpoints + Emergent object storage integration
+- 18/18 backend tests passing; admin auth + image overrides end-to-end verified by testing agent
+
 ## Deferred / Backlog
 ### P0 (next sprint)
 - **Claude Sonnet** integration: replace plan stub with real AI-generated personalised training plan
