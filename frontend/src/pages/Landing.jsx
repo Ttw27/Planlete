@@ -17,11 +17,12 @@ import { toast } from "sonner";
 import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import { useImageOverride } from "@/lib/useImages";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const HERO_IMG =
+const DEFAULT_HERO =
   "https://images.pexels.com/photos/33360904/pexels-photo-33360904.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940";
 
 const SAMPLE_CARDS = [
@@ -30,17 +31,19 @@ const SAMPLE_CARDS = [
     overline: "01 / Athlete Performance",
     title: "For people training\nseriously.",
     body: "Strength, conditioning, recovery and nutrition all in one place.",
-    img: "https://images.pexels.com/photos/9944894/pexels-photo-9944894.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    imgKey: "card_athlete",
+    defaultImg: "https://images.pexels.com/photos/9944894/pexels-photo-9944894.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Athlete app",
     href: "/app/athlete",
-    span: "md:col-span-7 md:row-span-2",
+    span: "md:col-span-7",
   },
   {
     id: "longevity",
     overline: "02 / Longevity & Fitness",
     title: "Look good. Feel\ngreat. For years.",
     body: "Training that fits around life. Joints, posture, energy.",
-    img: "https://images.pexels.com/photos/6922129/pexels-photo-6922129.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    imgKey: "card_longevity",
+    defaultImg: "https://images.pexels.com/photos/6922129/pexels-photo-6922129.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Longevity app",
     href: "/app/longevity",
     span: "md:col-span-5",
@@ -50,10 +53,22 @@ const SAMPLE_CARDS = [
     overline: "03 / Football Player",
     title: "Built around the\ncalendar.",
     body: "Off-season, pre-season, in-season. Toggle inside the app.",
-    img: "https://images.pexels.com/photos/6409107/pexels-photo-6409107.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    imgKey: "card_football",
+    defaultImg: "https://images.pexels.com/photos/6409107/pexels-photo-6409107.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Football app",
     href: "/app/football",
     span: "md:col-span-5",
+  },
+  {
+    id: "sprinter",
+    overline: "04 / Sprinter",
+    title: "Faster.\nSharper. Reactive.",
+    body: "Acceleration, max velocity, plyometrics and the recovery that holds it all up.",
+    imgKey: "card_sprinter",
+    defaultImg: "https://images.pexels.com/photos/2526878/pexels-photo-2526878.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    cta: "View Sprinter app",
+    href: "/app/sprinter",
+    span: "md:col-span-7",
   },
 ];
 
@@ -75,6 +90,7 @@ export default function Landing() {
 }
 
 function Hero() {
+  const heroImg = useImageOverride("hero_landing", DEFAULT_HERO);
   return (
     <section
       data-testid="hero-section"
@@ -82,7 +98,7 @@ function Hero() {
     >
       <div className="absolute inset-0">
         <img
-          src={HERO_IMG}
+          src={heroImg}
           alt=""
           className="w-full h-full object-cover object-center"
         />
@@ -253,40 +269,46 @@ function SampleApps() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-12 md:grid-rows-2 gap-px bg-white/10">
+        <div className="grid md:grid-cols-12 gap-px bg-white/10">
           {SAMPLE_CARDS.map((c) => (
-            <Link
-              key={c.id}
-              to={c.href}
-              data-testid={`sample-card-${c.id}`}
-              className={`group relative overflow-hidden bg-[#0a0a0a] min-h-[320px] md:min-h-[400px] ${c.span}`}
-            >
-              <div className="absolute inset-0">
-                <img
-                  src={c.img}
-                  alt={c.title}
-                  className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-              </div>
-              <div className="relative h-full flex flex-col justify-between p-6 md:p-8">
-                <p className="text-overline text-[#D4FF00]">{c.overline}</p>
-                <div>
-                  <h3 className="font-display text-3xl md:text-4xl whitespace-pre-line">
-                    {c.title}
-                  </h3>
-                  <p className="text-sm text-zinc-300 mt-4 max-w-sm">{c.body}</p>
-                  <span className="inline-flex items-center gap-2 mt-6 text-white group-hover:text-[#D4FF00] transition-colors">
-                    <span className="text-overline">{c.cta}</span>
-                    <ArrowRight size={16} />
-                  </span>
-                </div>
-              </div>
-            </Link>
+            <SampleCard key={c.id} c={c} />
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function SampleCard({ c }) {
+  const img = useImageOverride(c.imgKey, c.defaultImg);
+  return (
+    <Link
+      to={c.href}
+      data-testid={`sample-card-${c.id}`}
+      className={`group relative overflow-hidden bg-[#0a0a0a] min-h-[320px] md:min-h-[420px] ${c.span}`}
+    >
+      <div className="absolute inset-0">
+        <img
+          src={img}
+          alt={c.title}
+          className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-700"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+      </div>
+      <div className="relative h-full flex flex-col justify-between p-6 md:p-8">
+        <p className="text-overline text-[#D4FF00]">{c.overline}</p>
+        <div>
+          <h3 className="font-display text-3xl md:text-4xl whitespace-pre-line">
+            {c.title}
+          </h3>
+          <p className="text-sm text-zinc-300 mt-4 max-w-sm">{c.body}</p>
+          <span className="inline-flex items-center gap-2 mt-6 text-white group-hover:text-[#D4FF00] transition-colors">
+            <span className="text-overline">{c.cta}</span>
+            <ArrowRight size={16} />
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }
 

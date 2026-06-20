@@ -188,7 +188,7 @@ function HomeView({ data, days, morningRoutine, nutrition }) {
 
       {/* Today workouts */}
       <div className="px-5 py-5">
-        <p className="text-overline mb-3">Today's session</p>
+        <p className="text-overline mb-3">Today&apos;s session</p>
         <div className="flex flex-col gap-2">
           {today.workouts.slice(0, 4).map((w, i) => (
             <WorkoutRow key={i} w={w} />

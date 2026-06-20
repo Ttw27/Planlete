@@ -55,6 +55,12 @@ export default function SiteFooter() {
                 Football app
               </Link>
               <Link
+                to="/app/sprinter"
+                className="hover:text-[#D4FF00] transition-colors"
+              >
+                Sprinter app
+              </Link>
+              <Link
                 to="/build"
                 className="hover:text-[#D4FF00] transition-colors"
               >

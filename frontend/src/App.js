@@ -5,8 +5,11 @@ import Landing from "@/pages/Landing";
 import AthleteApp from "@/pages/AthleteApp";
 import LongevityApp from "@/pages/LongevityApp";
 import FootballApp from "@/pages/FootballApp";
+import SprinterApp from "@/pages/SprinterApp";
 import BuildApp from "@/pages/BuildApp";
 import GeneratedApp from "@/pages/GeneratedApp";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminImages from "@/pages/AdminImages";
 
 function App() {
   return (
@@ -18,7 +21,10 @@ function App() {
           <Route path="/app/athlete" element={<AthleteApp />} />
           <Route path="/app/longevity" element={<LongevityApp />} />
           <Route path="/app/football" element={<FootballApp />} />
+          <Route path="/app/sprinter" element={<SprinterApp />} />
           <Route path="/app/u/:id" element={<GeneratedApp />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/images" element={<AdminImages />} />
         </Routes>
       </BrowserRouter>
       <Toaster

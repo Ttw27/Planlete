@@ -306,3 +306,128 @@ export const FOOTBALL_APP = {
   accent: "#D4FF00",
   modes: FOOTBALL_MODES,
 };
+
+export const SPRINTER_APP = {
+  brand: "Sprinter",
+  tagline: "Faster. Sharper. Sub-second decisions.",
+  hero: "https://images.pexels.com/photos/2526878/pexels-photo-2526878.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+  accent: "#D4FF00",
+  days: [
+    {
+      day: "MON",
+      label: "Acceleration",
+      focus: "0–30m · block starts",
+      workouts: [
+        { name: "Block starts", sets: "8 × 20m", load: "Max effort", rest: "Full 3 min" },
+        { name: "Resisted sprints (sled)", sets: "6 × 20m", load: "10% BW", rest: "2-3 min" },
+        { name: "Wall drives", sets: "4 × 10s", load: "Sharp", rest: "60s" },
+        { name: "A-skips · B-skips", sets: "3 × 20m each", load: "Crisp", rest: "60s" },
+      ],
+    },
+    {
+      day: "TUE",
+      label: "Power Lift",
+      focus: "CNS · explosive strength",
+      workouts: [
+        { name: "Power Clean", sets: "5 × 3", load: "75-85% 1RM", rest: "180s" },
+        { name: "Back Squat", sets: "4 × 4", load: "RPE 8", rest: "180s" },
+        { name: "Romanian Deadlift", sets: "3 × 6", load: "Heavy", rest: "150s" },
+        { name: "Depth Jump", sets: "4 × 4", load: "Reactive", rest: "120s" },
+        { name: "Standing Calf", sets: "4 × 8", load: "Heavy", rest: "60s" },
+      ],
+    },
+    {
+      day: "WED",
+      label: "Tempo",
+      focus: "Recovery · technique",
+      workouts: [
+        { name: "Tempo runs 100m", sets: "10 × 100m", load: "70%", rest: "100m walk" },
+        { name: "Pogo hops", sets: "4 × 20", load: "Stiff", rest: "60s" },
+        { name: "Core circuit", sets: "3 rounds", load: "Anti-rotation", rest: "60s" },
+      ],
+    },
+    {
+      day: "THU",
+      label: "Max Velocity",
+      focus: "30–60m · top end",
+      workouts: [
+        { name: "Flying 30s", sets: "6 × 30m", load: "Max", rest: "Full 4 min" },
+        { name: "Ins & outs 60m", sets: "4 × 60m", load: "Max top end", rest: "Full" },
+        { name: "Bounding", sets: "4 × 20m", load: "Long contacts", rest: "120s" },
+        { name: "Single leg hops", sets: "3 × 10m each", load: "Reactive", rest: "90s" },
+      ],
+    },
+    {
+      day: "FRI",
+      label: "Posterior Power",
+      focus: "Hamstrings · glutes",
+      workouts: [
+        { name: "Trap Bar Deadlift", sets: "5 × 3", load: "RPE 8", rest: "180s" },
+        { name: "Nordic Curl", sets: "4 × 5", load: "Slow eccentric", rest: "120s" },
+        { name: "Hip Thrust", sets: "4 × 6", load: "Heavy", rest: "120s" },
+        { name: "Reverse Hyper", sets: "3 × 12", load: "Moderate", rest: "60s" },
+      ],
+    },
+    {
+      day: "SAT",
+      label: "Speed Endurance",
+      focus: "150–300m race prep",
+      workouts: [
+        { name: "150m repeats", sets: "5 × 150m", load: "90%", rest: "Full 5 min" },
+        { name: "Sled push 20m", sets: "4 × 20m", load: "Heavy", rest: "120s" },
+      ],
+    },
+    {
+      day: "SUN",
+      label: "Recovery",
+      focus: "Soft tissue · pool",
+      workouts: [
+        { name: "Pool walk + flush", sets: "30 min", load: "Easy", rest: "—" },
+        { name: "Sauna + cold contrast", sets: "20 min", load: "—", rest: "—" },
+        { name: "Mobility flow", sets: "20 min", load: "Easy", rest: "—" },
+      ],
+    },
+  ],
+  nutrition: {
+    calories: 3000,
+    protein: 200,
+    carbs: 350,
+    fats: 85,
+    meals: [
+      { time: "06:30", name: "Pre-Train", items: "Oats, banana, whey, espresso, beetroot juice" },
+      { time: "10:30", name: "Post-Train", items: "Chicken, jasmine rice, kimchi, olive oil" },
+      { time: "14:00", name: "Lunch", items: "Steak, sweet potato, spinach" },
+      { time: "17:30", name: "Pre-Lift", items: "Whey + dextrose, rice cake, honey" },
+      { time: "20:30", name: "Dinner", items: "Salmon, pasta, tomato, parmesan, rocket" },
+      { time: "22:30", name: "Pre-Sleep", items: "Casein, walnuts, tart cherry juice" },
+    ],
+    supplements: [
+      "Creatine 5g",
+      "Beta-alanine 4g",
+      "Whey 40g",
+      "Beetroot juice (pre-session)",
+      "Omega 3 2g",
+      "Magnesium 400mg",
+      "Vit D3 4000 IU",
+    ],
+  },
+  recovery: {
+    sleepTarget: "9h 00m",
+    hrvTrend: "Watch CNS",
+    protocols: [
+      "Cold plunge 2 min post-session (not before)",
+      "Sauna 20 min × 3/week (off-day)",
+      "Soft tissue (hamstrings, hips) 4×/week",
+      "10 min sun + walk AM — circadian",
+      "Sleep 9h minimum during heavy blocks",
+    ],
+  },
+  morningRoutine: [
+    "Ankle pulses ×20",
+    "Hip 90/90 switch ×8",
+    "Pogo hops ×20",
+    "A-skip ×20m",
+    "Wall drive ×10s",
+    "Cobra to downward dog ×8",
+  ],
+};

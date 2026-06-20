@@ -35,7 +35,7 @@ export default function GeneratedApp() {
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
         <div className="text-center max-w-md">
           <p className="text-overline mb-4">404</p>
-          <h2 className="font-display text-4xl">This plan doesn't exist.</h2>
+          <h2 className="font-display text-4xl">This plan doesn&apos;t exist.</h2>
           <Link
             to="/build"
             className="inline-block mt-8 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-6 py-3"
