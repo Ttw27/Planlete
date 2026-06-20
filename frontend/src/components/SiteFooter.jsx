@@ -23,7 +23,9 @@ export default function SiteFooter() {
               <span aria-hidden>→</span>
             </Link>
             <p className="text-sm text-zinc-500 mt-5 max-w-md">
-              Free samples available above. No subscription. One-off payment.
+              Free samples available above.{" "}
+              <span className="text-[#D4FF00]">Launch offer:</span> £4.99{" "}
+              <span className="line-through">£20</span> · no subscription · one-off payment.
             </p>
           </div>
 

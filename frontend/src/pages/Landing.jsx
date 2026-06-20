@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import OfferBar from "@/components/OfferBar";
 import { useImageOverride } from "@/lib/useImages";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -75,6 +76,7 @@ const SAMPLE_CARDS = [
 export default function Landing() {
   return (
     <div className="bg-[#050505] text-white overflow-x-hidden">
+      <OfferBar />
       <SiteHeader />
       <Hero />
       <SocialProofMarquee />
@@ -150,8 +152,13 @@ function Hero() {
           </a>
         </div>
         <p className="text-sm text-zinc-400 mt-5">
-          Or build your own for{" "}
-          <span className="text-white font-semibold">£4.99</span> — not £20.
+          <span className="inline-flex items-center gap-2 mr-2">
+            <span className="w-1.5 h-1.5 bg-[#D4FF00] rounded-full animate-pulse" />
+            <span className="text-[#D4FF00] text-overline">Launch offer</span>
+          </span>
+          Build your own for{" "}
+          <span className="text-white font-semibold">£4.99</span>{" "}
+          <span className="line-through text-zinc-600">£20</span> — limited time.
         </p>
       </div>
     </section>
@@ -321,12 +328,24 @@ function Pricing() {
     >
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-24 md:py-32">
         <div className="mb-12 md:mb-16">
+          <div className="inline-flex items-center gap-2 mb-5 border border-[#D4FF00]/40 bg-[#D4FF00]/5 px-3 py-1.5">
+            <span className="w-1.5 h-1.5 bg-[#D4FF00] rounded-full animate-pulse" />
+            <p className="text-overline text-[#D4FF00] text-[10px]">
+              Launch offer · 75% off · Limited time
+            </p>
+          </div>
           <p className="text-overline mb-4">— Pricing</p>
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl max-w-3xl">
             Your own app.
             <br />
-            <span className="text-[#D4FF00]">Built for you. £4.99.</span>
+            <span className="text-[#D4FF00]">
+              Normally £20. Now £4.99.
+            </span>
           </h2>
+          <p className="text-sm text-zinc-400 mt-5 max-w-xl">
+            We&apos;re running a launch offer to seed the first wave of users
+            with real feedback. Once we hit our cap, the price reverts to £20.
+          </p>
         </div>
 
         <div className="grid md:grid-cols-2 border border-white/10">
@@ -334,8 +353,8 @@ function Pricing() {
             <p className="text-overline">Free</p>
             <p className="font-display text-6xl mt-4">£0</p>
             <ul className="mt-8 flex flex-col gap-3 text-sm text-zinc-300">
-              <PricingLi>3 sample apps to explore</PricingLi>
-              <PricingLi>Athlete, longevity and football plans</PricingLi>
+              <PricingLi>4 sample apps to explore</PricingLi>
+              <PricingLi>Athlete, longevity, football & sprinter plans</PricingLi>
               <PricingLi>Use as your own — no sign up</PricingLi>
             </ul>
             <a
@@ -348,16 +367,24 @@ function Pricing() {
           </div>
 
           <div className="relative p-8 md:p-12 bg-[#0a0a0a]">
-            <span className="absolute top-0 right-0 bg-[#D4FF00] text-black text-[10px] uppercase tracking-widest font-bold px-3 py-1">
-              Most popular
-            </span>
-            <p className="text-overline text-[#D4FF00]">£4.99 plan</p>
+            <div className="absolute top-0 right-0 flex">
+              <span className="bg-white text-black text-[10px] uppercase tracking-widest font-bold px-3 py-1">
+                Most popular
+              </span>
+              <span className="bg-[#D4FF00] text-black text-[10px] uppercase tracking-widest font-bold px-3 py-1">
+                Save 75%
+              </span>
+            </div>
+            <p className="text-overline text-[#D4FF00]">Launch offer</p>
             <div className="mt-4 flex items-baseline gap-3">
               <p className="font-display text-6xl">£4.99</p>
               <p className="font-display text-2xl text-zinc-500 line-through">
                 £20
               </p>
             </div>
+            <p className="text-xs text-zinc-400 mt-2">
+              Was £20 — limited-time launch price.
+            </p>
             <ul className="mt-8 flex flex-col gap-3 text-sm text-zinc-300">
               <PricingLi accent>Answer 8 questions</PricingLi>
               <PricingLi accent>AI builds your personalised app</PricingLi>

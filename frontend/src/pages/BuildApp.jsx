@@ -4,6 +4,7 @@ import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
+import OfferBar from "@/components/OfferBar";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -122,6 +123,7 @@ export default function BuildApp() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
+      <OfferBar />
       <SiteHeader />
 
       <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-20">
@@ -132,7 +134,10 @@ export default function BuildApp() {
               Question {String(step + 1).padStart(2, "0")} /{" "}
               {String(QUESTIONS.length).padStart(2, "0")}
             </p>
-            <p className="text-overline text-[#D4FF00]">£4.99 plan</p>
+            <p className="text-overline text-[#D4FF00]">
+              Launch offer · £4.99{" "}
+              <span className="line-through text-zinc-600">£20</span>
+            </p>
           </div>
           <div className="h-px bg-white/10 relative overflow-hidden">
             <div
@@ -219,8 +224,8 @@ export default function BuildApp() {
         </div>
 
         <p className="text-xs text-zinc-500 mt-10 text-center">
-          By continuing you agree to a one-off £4.99 charge to receive your
-          personalised app.{" "}
+          By continuing you agree to a one-off launch-offer charge of £4.99
+          (normally £20) to receive your personalised app.{" "}
           <Link to="/" className="text-zinc-300 underline hover:text-white">
             Cancel
           </Link>
