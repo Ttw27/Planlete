@@ -1,0 +1,146 @@
+{
+  "brand_identity": {
+    "name": "Built.For.You",
+    "domain": "Premium Fitness & Training App Platform",
+    "theme_type": "dark",
+    "archetype": "Archetype 2: The Performance Pro (Elevated)",
+    "emotion": "Bespoke, elite, disciplined, cinematic, technical precision",
+    "design_principles": [
+      "Fusion over Imitation: Combine elite sports photography with Swiss editorial typography.",
+      "Emotion First: The UI should feel like a high-end locker room or professional coaching terminal.",
+      "Contrast: Deepest obsidian black backgrounds punctuated by neon volt accents and pure white text.",
+      "App-First Feel: The generated apps must feel native, using fixed bottom navigation, horizontal day-scrolling, and edge-to-edge imagery.",
+      "No Generic Fitness Tropes: Avoid basic blue/purple gradients or basic card layouts. Use pure black or 1px border grid layouts."
+    ]
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Cabinet Grotesk",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
+    },
+    "rules": {
+      "headings": "Tracking-tight to tracking-tighter. Use font-black or font-extrabold. No Inter for headings.",
+      "body": "Clean, legible, tracking-normal.",
+      "overline": "Uppercase, tracking-[0.2em], text-xs to text-sm.",
+      "sizes": {
+        "h1": "text-4xl sm:text-5xl lg:text-6xl uppercase tracking-tighter leading-none",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl uppercase tracking-tight",
+        "h3": "text-xl sm:text-2xl font-bold",
+        "body": "text-base leading-relaxed",
+        "small": "text-sm text-zinc-400"
+      }
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#050505",
+      "secondary": "#121212",
+      "tertiary": "#1A1A1A"
+    },
+    "text": {
+      "primary": "#FAFAFA",
+      "secondary": "#A3A3A3",
+      "inverse": "#050505"
+    },
+    "accents": {
+      "brand_primary": "#D4FF00",
+      "brand_secondary": "#FFFFFF",
+      "error": "#FF3B30",
+      "success": "#D4FF00"
+    },
+    "borders": {
+      "default": "rgba(255,255,255,0.1)",
+      "focus": "#D4FF00"
+    }
+  },
+  "layout": {
+    "spacing_scale": "Generous spacing. Use p-6 to p-12 for section paddings.",
+    "marketing_page": "Bento Grid (Mode A: Tetris) for sample apps. Swiss Grid for text features. Aggressive asymmetry.",
+    "app_interface": "Mobile-first layout. Max width on desktop (e.g., max-w-md mx-auto for the app simulator). Sticky top headers, fixed bottom navs. Edge-to-edge list items.",
+    "corners": "Sharp (rounded-none) or highly subtle (rounded-sm - 2px) to maintain the technical, professional vibe."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#D4FF00] text-black font-bold uppercase tracking-wide hover:bg-[#b8e600] transition-colors rounded-none px-8 py-4",
+      "secondary": "border border-white/20 bg-transparent text-white hover:bg-white/5 transition-colors rounded-none px-8 py-4",
+      "app_cta": "w-full bg-[#D4FF00] text-black font-bold py-4 text-center rounded-none shadow-[0_0_15px_rgba(212,255,0,0.3)]"
+    },
+    "cards": {
+      "marketing": "Grid Borders style: border-r border-b border-white/10 flat backgrounds, no shadows.",
+      "app_workout_card": "bg-[#121212] border-l-4 border-[#D4FF00] p-4 flex justify-between items-center"
+    },
+    "navigation": {
+      "marketing_header": "Glassmorphism: backdrop-blur-xl bg-black/60 border-b border-white/10 sticky top-0 z-50.",
+      "app_bottom_nav": "fixed bottom-0 w-full max-w-md bg-[#050505]/90 backdrop-blur-md border-t border-white/10 flex justify-around py-4 z-50"
+    },
+    "forms": {
+      "inputs": "bg-transparent border-b border-white/20 rounded-none focus:border-[#D4FF00] focus:ring-0 text-white placeholder-white/30 px-0 py-2",
+      "labels": "text-xs uppercase tracking-widest text-zinc-400"
+    }
+  },
+  "motion": {
+    "scroll": "Use lenis for smooth scrolling on the marketing page.",
+    "transitions": "hover states must have transition-all duration-200 ease-out.",
+    "interactions": "Buttons scale down slightly on active (active:scale-[0.98])."
+  },
+  "pages": {
+    "sales_funnel_landing": {
+      "hero": {
+        "layout": "Full viewport height. Background image with bg-black/50 to bg-black/70 gradient overlay. Massive H1 typography.",
+        "content": "Headline: 'Your training plan. Built as an app. In minutes.' Primary CTA + secondary text."
+      },
+      "social_proof": {
+        "layout": "Editorial Marquee or clean grid strip with small uppercase text and checkmarks."
+      },
+      "how_it_works": {
+        "layout": "3-column tall grid. Huge numbers (01, 02, 03) in a technical mono font."
+      },
+      "sample_apps": {
+        "layout": "Horizontal scroll container on mobile, 3-column bento on desktop. Each acts as a portal/link to the actual app views."
+      },
+      "pricing_b2b": {
+        "layout": "High contrast section. Split view: Left side B2C (£4.99), Right side B2B (Waitlist)."
+      }
+    },
+    "sample_training_apps": {
+      "global": "Simulate a mobile app environment. If viewed on desktop, wrap the app content in a 'phone' container (max-w-md mx-auto min-h-screen border-x border-white/10).",
+      "football_app": {
+        "special_feature": "Segmented Control / Tabs for Off-season, Pre-season, In-season at the top. This changes the workout list content."
+      },
+      "views": {
+        "dashboard": "Horizontal days scroll. Vertical list of today's workouts, nutrition goals, and recovery scores.",
+        "workout_detail": "Edge-to-edge video/image header, list of exercises with sets/reps.",
+        "nutrition": "Macro progress bars (using Volt Green). Meal list.",
+        "recovery": "Sleep/Strain metrics using minimalist circular progress or typography-heavy stats."
+      }
+    }
+  },
+  "media": {
+    "images": {
+      "hero_background": {
+        "url": "https://images.pexels.com/photos/33360904/pexels-photo-33360904.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Determined man working out in a gym in Cape Town, cinematic lighting."
+      },
+      "sample_app_football": {
+        "url": "https://images.pexels.com/photos/6409107/pexels-photo-6409107.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Male football player kicking ball in a dark stadium."
+      },
+      "sample_app_longevity": {
+        "url": "https://images.pexels.com/photos/6922129/pexels-photo-6922129.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Senior man stretching in a modern gym."
+      },
+      "sample_app_athlete": {
+        "url": "https://images.pexels.com/photos/9944894/pexels-photo-9944894.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Man climbing a rope in a dimly lit gym."
+      }
+    },
+    "icons_library": "lucide-react"
+  },
+  "testing": {
+    "attributes": "All interactive and key informational elements MUST include a data-testid attribute (e.g., data-testid='hero-cta-button', data-testid='sample-app-toggle')."
+  },
+  "tech_stack": {
+    "files": ".js files (no TypeScript)"
+  }
+}
