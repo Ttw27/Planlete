@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
+import { useContent } from "@/lib/useContent";
+import { CONTENT_DEFAULTS } from "@/lib/contentKeys";
 
 export default function SiteFooter() {
+  const headline = useContent("footer_headline", CONTENT_DEFAULTS.footer_headline);
+  const cta = useContent("footer_cta", CONTENT_DEFAULTS.footer_cta);
   return (
     <footer
       data-testid="site-footer"
@@ -11,15 +15,14 @@ export default function SiteFooter() {
           <div className="md:col-span-7">
             <p className="text-overline mb-6">— Footer / CTA</p>
             <h3 className="font-display text-3xl sm:text-5xl lg:text-6xl text-white mb-8 max-w-3xl">
-              Stop saving plans to your camera roll. Get an app that actually
-              works.
+              {headline}
             </h3>
             <Link
               to="/build"
               data-testid="footer-cta"
               className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white transition-colors"
             >
-              Build my plan — £4.99
+              {cta}
               <span aria-hidden>→</span>
             </Link>
             <p className="text-sm text-zinc-500 mt-5 max-w-md">
@@ -31,10 +34,11 @@ export default function SiteFooter() {
 
           <div className="md:col-span-5 md:pl-12 md:border-l md:border-white/10 flex flex-col gap-6">
             <div>
-              <p className="text-overline mb-3">Built.For.You</p>
+              <p className="text-overline mb-3">Planlete · Built for You</p>
               <p className="text-sm text-zinc-400 leading-relaxed">
                 Training apps built around you — athletes, everyday people,
-                football players and rehab clients. One-off. No subscription.
+                football players, sprinters and rehab clients. One-off. No
+                subscription.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm text-zinc-400">
@@ -73,7 +77,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between gap-4 text-xs text-zinc-500 font-mono-display">
-          <p>© {new Date().getFullYear()} BUILT.FOR.YOU — All rights reserved.</p>
+          <p>© {new Date().getFullYear()} PLANLETE — Built for You. All rights reserved.</p>
           <p className="uppercase tracking-[0.2em]">
             Your plan · Your app · No gym required
           </p>

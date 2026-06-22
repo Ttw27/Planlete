@@ -2,6 +2,7 @@ import { useState } from "react";
 import AppShell from "@/components/AppShell";
 import { FOOTBALL_APP } from "@/lib/sampleData";
 import { useImageOverride } from "@/lib/useImages";
+import { useContent } from "@/lib/useContent";
 
 const MODES = [
   { id: "off", label: "Off Season" },
@@ -13,11 +14,14 @@ export default function FootballApp() {
   const [mode, setMode] = useState("off");
   const modeData = FOOTBALL_APP.modes[mode];
   const hero = useImageOverride("app_football_hero", FOOTBALL_APP.hero);
+  const brand = useContent("app_football_brand", FOOTBALL_APP.brand);
+  const tagline = useContent("app_football_tagline", FOOTBALL_APP.tagline);
 
   const data = {
     ...FOOTBALL_APP,
     hero,
-    tagline: modeData.focus,
+    brand,
+    tagline: modeData.focus || tagline,
     nutrition: modeData.nutrition,
   };
 

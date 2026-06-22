@@ -26,7 +26,7 @@ export default function AppShell({ data, mode, modeToggle = null }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white pt-6 pb-6 md:py-12 px-3 md:px-6">
+    <div className="min-h-screen bg-[var(--brand-bg)] text-white pt-6 pb-6 md:py-12 px-3 md:px-6">
       {/* Phone frame */}
       <div
         data-testid="app-shell"
@@ -52,7 +52,7 @@ export default function AppShell({ data, mode, modeToggle = null }) {
           <button
             data-testid="app-share-button"
             onClick={share}
-            className="text-zinc-400 hover:text-[#D4FF00] transition-colors"
+            className="text-zinc-400 hover:text-[var(--accent)] transition-colors"
             aria-label="Share app"
           >
             <Share2 size={18} />
@@ -120,7 +120,7 @@ export default function AppShell({ data, mode, modeToggle = null }) {
         <Link
           to="/build"
           data-testid="upgrade-cta"
-          className="inline-flex items-center gap-2 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-5 py-3 hover:bg-white transition-colors"
+          className="inline-flex items-center gap-2 bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-xs px-5 py-3 hover:bg-white transition-colors"
         >
           Build mine — £4.99 →
         </Link>
@@ -139,7 +139,7 @@ function BottomTab({ id, label, icon, view, setView }) {
       data-testid={`app-tab-${id}`}
       onClick={() => setView(id)}
       className={`flex flex-col items-center justify-center gap-1 py-3 transition-colors ${
-        active ? "text-[#D4FF00]" : "text-zinc-500 hover:text-white"
+        active ? "text-[var(--accent)]" : "text-zinc-500 hover:text-white"
       }`}
     >
       {icon}
@@ -176,7 +176,7 @@ function HomeView({ data, days, morningRoutine, nutrition }) {
             key={d.day + i}
             className={`shrink-0 px-3 py-2 border ${
               i === todayIndex
-                ? "border-[#D4FF00] text-[#D4FF00]"
+                ? "border-[var(--accent)] text-[var(--accent)]"
                 : "border-white/10 text-zinc-400"
             }`}
           >
@@ -259,14 +259,14 @@ function TrainingView({ days }) {
 
 function WorkoutRow({ w }) {
   return (
-    <div className="bg-[#121212] border-l-2 border-[#D4FF00] px-3 py-3 flex items-center justify-between">
+    <div className="bg-[#121212] border-l-2 border-[var(--accent)] px-3 py-3 flex items-center justify-between">
       <div>
         <p className="text-sm text-white">{w.name}</p>
         <p className="text-[11px] text-zinc-500 mt-0.5">
           {w.load} · rest {w.rest}
         </p>
       </div>
-      <p className="font-mono-display text-sm text-[#D4FF00]">{w.sets}</p>
+      <p className="font-mono-display text-sm text-[var(--accent)]">{w.sets}</p>
     </div>
   );
 }
@@ -286,7 +286,7 @@ function NutritionView({ nutrition }) {
 
         <div className="flex h-2 mt-5 overflow-hidden">
           <div
-            className="bg-[#D4FF00]"
+            className="bg-[var(--accent)]"
             style={{ width: `${pPct}%` }}
             title="Protein"
           />
@@ -303,7 +303,7 @@ function NutritionView({ nutrition }) {
         </div>
         <div className="flex justify-between text-[11px] mt-3 text-zinc-400">
           <span>
-            <span className="text-[#D4FF00]">●</span> Protein {nutrition.protein}
+            <span className="text-[var(--accent)]">●</span> Protein {nutrition.protein}
             g
           </span>
           <span>
@@ -330,7 +330,7 @@ function NutritionView({ nutrition }) {
                 key={i}
                 className="flex items-start gap-4 border-b border-white/5 pb-3 last:border-0"
               >
-                <span className="font-mono-display text-[#D4FF00] text-sm w-14 shrink-0">
+                <span className="font-mono-display text-[var(--accent)] text-sm w-14 shrink-0">
                   {m.time}
                 </span>
                 <div>
@@ -379,7 +379,7 @@ function RecoveryView({ recovery, morningRoutine }) {
         </div>
         <div>
           <p className="text-overline">HRV trend</p>
-          <p className="font-display text-3xl mt-2 text-[#D4FF00]">
+          <p className="font-display text-3xl mt-2 text-[var(--accent)]">
             {recovery.hrvTrend}
           </p>
         </div>
@@ -419,7 +419,7 @@ function RecoveryView({ recovery, morningRoutine }) {
 function Stat({ label, value }) {
   return (
     <div className="text-center border border-white/10 py-3">
-      <p className="font-display text-xl text-[#D4FF00]">{value}</p>
+      <p className="font-display text-xl text-[var(--accent)]">{value}</p>
       <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
         {label}
       </p>

@@ -10,6 +10,10 @@ import BuildApp from "@/pages/BuildApp";
 import GeneratedApp from "@/pages/GeneratedApp";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminImages from "@/pages/AdminImages";
+import AdminContent from "@/pages/AdminContent";
+import CoachAuth from "@/pages/CoachAuth";
+import CoachDashboard from "@/pages/CoachDashboard";
+import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
 
 function App() {
   return (
@@ -24,7 +28,11 @@ function App() {
           <Route path="/app/sprinter" element={<SprinterApp />} />
           <Route path="/app/u/:id" element={<GeneratedApp />} />
           <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/images" element={<AdminImages />} />
+          <Route path="/coach" element={<CoachAuth />} />
+          <Route path="/coach/dashboard" element={<CoachDashboard />} />
+          <Route path="/c/:coachSlug/:clientSlug" element={<PublicBrandedPlan />} />
         </Routes>
       </BrowserRouter>
       <Toaster

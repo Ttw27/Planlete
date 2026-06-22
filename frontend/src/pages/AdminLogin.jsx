@@ -17,7 +17,7 @@ export default function AdminLogin() {
     if (!token) return;
     axios
       .get(`${API}/admin/verify`, { headers: { "X-Admin-Token": token } })
-      .then(() => navigate("/admin/images", { replace: true }))
+      .then(() => navigate("/admin/content", { replace: true }))
       .catch(() => localStorage.removeItem("bfy_admin_token"));
   }, [navigate]);
 
@@ -28,7 +28,7 @@ export default function AdminLogin() {
       const res = await axios.post(`${API}/admin/login`, { password });
       localStorage.setItem("bfy_admin_token", res.data.token);
       toast.success("Welcome back");
-      navigate("/admin/images");
+      navigate("/admin/content");
     } catch {
       toast.error("Wrong password");
     } finally {

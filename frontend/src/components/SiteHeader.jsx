@@ -33,16 +33,12 @@ export default function SiteHeader() {
           data-testid="brand-logo"
           className="flex items-center gap-2 group"
         >
-          <span className="font-mono-display text-[11px] tracking-[0.22em] uppercase text-zinc-400 group-hover:text-[#D4FF00] transition-colors">
-            Built
+          <span className="font-display text-[15px] tracking-tight uppercase text-white group-hover:text-[#D4FF00] transition-colors leading-none">
+            Planlete
           </span>
           <span className="w-1 h-1 bg-[#D4FF00] rounded-full" />
-          <span className="font-mono-display text-[11px] tracking-[0.22em] uppercase text-zinc-400 group-hover:text-[#D4FF00] transition-colors">
-            For
-          </span>
-          <span className="w-1 h-1 bg-[#D4FF00] rounded-full" />
-          <span className="font-mono-display text-[11px] tracking-[0.22em] uppercase text-white">
-            You
+          <span className="font-mono-display text-[10px] tracking-[0.22em] uppercase text-zinc-500 group-hover:text-zinc-300 transition-colors">
+            Built for You
           </span>
         </Link>
 

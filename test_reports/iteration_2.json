@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 4 (rebrand to Planlete + Admin content editor + Coach builder). Backend: 40/40 pytest pass (15 from existing backend_test.py + 25 new in test_iteration4.py covering content endpoints, coach signup/login/logout/me/PATCH brand/logo upload, client plans CRUD, public branded plan bundle, all 401/409/422 negative cases). Frontend verified end-to-end: landing rebrand complete (PLANLETE · Built for You, no Built.For.You leftover, title correct, footer correct); /admin redirects to /admin/content after login; sidebar shows TEXT CONTENT + IMAGES tabs; all 7 content groups (hero, howitworks, samples, sample_apps, pricing, coaches, footer) render with input-{key}/save-{key}/reset-{key} testids; editing hero_h1_line2 → save → reload landing reflects change → reset reverts → auth-gate redirects to /admin when token cleared. Coach: signup creates account, redirects to /coach/dashboard, sets planlete_coach_token in localStorage; dashboard renders 'Client plans' + 'Brand & logo' tabs; new client modal (name + 4 templates incl. athlete/longevity/football/sprinter + notes) creates plan card with delete/open/copy actions; brand tab primary-color-hex / secondary-color-hex / brand-save persists colours (verified via GET /api/coach/me returned primary_color=#FF6B35).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "Pydantic EmailStr", "issue": "Backend rejects '.test' TLD emails with 422 (email_validator considers .test reserved). Not a product bug but worth knowing for QA — tests use @example.com."},
+      {"endpoint": "CORS", "issue": "backend/.env CORS_ORIGINS='*' + allow_credentials=True is invalid per CORS spec; browsers will reject any credentialed cross-origin request. Currently fine because the frontend uses Bearer headers (axios withCredentials=true is set but the actual coach_token cookie isn't required since localStorage Bearer takes precedence). Recommend setting CORS_ORIGINS to the explicit frontend URL."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration4_results.xml",
+    "/app/test_reports/pytest/all_results.xml"
+  ],
+  "action_items": [
+    "[Non-blocking] Replace CORS_ORIGINS='*' with explicit production origin since allow_credentials=True is set; current combo is rejected by spec-compliant browsers for credentialed requests.",
+    "[Non-blocking] Consider catching pydantic-email reserved-TLD 422 and returning a friendlier 400 error message to users (helps if a real user types a .test/.example email)."
+  ],
+  "critical_code_review_comments": [
+    "server.py: get_current_coach correctly excludes _id and password_hash via projection — safe.",
+    "Coach signup uses bcrypt.gensalt() (cost 12 default) — secure. Hash format $2b$ verified.",
+    "Slug collision handling for both coach and client_plans uses a while-loop suffix — works but races on concurrent inserts (unique indexes on coaches.slug and (coach_id, slug) ensure DB-level safety).",
+    "PATCH /coach/me allows primary_color/secondary_color updates without hex-format validation — could store arbitrary strings. Low risk.",
+    "Public /api/c/{coach_slug}/{client_slug} returns no Cache-Control header — fine for now since plans are personal, but consider no-store explicitly to avoid stale CDN caching when colours change.",
+    "JWT_SECRET defaults to 'dev-secret-change-me' if env var missing — .env sets a real value, but defaulting in code is risky. Recommend failing fast.",
+    "CoachDashboard.jsx (610 lines) is at the upper bound — consider splitting NewClientModal and BrandTab into separate files for maintainability.",
+    "Backend allow_credentials=True with allow_origins='*' is a spec violation (see backend_issues.minor)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (new — 22 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (40/40 across both test files)", "frontend": "100% of critical flows verified (rebrand, admin content editor save/reset/auth-gate, coach signup→dashboard→client create→brand colour save, public branded plan render)"},
+  "test_credentials": "Admin password: builtforyou2026 (ADMIN_TOKEN bfy-admin-7f3e9d2b8c1a4e5f6a8b9c0d1e2f3a4b stored as bfy_admin_token in localStorage). Coach test signup uses fresh email each run (e.g. coach-test-{ts}@example.com / strongpass-2026 / brand 'Test Studio {ts}'). NOTE: emails ending in '.test' TLD are rejected by pydantic EmailStr — use @example.com.",
+  "seed_data_creation": "Backend tests create transient TEST_ content keys (cleaned up by delete tests) and ephemeral coach/client records (no cleanup — uses unique timestamps to avoid collisions across runs). UI tests create ephemeral coach + client records.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Two backend test files coexist: /app/backend/tests/backend_test.py (iteration 1 — admin auth, images, waitlist, plans stub) + /app/backend/tests/test_iteration4.py (iteration 4 — content editor, coach auth/brand/clients, public branded plan). Run both: REACT_APP_BACKEND_URL=<url> pytest /app/backend/tests/ -v. EmailStr rejects .test TLD. Brand-tab colour hex inputs use data-testid='primary-color-hex' / 'secondary-color-hex' (NOT 'primary-hex'). Coach token in localStorage key 'planlete_coach_token'. Admin token in localStorage key 'bfy_admin_token'. Logout testid: 'coach-logout'. Public branded plan endpoint is unauthenticated and returns coach + client bundle.",
+  "rca of the issue": "No product bugs found. One QA gotcha: pydantic's EmailStr rejects reserved TLDs like '.test' with 422 — initial test run failed on this until emails were switched to @example.com. Two non-blocking review items: (1) CORS_ORIGINS='*' + allow_credentials=True is spec-invalid; (2) JWT_SECRET in code defaults to a placeholder if env missing — currently masked because .env is set."
+}

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Upload, RotateCcw, LogOut, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Upload, RotateCcw, Link as LinkIcon } from "lucide-react";
+import AdminLayout from "@/components/AdminLayout";
 import { useAllImages, notifyImagesChanged } from "@/lib/useImages";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -93,11 +94,6 @@ export default function AdminImages() {
       });
   }, [navigate]);
 
-  const logout = () => {
-    localStorage.removeItem("bfy_admin_token");
-    navigate("/admin");
-  };
-
   if (!token) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center text-zinc-400">
@@ -107,61 +103,31 @@ export default function AdminImages() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <header className="border-b border-white/10 sticky top-0 z-40 bg-black/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-overline text-[#D4FF00]">
-              Built.For.You · Admin
-            </Link>
-            <span className="text-zinc-600">/</span>
-            <span className="text-overline">Images</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/"
-              target="_blank"
-              className="text-overline hover:text-[#D4FF00] inline-flex items-center gap-2"
-            >
-              View site <ExternalLink size={14} />
-            </Link>
-            <button
-              data-testid="admin-logout-button"
-              onClick={logout}
-              className="text-overline hover:text-white inline-flex items-center gap-2"
-            >
-              <LogOut size={14} /> Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-5 md:px-8 py-12">
-        <div className="mb-12">
-          <p className="text-overline mb-4">— Image manager</p>
-          <h1 className="font-display text-4xl sm:text-5xl">
-            Swap the visuals.
-            <br />
-            <span className="text-[#D4FF00]">Anytime you want.</span>
-          </h1>
-          <p className="text-sm text-zinc-400 mt-5 max-w-xl">
-            Upload a new image or paste a URL. Changes go live immediately for
-            visitors. Recommended: 1600×1000+ JPG/WebP under 8MB.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-px bg-white/10">
-          {IMAGE_SLOTS.map((slot) => (
-            <ImageSlot
-              key={slot.key}
-              slot={slot}
-              currentRaw={overrides[slot.key]}
-              token={token}
-            />
-          ))}
-        </div>
+    <AdminLayout title="Images">
+      <div className="mb-10">
+        <p className="text-overline mb-4">— Image manager</p>
+        <h1 className="font-display text-4xl sm:text-5xl">
+          Swap the visuals.
+          <br />
+          <span className="text-[#D4FF00]">Anytime you want.</span>
+        </h1>
+        <p className="text-sm text-zinc-400 mt-5 max-w-xl">
+          Upload a new image or paste a URL. Changes go live immediately for
+          visitors. Recommended: 1600×1000+ JPG/WebP under 8MB.
+        </p>
       </div>
-    </div>
+
+      <div className="grid md:grid-cols-2 gap-px bg-white/10">
+        {IMAGE_SLOTS.map((slot) => (
+          <ImageSlot
+            key={slot.key}
+            slot={slot}
+            currentRaw={overrides[slot.key]}
+            token={token}
+          />
+        ))}
+      </div>
+    </AdminLayout>
   );
 }
 

@@ -19,6 +19,8 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import OfferBar from "@/components/OfferBar";
 import { useImageOverride } from "@/lib/useImages";
+import { useContent } from "@/lib/useContent";
+import { CONTENT_DEFAULTS } from "@/lib/contentKeys";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -30,8 +32,10 @@ const SAMPLE_CARDS = [
   {
     id: "athlete",
     overline: "01 / Athlete Performance",
-    title: "For people training\nseriously.",
-    body: "Strength, conditioning, recovery and nutrition all in one place.",
+    titleKey: "card_athlete_title",
+    defaultTitle: "For people training\nseriously.",
+    bodyKey: "card_athlete_body",
+    defaultBody: "Strength, conditioning, recovery and nutrition all in one place.",
     imgKey: "card_athlete",
     defaultImg: "https://images.pexels.com/photos/9944894/pexels-photo-9944894.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Athlete app",
@@ -41,8 +45,10 @@ const SAMPLE_CARDS = [
   {
     id: "longevity",
     overline: "02 / Longevity & Fitness",
-    title: "Look good. Feel\ngreat. For years.",
-    body: "Training that fits around life. Joints, posture, energy.",
+    titleKey: "card_longevity_title",
+    defaultTitle: "Look good. Feel\ngreat. For years.",
+    bodyKey: "card_longevity_body",
+    defaultBody: "Training that fits around life. Joints, posture, energy.",
     imgKey: "card_longevity",
     defaultImg: "https://images.pexels.com/photos/6922129/pexels-photo-6922129.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Longevity app",
@@ -52,8 +58,10 @@ const SAMPLE_CARDS = [
   {
     id: "football",
     overline: "03 / Football Player",
-    title: "Built around the\ncalendar.",
-    body: "Off-season, pre-season, in-season. Toggle inside the app.",
+    titleKey: "card_football_title",
+    defaultTitle: "Built around the\ncalendar.",
+    bodyKey: "card_football_body",
+    defaultBody: "Off-season, pre-season, in-season. Toggle inside the app.",
     imgKey: "card_football",
     defaultImg: "https://images.pexels.com/photos/6409107/pexels-photo-6409107.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Football app",
@@ -63,8 +71,10 @@ const SAMPLE_CARDS = [
   {
     id: "sprinter",
     overline: "04 / Sprinter",
-    title: "Faster.\nSharper. Reactive.",
-    body: "Acceleration, max velocity, plyometrics and the recovery that holds it all up.",
+    titleKey: "card_sprinter_title",
+    defaultTitle: "Faster.\nSharper. Reactive.",
+    bodyKey: "card_sprinter_body",
+    defaultBody: "Acceleration, max velocity, plyometrics and the recovery that holds it all up.",
     imgKey: "card_sprinter",
     defaultImg: "https://images.pexels.com/photos/2526878/pexels-photo-2526878.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
     cta: "View Sprinter app",
@@ -93,6 +103,13 @@ export default function Landing() {
 
 function Hero() {
   const heroImg = useImageOverride("hero_landing", DEFAULT_HERO);
+  const overline = useContent("hero_overline", CONTENT_DEFAULTS.hero_overline);
+  const h1a = useContent("hero_h1_line1", CONTENT_DEFAULTS.hero_h1_line1);
+  const h1b = useContent("hero_h1_line2", CONTENT_DEFAULTS.hero_h1_line2);
+  const h1c = useContent("hero_h1_line3", CONTENT_DEFAULTS.hero_h1_line3);
+  const subhead = useContent("hero_subhead", CONTENT_DEFAULTS.hero_subhead);
+  const primaryCta = useContent("hero_primary_cta", CONTENT_DEFAULTS.hero_primary_cta);
+  const secondaryCta = useContent("hero_secondary_cta", CONTENT_DEFAULTS.hero_secondary_cta);
   return (
     <section
       data-testid="hero-section"
@@ -111,27 +128,22 @@ function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto w-full px-5 md:px-8 pb-16 md:pb-24 pt-32">
         <div className="flex items-center gap-3 mb-8">
           <span className="w-8 h-px bg-[#D4FF00]" />
-          <p className="text-overline text-[#D4FF00]">
-            Built · For · You — Training apps
-          </p>
+          <p className="text-overline text-[#D4FF00]">{overline}</p>
         </div>
 
         <h1
           data-testid="hero-headline"
           className="font-display text-5xl sm:text-7xl lg:text-[8.5rem] text-white max-w-5xl"
         >
-          Your training plan.
+          {h1a}
           <br />
-          <span className="text-[#D4FF00]">Built as an app.</span>
+          <span className="text-[#D4FF00]">{h1b}</span>
           <br />
-          In minutes.
+          {h1c}
         </h1>
 
         <p className="text-base md:text-lg text-zinc-300 mt-8 max-w-xl leading-relaxed">
-          Stop screenshot-ing workout plans from Instagram. Get a proper
-          training app — personalised to you, on your phone, ready to go. Built
-          on protocols from longevity doctors, biohackers, physios and
-          sport-specific coaches.
+          {subhead}
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -140,7 +152,7 @@ function Hero() {
             data-testid="hero-primary-cta"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white transition-colors active:scale-[0.98]"
           >
-            Get my free plan
+            {primaryCta}
             <ArrowRight size={18} />
           </Link>
           <a
@@ -148,7 +160,7 @@ function Hero() {
             data-testid="hero-secondary-cta"
             className="inline-flex items-center gap-3 border border-white/20 text-white font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white/5 transition-colors"
           >
-            Try a free sample
+            {secondaryCta}
           </a>
         </div>
         <p className="text-sm text-zinc-400 mt-5">
@@ -191,22 +203,19 @@ function SocialProofMarquee() {
 }
 
 function HowItWorks() {
+  const overline = useContent("how_overline", CONTENT_DEFAULTS.how_overline);
+  const ha = useContent("how_headline_a", CONTENT_DEFAULTS.how_headline_a);
+  const hb = useContent("how_headline_b", CONTENT_DEFAULTS.how_headline_b);
+  const s1t = useContent("how_step1_title", CONTENT_DEFAULTS.how_step1_title);
+  const s1b = useContent("how_step1_body", CONTENT_DEFAULTS.how_step1_body);
+  const s2t = useContent("how_step2_title", CONTENT_DEFAULTS.how_step2_title);
+  const s2b = useContent("how_step2_body", CONTENT_DEFAULTS.how_step2_body);
+  const s3t = useContent("how_step3_title", CONTENT_DEFAULTS.how_step3_title);
+  const s3b = useContent("how_step3_body", CONTENT_DEFAULTS.how_step3_body);
   const steps = [
-    {
-      n: "01",
-      title: "Pick your goal",
-      body: "Athlete, longevity, football, rehab — or something else entirely.",
-    },
-    {
-      n: "02",
-      title: "Answer a few questions",
-      body: "Eight questions. Two minutes. We do the rest.",
-    },
-    {
-      n: "03",
-      title: "Get your app",
-      body: "Live link, on your phone, ready to use. Yours to keep.",
-    },
+    { n: "01", title: s1t, body: s1b },
+    { n: "02", title: s2t, body: s2b },
+    { n: "03", title: s3t, body: s3b },
   ];
   return (
     <section
@@ -216,11 +225,11 @@ function HowItWorks() {
     >
       <div className="flex items-baseline justify-between mb-12 md:mb-20 flex-wrap gap-4">
         <div>
-          <p className="text-overline mb-4">— How it works</p>
+          <p className="text-overline mb-4">{overline}</p>
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl max-w-2xl">
-            Three steps.
+            {ha}
             <br />
-            <span className="text-[#D4FF00]">No friction.</span>
+            <span className="text-[#D4FF00]">{hb}</span>
           </h2>
         </div>
         <Link
@@ -288,6 +297,8 @@ function SampleApps() {
 
 function SampleCard({ c }) {
   const img = useImageOverride(c.imgKey, c.defaultImg);
+  const title = useContent(c.titleKey, c.defaultTitle);
+  const body = useContent(c.bodyKey, c.defaultBody);
   return (
     <Link
       to={c.href}
@@ -297,7 +308,7 @@ function SampleCard({ c }) {
       <div className="absolute inset-0">
         <img
           src={img}
-          alt={c.title}
+          alt={title}
           className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-105 transition-all duration-700"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -306,9 +317,9 @@ function SampleCard({ c }) {
         <p className="text-overline text-[#D4FF00]">{c.overline}</p>
         <div>
           <h3 className="font-display text-3xl md:text-4xl whitespace-pre-line">
-            {c.title}
+            {title}
           </h3>
-          <p className="text-sm text-zinc-300 mt-4 max-w-sm">{c.body}</p>
+          <p className="text-sm text-zinc-300 mt-4 max-w-sm">{body}</p>
           <span className="inline-flex items-center gap-2 mt-6 text-white group-hover:text-[#D4FF00] transition-colors">
             <span className="text-overline">{c.cta}</span>
             <ArrowRight size={16} />
@@ -320,6 +331,10 @@ function SampleCard({ c }) {
 }
 
 function Pricing() {
+  const badge = useContent("pricing_badge", CONTENT_DEFAULTS.pricing_badge);
+  const ha = useContent("pricing_headline_a", CONTENT_DEFAULTS.pricing_headline_a);
+  const hb = useContent("pricing_headline_b", CONTENT_DEFAULTS.pricing_headline_b);
+  const explainer = useContent("pricing_explainer", CONTENT_DEFAULTS.pricing_explainer);
   return (
     <section
       id="pricing"
@@ -331,21 +346,16 @@ function Pricing() {
           <div className="inline-flex items-center gap-2 mb-5 border border-[#D4FF00]/40 bg-[#D4FF00]/5 px-3 py-1.5">
             <span className="w-1.5 h-1.5 bg-[#D4FF00] rounded-full animate-pulse" />
             <p className="text-overline text-[#D4FF00] text-[10px]">
-              Launch offer · 75% off · Limited time
+              {badge}
             </p>
           </div>
           <p className="text-overline mb-4">— Pricing</p>
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl max-w-3xl">
-            Your own app.
+            {ha}
             <br />
-            <span className="text-[#D4FF00]">
-              Normally £20. Now £4.99.
-            </span>
+            <span className="text-[#D4FF00]">{hb}</span>
           </h2>
-          <p className="text-sm text-zinc-400 mt-5 max-w-xl">
-            We&apos;re running a launch offer to seed the first wave of users
-            with real feedback. Once we hit our cap, the price reverts to £20.
-          </p>
+          <p className="text-sm text-zinc-400 mt-5 max-w-xl">{explainer}</p>
         </div>
 
         <div className="grid md:grid-cols-2 border border-white/10">
@@ -601,28 +611,19 @@ function Methodology() {
 }
 
 function B2B() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const overline = useContent("coaches_overline", CONTENT_DEFAULTS.coaches_overline);
+  const ha = useContent("coaches_headline_a", CONTENT_DEFAULTS.coaches_headline_a);
+  const hb = useContent("coaches_headline_b", CONTENT_DEFAULTS.coaches_headline_b);
+  const body = useContent("coaches_body", CONTENT_DEFAULTS.coaches_body);
+  const noSub = useContent("coaches_no_subscription", CONTENT_DEFAULTS.coaches_no_subscription);
+  const cta = useContent("coaches_cta", CONTENT_DEFAULTS.coaches_cta);
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!email || !email.includes("@")) {
-      toast.error("Enter a valid email");
-      return;
-    }
-    setLoading(true);
-    try {
-      await axios.post(`${API}/waitlist`, { email, source: "b2b" });
-      setDone(true);
-      toast.success("You're on the waitlist. We'll be in touch.");
-      setEmail("");
-    } catch {
-      toast.error("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const perks = [
+    "Your logo · your brand colours",
+    "4 expert-led training templates to start from",
+    "Unique shareable link per client",
+    "No subscription · no tie-ins · no cancellation calls",
+  ];
 
   return (
     <section
@@ -632,59 +633,54 @@ function B2B() {
     >
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-24 md:py-32 grid md:grid-cols-12 gap-12">
         <div className="md:col-span-6">
-          <p className="text-overline mb-4">— For coaches & gyms</p>
+          <p className="text-overline mb-4">{overline}</p>
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl">
-            Are you a PT,
+            {ha}
             <br />
-            coach, gym or
-            <br />
-            <span className="text-[#D4FF00]">rehab specialist?</span>
+            <span className="text-[#D4FF00]">{hb}</span>
           </h2>
+          <p className="text-base text-zinc-300 leading-relaxed mt-8 max-w-lg">
+            {body}
+          </p>
         </div>
-        <div className="md:col-span-6 md:pl-12 md:border-l border-white/10 flex flex-col justify-center">
-          <p className="text-base text-zinc-300 leading-relaxed">
-            Built.For.You isn&apos;t just for individuals. PTs, personal
-            trainers, gyms, sports clubs and rehab clinics can use the platform
-            to create fully branded training apps for their clients — with
-            their own logo, colours and content. Same expert-led foundation, your
-            brand on top.
-          </p>
-          <p className="text-sm text-zinc-500 mt-4 leading-relaxed">
-            White-label · client management · bulk creation · revenue share.
-            Coming soon.
-          </p>
 
-          {done ? (
-            <div
-              data-testid="b2b-waitlist-success"
-              className="mt-8 border border-[#D4FF00]/40 px-5 py-4 text-sm text-[#D4FF00] flex items-center gap-3"
+        <div className="md:col-span-6 md:pl-12 md:border-l border-white/10 flex flex-col justify-center">
+          <div className="border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-5 mb-8 flex gap-3">
+            <Sparkles size={18} className="text-[#D4FF00] shrink-0 mt-0.5" />
+            <p className="text-sm text-white leading-relaxed">
+              <span className="text-[#D4FF00] font-bold uppercase tracking-widest text-[11px] block mb-1">
+                No subscription
+              </span>
+              {noSub}
+            </p>
+          </div>
+
+          <ul className="flex flex-col gap-3 mb-8">
+            {perks.map((p) => (
+              <li key={p} className="flex items-start gap-3 text-sm text-zinc-300">
+                <Check size={16} className="text-[#D4FF00] mt-0.5" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/coach"
+              data-testid="coaches-signup-cta"
+              className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white transition-colors active:scale-[0.98]"
             >
-              <Check size={16} /> You&apos;re on the waitlist. We&apos;ll email
-              you when B2B opens.
-            </div>
-          ) : (
-            <form
-              data-testid="b2b-waitlist-form"
-              onSubmit={submit}
-              className="mt-8 flex flex-col sm:flex-row gap-3"
+              {cta}
+              <ArrowRight size={16} />
+            </Link>
+            <Link
+              to="/coach"
+              data-testid="coaches-signin"
+              className="text-overline text-zinc-400 hover:text-[#D4FF00] transition-colors"
             >
-              <input
-                data-testid="b2b-waitlist-email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-transparent border border-white/15 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-[#D4FF00] focus:outline-none"
-              />
-              <button
-                data-testid="b2b-waitlist-submit"
-                disabled={loading}
-                className="bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-6 py-3 hover:bg-white transition-colors disabled:opacity-50"
-              >
-                {loading ? "Joining…" : "Join the waitlist →"}
-              </button>
-            </form>
-          )}
+              Already have an account? Sign in →
+            </Link>
+          </div>
         </div>
       </div>
     </section>

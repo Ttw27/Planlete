@@ -4,6 +4,8 @@
 
 :root {
     color-scheme: dark;
+    --accent: #D4FF00;
+    --brand-bg: #050505;
 }
 
 html,

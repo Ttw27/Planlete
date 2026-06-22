@@ -1,32 +1,38 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Header, Depends, Query, Response
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Header, Depends, Query, Response, Request
 from dotenv import load_dotenv
+load_dotenv()
+
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import uuid
+import re
 import requests
 import secrets
+import bcrypt
+import jwt
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import Optional, Dict, Any, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-APP_NAME = os.environ.get("APP_NAME", "builtforyou")
+APP_NAME = os.environ.get("APP_NAME", "planlete")
 EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
+JWT_ALGORITHM = "HS256"
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
 
-app = FastAPI(title="Built.For.You API")
+app = FastAPI(title="Planlete API")
 api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -67,6 +73,33 @@ def get_object(path: str):
     )
     resp.raise_for_status()
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+# ===== Auth helpers =====
+def hash_password(pw: str) -> str:
+    return bcrypt.hashpw(pw.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def create_coach_token(coach_id: str, email: str) -> str:
+    payload = {
+        "sub": coach_id,
+        "email": email,
+        "type": "coach",
+        "exp": datetime.now(timezone.utc) + timedelta(days=30),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def slugify(s: str) -> str:
+    s = re.sub(r"[^a-zA-Z0-9]+", "-", s.lower()).strip("-")
+    return s[:48] or uuid.uuid4().hex[:8]
 
 
 # ===== Models =====
@@ -113,7 +146,60 @@ class ImageRecord(BaseModel):
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
-# ===== Auth dep =====
+class ContentSetRequest(BaseModel):
+    key: str
+    value: str
+
+
+# Coach models
+class CoachSignup(BaseModel):
+    email: EmailStr
+    password: str
+    brand_name: str
+
+
+class CoachLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class CoachBrandUpdate(BaseModel):
+    brand_name: Optional[str] = None
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
+
+
+class ClientPlanCreate(BaseModel):
+    client_name: str
+    client_email: Optional[EmailStr] = None
+    template: str  # athlete | longevity | football | sprinter
+    notes: Optional[str] = None
+
+
+class CoachPublic(BaseModel):
+    id: str
+    email: EmailStr
+    brand_name: str
+    slug: str
+    logo_url: Optional[str] = None
+    primary_color: str = "#D4FF00"
+    secondary_color: str = "#050505"
+    created_at: str
+
+
+class ClientPlanPublic(BaseModel):
+    id: str
+    coach_id: str
+    client_name: str
+    client_email: Optional[EmailStr] = None
+    template: str
+    notes: Optional[str] = None
+    slug: str
+    created_at: str
+
+
+# ===== Auth deps =====
 def require_admin(x_admin_token: Optional[str] = Header(None), auth: Optional[str] = Query(None)) -> bool:
     token = x_admin_token or auth
     if not token or not ADMIN_TOKEN or not secrets.compare_digest(token, ADMIN_TOKEN):
@@ -121,10 +207,33 @@ def require_admin(x_admin_token: Optional[str] = Header(None), auth: Optional[st
     return True
 
 
+async def get_current_coach(request: Request) -> dict:
+    auth_header = request.headers.get("Authorization", "")
+    token = None
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+    if not token:
+        token = request.cookies.get("coach_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "coach":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        coach = await db.coaches.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+        if not coach:
+            raise HTTPException(status_code=401, detail="Coach not found")
+        return coach
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 # ===== Routes =====
 @api_router.get("/")
 async def root():
-    return {"service": "Built.For.You", "status": "ok"}
+    return {"service": "Planlete", "status": "ok"}
 
 
 @api_router.post("/waitlist", response_model=WaitlistEntry)
@@ -171,11 +280,37 @@ async def admin_verify(_: bool = Depends(require_admin)):
     return {"ok": True}
 
 
+# ===== Content (text) =====
+@api_router.get("/content")
+async def list_content():
+    docs = await db.content.find({}, {"_id": 0}).to_list(500)
+    return {d["key"]: d["value"] for d in docs}
+
+
+@api_router.post("/admin/content")
+async def admin_set_content(payload: ContentSetRequest, _: bool = Depends(require_admin)):
+    await db.content.update_one(
+        {"key": payload.key},
+        {"$set": {
+            "key": payload.key,
+            "value": payload.value,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"ok": True, "key": payload.key}
+
+
+@api_router.delete("/admin/content/{key}")
+async def admin_reset_content(key: str, _: bool = Depends(require_admin)):
+    await db.content.delete_one({"key": key})
+    return {"ok": True}
+
+
 # ===== Images =====
 @api_router.get("/images")
 async def list_images():
-    """Public list of all custom image overrides. Returns {key: url}."""
-    docs = await db.images.find({}, {"_id": 0}).to_list(200)
+    docs = await db.images.find({}, {"_id": 0}).to_list(500)
     return {d["key"]: d["url"] for d in docs}
 
 
@@ -197,23 +332,14 @@ async def admin_upload_image(
     except Exception as e:
         logger.exception("Storage upload failed")
         raise HTTPException(status_code=500, detail=f"Storage failed: {e}")
-    # Public URL served via /api/files/{path}
     public_url = f"/api/files/{result['path']}"
     rec = ImageRecord(key=key, url=public_url, storage_path=result["path"])
-    await db.images.update_one(
-        {"key": key},
-        {"$set": rec.model_dump()},
-        upsert=True,
-    )
+    await db.images.update_one({"key": key}, {"$set": rec.model_dump()}, upsert=True)
     return rec
 
 
 @api_router.post("/admin/images/url", response_model=ImageRecord)
-async def admin_set_image_url(
-    key: str = Query(...),
-    url: str = Query(...),
-    _: bool = Depends(require_admin),
-):
+async def admin_set_image_url(key: str = Query(...), url: str = Query(...), _: bool = Depends(require_admin)):
     rec = ImageRecord(key=key, url=url, storage_path=None)
     await db.images.update_one({"key": key}, {"$set": rec.model_dump()}, upsert=True)
     return rec
@@ -231,11 +357,170 @@ async def serve_file(path: str):
         data, content_type = get_object(path)
     except Exception:
         raise HTTPException(status_code=404, detail="Not found")
-    return Response(
-        content=data,
-        media_type=content_type,
-        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    return Response(content=data, media_type=content_type,
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+# ===== Coach Auth & Brand =====
+async def _coach_to_public(c: dict) -> CoachPublic:
+    c.pop("_id", None)
+    c.pop("password_hash", None)
+    return CoachPublic(**c)
+
+
+@api_router.post("/coach/signup")
+async def coach_signup(payload: CoachSignup, response: Response):
+    email = payload.email.lower()
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if await db.coaches.find_one({"email": email}):
+        raise HTTPException(status_code=409, detail="Email already registered")
+    base_slug = slugify(payload.brand_name)
+    slug = base_slug
+    i = 1
+    while await db.coaches.find_one({"slug": slug}):
+        i += 1
+        slug = f"{base_slug}-{i}"
+    coach_doc = {
+        "id": str(uuid.uuid4()),
+        "email": email,
+        "password_hash": hash_password(payload.password),
+        "brand_name": payload.brand_name.strip(),
+        "slug": slug,
+        "logo_url": None,
+        "primary_color": "#D4FF00",
+        "secondary_color": "#050505",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.coaches.insert_one(coach_doc)
+    token = create_coach_token(coach_doc["id"], email)
+    response.set_cookie("coach_token", token, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30, path="/")
+    public = await _coach_to_public({**coach_doc})
+    return {"coach": public, "token": token}
+
+
+@api_router.post("/coach/login")
+async def coach_login(payload: CoachLogin, response: Response):
+    email = payload.email.lower()
+    coach = await db.coaches.find_one({"email": email})
+    if not coach or not verify_password(payload.password, coach.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_coach_token(coach["id"], email)
+    response.set_cookie("coach_token", token, httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30, path="/")
+    public = await _coach_to_public({**coach})
+    return {"coach": public, "token": token}
+
+
+@api_router.post("/coach/logout")
+async def coach_logout(response: Response):
+    response.delete_cookie("coach_token", path="/")
+    return {"ok": True}
+
+
+@api_router.get("/coach/me", response_model=CoachPublic)
+async def coach_me(coach: dict = Depends(get_current_coach)):
+    return CoachPublic(**coach)
+
+
+@api_router.patch("/coach/me", response_model=CoachPublic)
+async def coach_update(payload: CoachBrandUpdate, coach: dict = Depends(get_current_coach)):
+    updates: Dict[str, Any] = {}
+    if payload.brand_name and payload.brand_name.strip():
+        updates["brand_name"] = payload.brand_name.strip()
+    if payload.logo_url is not None:
+        updates["logo_url"] = payload.logo_url
+    if payload.primary_color:
+        updates["primary_color"] = payload.primary_color
+    if payload.secondary_color:
+        updates["secondary_color"] = payload.secondary_color
+    if updates:
+        await db.coaches.update_one({"id": coach["id"]}, {"$set": updates})
+    new_doc = await db.coaches.find_one({"id": coach["id"]}, {"_id": 0, "password_hash": 0})
+    return CoachPublic(**new_doc)
+
+
+@api_router.post("/coach/logo")
+async def coach_upload_logo(file: UploadFile = File(...), coach: dict = Depends(get_current_coach)):
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image uploads allowed")
+    ext = (file.filename.rsplit(".", 1)[-1] if file.filename and "." in file.filename else "bin").lower()
+    path = f"{APP_NAME}/coaches/{coach['id']}/logo-{uuid.uuid4()}.{ext}"
+    data = await file.read()
+    if len(data) > 4 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Max 4MB")
+    result = put_object(path, data, file.content_type)
+    logo_url = f"/api/files/{result['path']}"
+    await db.coaches.update_one({"id": coach["id"]}, {"$set": {"logo_url": logo_url}})
+    return {"logo_url": logo_url}
+
+
+VALID_TEMPLATES = {"athlete", "longevity", "football", "sprinter"}
+
+
+@api_router.post("/coach/clients", response_model=ClientPlanPublic)
+async def coach_create_client(payload: ClientPlanCreate, coach: dict = Depends(get_current_coach)):
+    if payload.template not in VALID_TEMPLATES:
+        raise HTTPException(status_code=400, detail="Invalid template")
+    base_slug = slugify(payload.client_name)
+    slug = base_slug
+    i = 1
+    while await db.client_plans.find_one({"coach_id": coach["id"], "slug": slug}):
+        i += 1
+        slug = f"{base_slug}-{i}"
+    doc = {
+        "id": str(uuid.uuid4()),
+        "coach_id": coach["id"],
+        "client_name": payload.client_name.strip(),
+        "client_email": payload.client_email,
+        "template": payload.template,
+        "notes": payload.notes,
+        "slug": slug,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.client_plans.insert_one(doc)
+    return ClientPlanPublic(**{k: v for k, v in doc.items() if k != "_id"})
+
+
+@api_router.get("/coach/clients", response_model=List[ClientPlanPublic])
+async def coach_list_clients(coach: dict = Depends(get_current_coach)):
+    docs = await db.client_plans.find({"coach_id": coach["id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return [ClientPlanPublic(**d) for d in docs]
+
+
+@api_router.delete("/coach/clients/{client_id}")
+async def coach_delete_client(client_id: str, coach: dict = Depends(get_current_coach)):
+    res = await db.client_plans.delete_one({"id": client_id, "coach_id": coach["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+
+# ===== Public branded plan =====
+@api_router.get("/c/{coach_slug}/{client_slug}")
+async def public_branded_plan(coach_slug: str, client_slug: str):
+    coach = await db.coaches.find_one({"slug": coach_slug}, {"_id": 0, "password_hash": 0})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach not found")
+    client_plan = await db.client_plans.find_one(
+        {"coach_id": coach["id"], "slug": client_slug}, {"_id": 0}
     )
+    if not client_plan:
+        raise HTTPException(status_code=404, detail="Client plan not found")
+    return {
+        "coach": {
+            "brand_name": coach["brand_name"],
+            "slug": coach["slug"],
+            "logo_url": coach.get("logo_url"),
+            "primary_color": coach.get("primary_color", "#D4FF00"),
+            "secondary_color": coach.get("secondary_color", "#050505"),
+        },
+        "client": {
+            "client_name": client_plan["client_name"],
+            "template": client_plan["template"],
+            "notes": client_plan.get("notes"),
+            "slug": client_plan["slug"],
+        },
+    }
 
 
 app.include_router(api_router)
@@ -256,6 +541,14 @@ async def startup():
         logger.info("Storage initialised")
     except Exception as e:
         logger.warning(f"Storage init deferred: {e}")
+    try:
+        await db.coaches.create_index("email", unique=True)
+        await db.coaches.create_index("slug", unique=True)
+        await db.client_plans.create_index([("coach_id", 1), ("slug", 1)], unique=True)
+        await db.content.create_index("key", unique=True)
+        await db.images.create_index("key", unique=True)
+    except Exception as e:
+        logger.warning(f"Index ensure: {e}")
 
 
 @app.on_event("shutdown")
