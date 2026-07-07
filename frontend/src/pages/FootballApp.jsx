@@ -28,7 +28,13 @@ export default function FootballApp() {
   const { images } = useImages();
   return (
     <div className="min-h-screen bg-black">
-      <PlanCarousel images={images} slides={SLIDES} planLabel="Football Player Plan" />
+      <PlanCarousel
+        images={images}
+        slides={SLIDES}
+        planLabel="Football Player Plan"
+        linkKey="sample_link_football"
+        defaultLink="https://planlete.vercel.app/app/football"
+      />
     </div>
   );
 }

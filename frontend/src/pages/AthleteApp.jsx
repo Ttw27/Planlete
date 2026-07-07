@@ -28,7 +28,13 @@ export default function AthleteApp() {
   const { images } = useImages();
   return (
     <div className="min-h-screen bg-black">
-      <PlanCarousel images={images} slides={SLIDES} planLabel="Athlete Performance Plan" />
+      <PlanCarousel
+        images={images}
+        slides={SLIDES}
+        planLabel="Athlete Performance Plan"
+        linkKey="sample_link_athlete"
+        defaultLink="https://planlete.vercel.app/app/athlete"
+      />
     </div>
   );
 }

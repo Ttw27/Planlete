@@ -28,7 +28,13 @@ export default function SprinterApp() {
   const { images } = useImages();
   return (
     <div className="min-h-screen bg-black">
-      <PlanCarousel images={images} slides={SLIDES} planLabel="Sprint Training Plan" />
+      <PlanCarousel
+        images={images}
+        slides={SLIDES}
+        planLabel="Sprint Training Plan"
+        linkKey="sample_link_sprinter"
+        defaultLink="https://planlete.vercel.app/app/sprinter"
+      />
     </div>
   );
 }

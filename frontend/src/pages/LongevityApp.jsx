@@ -28,7 +28,13 @@ export default function LongevityApp() {
   const { images } = useImages();
   return (
     <div className="min-h-screen bg-black">
-      <PlanCarousel images={images} slides={SLIDES} planLabel="Longevity & Fitness Plan" />
+      <PlanCarousel
+        images={images}
+        slides={SLIDES}
+        planLabel="Longevity & Fitness Plan"
+        linkKey="sample_link_longevity"
+        defaultLink="https://planlete.vercel.app/app/longevity"
+      />
     </div>
   );
 }
