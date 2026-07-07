@@ -6,45 +6,44 @@ const MODES = ["off-season", "pre-season", "in-season"];
 const FOOTBALL_DATA = {
   brand: "Planlete",
   tagline: "Football Player Plan",
-  hero: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80",
   modes: {
     "off-season": {
       days: [
         { day: "Mon", label: "Lower Power", focus: "Strength base", workouts: [
-          { name: "Back Squat", sets: "4×5", load: "85% 1RM", rest: "3min" },
-          { name: "Romanian Deadlift", sets: "3×8", load: "70% 1RM", rest: "2min" },
-          { name: "Bulgarian Split Squat", sets: "3×10", load: "60%", rest: "90s" },
-          { name: "Hamstring Curl", sets: "3×12", load: "Moderate", rest: "60s" },
-          { name: "Calf Raise", sets: "4×15", load: "Heavy", rest: "45s" },
+          { name: "Back Squat", sets: "4x5", load: "85% 1RM", rest: "3min" },
+          { name: "Romanian Deadlift", sets: "3x8", load: "70% 1RM", rest: "2min" },
+          { name: "Bulgarian Split Squat", sets: "3x10", load: "60%", rest: "90s" },
+          { name: "Hamstring Curl", sets: "3x12", load: "Moderate", rest: "60s" },
+          { name: "Calf Raise", sets: "4x15", load: "Heavy", rest: "45s" },
         ]},
         { day: "Tue", label: "Upper Power", focus: "Push + pull", workouts: [
-          { name: "Bench Press", sets: "4×5", load: "80% 1RM", rest: "3min" },
-          { name: "Weighted Pull-up", sets: "4×6", load: "BW+10kg", rest: "2min" },
-          { name: "DB Shoulder Press", sets: "3×10", load: "Moderate", rest: "90s" },
-          { name: "Cable Row", sets: "3×12", load: "Moderate", rest: "60s" },
-          { name: "Face Pull", sets: "3×15", load: "Light", rest: "45s" },
+          { name: "Bench Press", sets: "4x5", load: "80% 1RM", rest: "3min" },
+          { name: "Weighted Pull-up", sets: "4x6", load: "BW+10kg", rest: "2min" },
+          { name: "DB Shoulder Press", sets: "3x10", load: "Moderate", rest: "90s" },
+          { name: "Cable Row", sets: "3x12", load: "Moderate", rest: "60s" },
+          { name: "Face Pull", sets: "3x15", load: "Light", rest: "45s" },
         ]},
         { day: "Wed", label: "Speed & Agility", focus: "Sprint base", workouts: [
-          { name: "10m Accelerations", sets: "8×1", load: "95% max", rest: "90s" },
-          { name: "Lateral Shuffle", sets: "5×10m", load: "Max effort", rest: "60s" },
+          { name: "10m Accelerations", sets: "8x1", load: "95% max", rest: "90s" },
+          { name: "Lateral Shuffle", sets: "5x10m", load: "Max effort", rest: "60s" },
           { name: "T-Drill", sets: "6 reps", load: "Max speed", rest: "90s" },
-          { name: "Box Jump", sets: "4×5", load: "Explosive", rest: "2min" },
+          { name: "Box Jump", sets: "4x5", load: "Explosive", rest: "2min" },
         ]},
         { day: "Thu", label: "Rest / Mobility", focus: "Recovery", workouts: [
-          { name: "Hip Flexor Stretch", sets: "3×60s", load: "Bodyweight", rest: "30s" },
-          { name: "Thoracic Rotation", sets: "3×10 each", load: "Bodyweight", rest: "30s" },
-          { name: "Foam Roll — Quads", sets: "2min", load: "Moderate", rest: "—" },
-          { name: "Foam Roll — ITB", sets: "2min", load: "Moderate", rest: "—" },
+          { name: "Hip Flexor Stretch", sets: "3x60s", load: "Bodyweight", rest: "30s" },
+          { name: "Thoracic Rotation", sets: "3x10 each", load: "Bodyweight", rest: "30s" },
+          { name: "Foam Roll Quads", sets: "2min", load: "Moderate", rest: "—" },
+          { name: "Foam Roll ITB", sets: "2min", load: "Moderate", rest: "—" },
         ]},
         { day: "Fri", label: "Full Body", focus: "Compound", workouts: [
-          { name: "Deadlift", sets: "4×4", load: "87% 1RM", rest: "3min" },
-          { name: "Incline Press", sets: "3×8", load: "75%", rest: "2min" },
-          { name: "Chin-up", sets: "3×8", load: "BW", rest: "90s" },
-          { name: "DB Lunge", sets: "3×10 each", load: "Moderate", rest: "60s" },
+          { name: "Deadlift", sets: "4x4", load: "87% 1RM", rest: "3min" },
+          { name: "Incline Press", sets: "3x8", load: "75%", rest: "2min" },
+          { name: "Chin-up", sets: "3x8", load: "BW", rest: "90s" },
+          { name: "DB Lunge", sets: "3x10 each", load: "Moderate", rest: "60s" },
         ]},
         { day: "Sat", label: "Conditioning", focus: "Aerobic base", workouts: [
           { name: "Zone 2 Run", sets: "45min", load: "65% HRmax", rest: "—" },
-          { name: "Small Sided Game", sets: "4×8min", load: "High intensity", rest: "2min" },
+          { name: "Small Sided Game", sets: "4x8min", load: "High intensity", rest: "2min" },
         ]},
         { day: "Sun", label: "Rest", focus: "Full recovery", workouts: [
           { name: "Walk", sets: "30min", load: "Easy", rest: "—" },
@@ -68,28 +67,28 @@ const FOOTBALL_DATA = {
     "pre-season": {
       days: [
         { day: "Mon", label: "Gym + Pitch", focus: "Power transfer", workouts: [
-          { name: "Power Clean", sets: "4×3", load: "80% 1RM", rest: "3min" },
-          { name: "Squat Jump", sets: "4×5", load: "BW+20kg", rest: "2min" },
+          { name: "Power Clean", sets: "4x3", load: "80% 1RM", rest: "3min" },
+          { name: "Squat Jump", sets: "4x5", load: "BW+20kg", rest: "2min" },
           { name: "45min Pitch Session", sets: "1", load: "Tactical", rest: "—" },
         ]},
         { day: "Tue", label: "Conditioning", focus: "High intensity", workouts: [
-          { name: "Repeated Sprints", sets: "10×30m", load: "95%", rest: "30s" },
-          { name: "High-low Runs", sets: "5×200m", load: "85%", rest: "90s" },
+          { name: "Repeated Sprints", sets: "10x30m", load: "95%", rest: "30s" },
+          { name: "High-low Runs", sets: "5x200m", load: "85%", rest: "90s" },
           { name: "Agility Circuit", sets: "3 rounds", load: "Max", rest: "2min" },
         ]},
         { day: "Wed", label: "Team Session", focus: "Ball work", workouts: [
-          { name: "Rondo", sets: "4×8min", load: "High press", rest: "2min" },
-          { name: "SSG 6v6", sets: "4×10min", load: "Competitive", rest: "2min" },
+          { name: "Rondo", sets: "4x8min", load: "High press", rest: "2min" },
+          { name: "SSG 6v6", sets: "4x10min", load: "Competitive", rest: "2min" },
           { name: "Set Pieces", sets: "20min", load: "Technical", rest: "—" },
         ]},
         { day: "Thu", label: "Gym", focus: "Maintain strength", workouts: [
-          { name: "Back Squat", sets: "3×5", load: "80%", rest: "3min" },
-          { name: "Bench Press", sets: "3×5", load: "80%", rest: "3min" },
-          { name: "Pull-up", sets: "3×8", load: "BW", rest: "2min" },
+          { name: "Back Squat", sets: "3x5", load: "80%", rest: "3min" },
+          { name: "Bench Press", sets: "3x5", load: "80%", rest: "3min" },
+          { name: "Pull-up", sets: "3x8", load: "BW", rest: "2min" },
         ]},
         { day: "Fri", label: "Activation", focus: "MD-1 prep", workouts: [
           { name: "Activation Circuit", sets: "2 rounds", load: "Light", rest: "60s" },
-          { name: "Short Sprints", sets: "5×10m", load: "95%", rest: "90s" },
+          { name: "Short Sprints", sets: "5x10m", load: "95%", rest: "90s" },
           { name: "Mobility", sets: "15min", load: "Light", rest: "—" },
         ]},
         { day: "Sat", label: "Match / Friendly", focus: "Game day", workouts: [
@@ -118,13 +117,13 @@ const FOOTBALL_DATA = {
     "in-season": {
       days: [
         { day: "MD-2", label: "Gym", focus: "Maintain", workouts: [
-          { name: "Squat", sets: "3×4", load: "80%", rest: "3min" },
-          { name: "Bench", sets: "3×4", load: "80%", rest: "3min" },
-          { name: "Hip Thrust", sets: "3×6", load: "Heavy", rest: "2min" },
-          { name: "Nordic Curl", sets: "3×5", load: "Eccentric", rest: "2min" },
+          { name: "Squat", sets: "3x4", load: "80%", rest: "3min" },
+          { name: "Bench", sets: "3x4", load: "80%", rest: "3min" },
+          { name: "Hip Thrust", sets: "3x6", load: "Heavy", rest: "2min" },
+          { name: "Nordic Curl", sets: "3x5", load: "Eccentric", rest: "2min" },
         ]},
         { day: "MD-1", label: "Activation", focus: "Game prep", workouts: [
-          { name: "Acceleration Runs", sets: "6×10m", load: "95%", rest: "90s" },
+          { name: "Acceleration Runs", sets: "6x10m", load: "95%", rest: "90s" },
           { name: "Activation Circuit", sets: "2 rounds", load: "Light-mod", rest: "60s" },
           { name: "Mobility", sets: "15min", load: "Light", rest: "—" },
         ]},
@@ -139,13 +138,13 @@ const FOOTBALL_DATA = {
           { name: "Full Body Stretch", sets: "20min", load: "Light", rest: "—" },
         ]},
         { day: "MD+2", label: "Light Training", focus: "Ball work", workouts: [
-          { name: "Rondo", sets: "3×6min", load: "Low intensity", rest: "2min" },
+          { name: "Rondo", sets: "3x6min", load: "Low intensity", rest: "2min" },
           { name: "Technical Drills", sets: "20min", load: "Skill focus", rest: "—" },
         ]},
         { day: "MD+3", label: "Gym", focus: "Strength maintain", workouts: [
-          { name: "Deadlift", sets: "3×4", load: "78%", rest: "3min" },
-          { name: "Pull-up", sets: "3×6", load: "BW+5kg", rest: "2min" },
-          { name: "Single Leg Press", sets: "3×8", load: "Moderate", rest: "90s" },
+          { name: "Deadlift", sets: "3x4", load: "78%", rest: "3min" },
+          { name: "Pull-up", sets: "3x6", load: "BW+5kg", rest: "2min" },
+          { name: "Single Leg Press", sets: "3x8", load: "Moderate", rest: "90s" },
         ]},
         { day: "Rest", label: "Full Rest", focus: "Recovery", workouts: [
           { name: "Sleep 8-9hrs", sets: "1", load: "Priority", rest: "—" },
@@ -168,7 +167,7 @@ const FOOTBALL_DATA = {
     },
   },
   recovery: {
-    sleepTarget: "8–9h",
+    sleepTarget: "8-9h",
     hrvTrend: "↑ Good",
     protocols: [
       "Ice bath 10min post-match",
@@ -179,9 +178,9 @@ const FOOTBALL_DATA = {
     ],
   },
   morningRoutine: [
-    "Hip flexor activation — 2×60s each",
-    "Glute bridges — 2×15",
-    "Thoracic rotations — 2×10",
+    "Hip flexor activation — 2x60s each",
+    "Glute bridges — 2x15",
+    "Thoracic rotations — 2x10",
     "Ankle circles — 30s each",
     "Light jog or walk — 5min",
   ],

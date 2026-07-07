@@ -1,42 +1,40 @@
 import AppShell from "../components/AppShell";
-import { useImages } from "../hooks/useImages";
 
 const ATHLETE_DATA = {
   brand: "Planlete",
   tagline: "Athlete Performance Plan",
-  hero: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
   days: [
     { day: "Mon", label: "Lower Power", focus: "Strength + velocity", workouts: [
-      { name: "Back Squat", sets: "5×3", load: "87% 1RM", rest: "3min" },
-      { name: "Romanian Deadlift", sets: "4×6", load: "75%", rest: "2min" },
-      { name: "Leg Press", sets: "3×10", load: "Moderate-heavy", rest: "90s" },
-      { name: "Nordic Curl", sets: "3×5", load: "Eccentric", rest: "2min" },
-      { name: "Calf Raise", sets: "4×15", load: "Heavy", rest: "60s" },
+      { name: "Back Squat", sets: "5x3", load: "87% 1RM", rest: "3min" },
+      { name: "Romanian Deadlift", sets: "4x6", load: "75%", rest: "2min" },
+      { name: "Leg Press", sets: "3x10", load: "Moderate-heavy", rest: "90s" },
+      { name: "Nordic Curl", sets: "3x5", load: "Eccentric", rest: "2min" },
+      { name: "Calf Raise", sets: "4x15", load: "Heavy", rest: "60s" },
     ]},
     { day: "Tue", label: "Upper Push", focus: "Horizontal + vertical", workouts: [
-      { name: "Bench Press", sets: "5×3", load: "85% 1RM", rest: "3min" },
-      { name: "Incline DB Press", sets: "4×8", load: "Moderate", rest: "2min" },
-      { name: "Overhead Press", sets: "3×8", load: "70%", rest: "90s" },
-      { name: "Cable Fly", sets: "3×12", load: "Light", rest: "60s" },
-      { name: "Tricep Pushdown", sets: "3×15", load: "Moderate", rest: "45s" },
+      { name: "Bench Press", sets: "5x3", load: "85% 1RM", rest: "3min" },
+      { name: "Incline DB Press", sets: "4x8", load: "Moderate", rest: "2min" },
+      { name: "Overhead Press", sets: "3x8", load: "70%", rest: "90s" },
+      { name: "Cable Fly", sets: "3x12", load: "Light", rest: "60s" },
+      { name: "Tricep Pushdown", sets: "3x15", load: "Moderate", rest: "45s" },
     ]},
     { day: "Wed", label: "Upper Pull", focus: "Back + biceps", workouts: [
-      { name: "Weighted Pull-up", sets: "5×4", load: "BW+15kg", rest: "3min" },
-      { name: "Barbell Row", sets: "4×6", load: "80%", rest: "2min" },
-      { name: "Cable Row", sets: "3×10", load: "Moderate", rest: "90s" },
-      { name: "Face Pull", sets: "3×15", load: "Light", rest: "60s" },
-      { name: "Barbell Curl", sets: "3×8", load: "Moderate\", rest: "90s\" },
+      { name: "Weighted Pull-up", sets: "5x4", load: "BW+15kg", rest: "3min" },
+      { name: "Barbell Row", sets: "4x6", load: "80%", rest: "2min" },
+      { name: "Cable Row", sets: "3x10", load: "Moderate", rest: "90s" },
+      { name: "Face Pull", sets: "3x15", load: "Light", rest: "60s" },
+      { name: "Barbell Curl", sets: "3x8", load: "Moderate", rest: "90s" },
     ]},
     { day: "Thu", label: "Lower Strength", focus: "Quads + hamstrings", workouts: [
-      { name: "Front Squat", sets: "5×3", load: "85% 1RM", rest: "3min" },
-      { name: "Trap Bar Deadlift", sets: "4×5", load: "80%", rest: "3min" },
-      { name: "Leg Curl", sets: "3×8", load: "Moderate", rest: "2min" },
-      { name: "Belt Squat", sets: "3×10", load: "Moderate", rest: "90s" },
-      { name: "Seated Leg Extension", sets: "3×12", load: "Light", rest: "60s" },
+      { name: "Front Squat", sets: "5x3", load: "85% 1RM", rest: "3min" },
+      { name: "Trap Bar Deadlift", sets: "4x5", load: "80%", rest: "3min" },
+      { name: "Leg Curl", sets: "3x8", load: "Moderate", rest: "2min" },
+      { name: "Belt Squat", sets: "3x10", load: "Moderate", rest: "90s" },
+      { name: "Seated Leg Extension", sets: "3x12", load: "Light", rest: "60s" },
     ]},
     { day: "Fri", label: "Full Body Conditioning", focus: "Work capacity", workouts: [
-      { name: "Sled Push", sets: "6×20m", load: "Heavy", rest: "2min" },
-      { name: "Battle Ropes", sets: "4×30s", load: "Max effort", rest: "90s" },
+      { name: "Sled Push", sets: "6x20m", load: "Heavy", rest: "2min" },
+      { name: "Battle Ropes", sets: "4x30s", load: "Max effort", rest: "90s" },
     ]},
     { day: "Sat", label: "Active Recovery", focus: "Mobility + parasympathetic", workouts: [
       { name: "Walk", sets: "60min", load: "Easy", rest: "—" },
@@ -74,7 +72,7 @@ const ATHLETE_DATA = {
   },
   morningRoutine: [
     "Hip flexor stretch — 60s each",
-    "Glute bridge — 2×15",
+    "Glute bridge — 2x15",
     "Cat-cow — 10 reps",
     "Shoulder circles — 30s",
     "5min walk or light jog",
