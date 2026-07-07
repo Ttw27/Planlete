@@ -115,6 +115,16 @@ export const CONTENT_GROUPS = [
       { key: "footer_cta", label: "Footer CTA button", default: "Build my plan — £4.99" },
     ],
   },
+  {
+    id: "sample_links",
+    label: "Sample plan links (emailed to leads)",
+    fields: [
+      { key: "sample_link_athlete", label: "Athlete sample link", default: "https://planlete.vercel.app/app/athlete" },
+      { key: "sample_link_longevity", label: "Longevity sample link", default: "https://planlete.vercel.app/app/longevity" },
+      { key: "sample_link_football", label: "Football sample link", default: "https://planlete.vercel.app/app/football" },
+      { key: "sample_link_sprinter", label: "Sprinter sample link", default: "https://planlete.vercel.app/app/sprinter" },
+    ],
+  },
 ];
 
 export const CONTENT_DEFAULTS = CONTENT_GROUPS.reduce((acc, g) => {
