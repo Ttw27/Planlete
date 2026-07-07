@@ -1,6 +1,71 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Bookmark, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Check, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import axios from "axios";
+import { toast } from "sonner";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+// ─── Email Gate ──────────────────────────────────────────────────────────────
+function EmailGate({ planLabel, onClose, onSuccess }) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!email.includes("@")) {
+      toast.error("Enter a valid email");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await axios.post(`${API}/leads/sample`, { email, plan_type: planLabel });
+      onSuccess();
+    } catch (error) {
+      console.error("Lead capture error:", error);
+      toast.error("Something went wrong. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur flex items-end md:items-center justify-center p-4">
+      <div className="bg-zinc-900 border border-white/10 w-full max-w-md p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-zinc-500 hover:text-white"
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
+        <p className="font-display text-2xl uppercase mb-1">Download this sample</p>
+        <p className="text-zinc-400 text-sm mb-6">
+          Pop your email in and we'll send you the link — plus show you how to save it to your phone.
+        </p>
+        <form onSubmit={submit} className="flex flex-col gap-3">
+          <input
+            type="email"
+            placeholder="you@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoFocus
+            className="w-full bg-transparent border-b border-white/20 focus:border-[#D4FF00] outline-none text-lg py-3 placeholder:text-white/20"
+          />
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full mt-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-6 py-3 hover:bg-white transition-colors disabled:opacity-50"
+          >
+            {submitting ? "Sending…" : "Get my sample"}
+          </button>
+        </form>
+        <p className="text-xs text-zinc-600 mt-4">No spam. Just your sample link.</p>
+      </div>
+    </div>
+  );
+}
 
 // ─── Save to Phone Instructions ─────────────────────────────────────────────
 function SaveInstructions({ onClose }) {
@@ -63,8 +128,9 @@ function SaveInstructions({ onClose }) {
  */
 export default function PlanCarousel({ images = {}, slides = [], planLabel = "This plan", buildHref = "/build" }) {
   const [current, setCurrent] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const [showEmailGate, setShowEmailGate] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const total = slides.length;
 
   if (total === 0) return null;
@@ -75,13 +141,25 @@ export default function PlanCarousel({ images = {}, slides = [], planLabel = "Th
   const slide = slides[current];
   const imgSrc = images?.[slide.imageKey] || slide.fallback;
 
-  const handleSave = () => {
-    setSaved(true);
+  const handleDownloadClick = () => {
+    setShowEmailGate(true);
+  };
+
+  const handleEmailSuccess = () => {
+    setShowEmailGate(false);
+    setDownloaded(true);
     setShowInstructions(true);
   };
 
   return (
     <>
+      {showEmailGate && (
+        <EmailGate
+          planLabel={planLabel}
+          onClose={() => setShowEmailGate(false)}
+          onSuccess={handleEmailSuccess}
+        />
+      )}
       {showInstructions && <SaveInstructions onClose={() => setShowInstructions(false)} />}
 
       <div className="w-full bg-zinc-950 border-b border-white/10">
@@ -125,7 +203,7 @@ export default function PlanCarousel({ images = {}, slides = [], planLabel = "Th
         </div>
 
         {/* Dots + actions */}
-        <div className="px-5 py-4 flex items-center justify-between gap-4">
+        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Dots */}
           <div className="flex gap-1.5">
             {slides.map((_, i) => (
@@ -142,15 +220,15 @@ export default function PlanCarousel({ images = {}, slides = [], planLabel = "Th
           {/* Buttons */}
           <div className="flex gap-2">
             <button
-              onClick={handleSave}
+              onClick={handleDownloadClick}
               className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wide px-4 py-2 border transition-colors ${
-                saved
+                downloaded
                   ? "border-[#D4FF00] text-[#D4FF00]"
                   : "border-white/20 text-white hover:border-white"
               }`}
             >
-              {saved ? <Check size={12} /> : <Bookmark size={12} />}
-              {saved ? "Saved" : "Save to phone"}
+              {downloaded ? <Check size={12} /> : <Download size={12} />}
+              {downloaded ? "Sent" : "Download sample"}
             </button>
             <Link
               to={buildHref}
