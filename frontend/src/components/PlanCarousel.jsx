@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Download, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Check, X, Copy, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
+import { useContent } from "../lib/useContent";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -42,7 +43,7 @@ function EmailGate({ planLabel, onClose, onSuccess }) {
         </button>
         <p className="font-display text-2xl uppercase mb-1">Download this sample</p>
         <p className="text-zinc-400 text-sm mb-6">
-          Pop your email in and we'll send you the link — plus show you how to save it to your phone.
+          Pop your email in and we'll show you the link — plus how to save it to your phone.
         </p>
         <form onSubmit={submit} className="flex flex-col gap-3">
           <input
@@ -67,22 +68,64 @@ function EmailGate({ planLabel, onClose, onSuccess }) {
   );
 }
 
-// ─── Save to Phone Instructions ─────────────────────────────────────────────
-function SaveInstructions({ onClose }) {
+// ─── Link + Save Instructions (shown after email is submitted) ──────────────
+function LinkAndInstructions({ link, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy — long-press the link instead");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur flex items-end md:items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-white/10 w-full max-w-md p-6">
-        <p className="font-display text-2xl uppercase mb-1">Save to your phone</p>
-        <p className="text-zinc-400 text-sm mb-6">Follow the steps for your device below.</p>
+      <div className="bg-zinc-900 border border-white/10 w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        <p className="font-display text-2xl uppercase mb-1">Your sample is ready</p>
+        <p className="text-zinc-400 text-sm mb-5">
+          Here's your link. Open it, then save it to your home screen so it feels like an app.
+        </p>
 
-        <div className="flex flex-col gap-5">
+        {/* Link box */}
+        <div className="border border-[#D4FF00]/40 bg-black/40 p-4 mb-6">
+          <p className="text-overline text-[#D4FF00] mb-2">Your link</p>
+          <p className="text-sm text-white break-all mb-3">{link}</p>
+          <div className="flex gap-2">
+            <a
+              href={link}
+              className="flex-1 flex items-center justify-center gap-2 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-4 py-3 hover:bg-white transition-colors"
+            >
+              Open link <ExternalLink size={14} />
+            </a>
+            <button
+              onClick={copyLink}
+              className={`flex items-center justify-center gap-2 border text-xs font-bold uppercase tracking-wide px-4 py-3 transition-colors ${
+                copied
+                  ? "border-[#D4FF00] text-[#D4FF00]"
+                  : "border-white/20 text-white hover:border-white"
+              }`}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+
+        <p className="text-overline mb-4">— Now save it to your phone</p>
+
+        <div className="flex flex-col gap-4">
           {/* iPhone */}
           <div className="border border-white/10 p-4">
             <p className="text-overline text-[#D4FF00] mb-3">iPhone / Safari</p>
             <ol className="flex flex-col gap-2 text-sm text-zinc-300">
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Tap the <strong className="text-white">Share</strong> button at the bottom of Safari (the box with an arrow pointing up)</li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Scroll down and tap <strong className="text-white">"Add to Home Screen"</strong></li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Tap <strong className="text-white">Add</strong> — it appears on your home screen like an app</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Open the link above in Safari</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap the <strong className="text-white">Share</strong> button at the bottom (box with an arrow pointing up)</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Scroll down and tap <strong className="text-white">"Add to Home Screen"</strong></li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Tap <strong className="text-white">Add</strong> — it now sits on your home screen like an app</li>
             </ol>
           </div>
 
@@ -90,9 +133,10 @@ function SaveInstructions({ onClose }) {
           <div className="border border-white/10 p-4">
             <p className="text-overline text-[#D4FF00] mb-3">Samsung / Android Chrome</p>
             <ol className="flex flex-col gap-2 text-sm text-zinc-300">
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Tap the <strong className="text-white">three dots menu</strong> (⋮) in the top right of Chrome</li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap <strong className="text-white">"Add to Home screen"</strong></li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Tap <strong className="text-white">Add</strong> — done</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Open the link above in Chrome</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap the <strong className="text-white">three dots menu</strong> (⋮) top right</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Tap <strong className="text-white">"Add to Home screen"</strong></li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Tap <strong className="text-white">Add</strong> — done</li>
             </ol>
           </div>
 
@@ -100,18 +144,19 @@ function SaveInstructions({ onClose }) {
           <div className="border border-white/10 p-4">
             <p className="text-overline text-[#D4FF00] mb-3">Other Android browsers</p>
             <ol className="flex flex-col gap-2 text-sm text-zinc-300">
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Tap the browser <strong className="text-white">menu</strong> (usually ⋮ or ☰)</li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Look for <strong className="text-white">"Add to Home screen"</strong> or <strong className="text-white">"Install app"</strong></li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Confirm — it saves to your home screen</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Open the link above</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap the browser <strong className="text-white">menu</strong> (usually ⋮ or ☰)</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Look for <strong className="text-white">"Add to Home screen"</strong> or <strong className="text-white">"Install app"</strong></li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Confirm — it saves to your home screen</li>
             </ol>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="w-full mt-6 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-6 py-3 hover:bg-white transition-colors"
+          className="w-full mt-6 border border-white/20 text-white font-bold uppercase tracking-wide text-xs px-6 py-3 hover:border-white transition-colors"
         >
-          Got it
+          Close
         </button>
       </div>
     </div>
@@ -125,11 +170,23 @@ function SaveInstructions({ onClose }) {
  *   slides       — array of { imageKey, fallback, caption? }
  *   planLabel    — e.g. "Football Player"
  *   buildHref    — defaults to "/build"
+ *   linkKey      — content key holding the editable sample link, e.g. "sample_link_athlete"
+ *   defaultLink  — fallback link if no override is set in Admin
  */
-export default function PlanCarousel({ images = {}, slides = [], planLabel = "This plan", buildHref = "/build" }) {
+export default function PlanCarousel({
+  images = {},
+  slides = [],
+  planLabel = "This plan",
+  buildHref = "/build",
+  linkKey,
+  defaultLink,
+}) {
+  const c = useContent();
+  const sampleLink = linkKey ? c(linkKey, defaultLink) : defaultLink;
+
   const [current, setCurrent] = useState(0);
   const [showEmailGate, setShowEmailGate] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const total = slides.length;
 
@@ -148,7 +205,7 @@ export default function PlanCarousel({ images = {}, slides = [], planLabel = "Th
   const handleEmailSuccess = () => {
     setShowEmailGate(false);
     setDownloaded(true);
-    setShowInstructions(true);
+    setShowLinkModal(true);
   };
 
   return (
@@ -160,7 +217,9 @@ export default function PlanCarousel({ images = {}, slides = [], planLabel = "Th
           onSuccess={handleEmailSuccess}
         />
       )}
-      {showInstructions && <SaveInstructions onClose={() => setShowInstructions(false)} />}
+      {showLinkModal && (
+        <LinkAndInstructions link={sampleLink} onClose={() => setShowLinkModal(false)} />
+      )}
 
       <div className="w-full bg-zinc-950 border-b border-white/10">
         {/* Images */}
