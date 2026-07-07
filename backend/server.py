@@ -270,6 +270,19 @@ class AdminLoginResponse(BaseModel):
     token: str
 
 
+class SampleLeadCreate(BaseModel):
+    email: EmailStr
+    plan_type: str
+
+
+class SampleLead(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    plan_type: str
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
 class ImageRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
     key: str
@@ -436,6 +449,20 @@ async def admin_login(payload: AdminLoginRequest):
 @api_router.get("/admin/verify")
 async def admin_verify(_: bool = Depends(require_admin)):
     return {"ok": True}
+
+
+# ===== Sample plan leads (email capture for sample downloads) =====
+@api_router.post("/leads/sample", response_model=SampleLead)
+async def capture_sample_lead(payload: SampleLeadCreate):
+    lead = SampleLead(email=payload.email, plan_type=payload.plan_type)
+    await db.sample_leads.insert_one(lead.model_dump())
+    return lead
+
+
+@api_router.get("/admin/leads", response_model=List[SampleLead])
+async def admin_list_leads(_: bool = Depends(require_admin)):
+    docs = await db.sample_leads.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return [SampleLead(**d) for d in docs]
 
 
 # ===== Content (text) =====
