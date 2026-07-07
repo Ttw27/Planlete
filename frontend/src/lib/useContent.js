@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { CONTENT_DEFAULTS } from "./contentKeys";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
@@ -44,31 +44,27 @@ async function getContentOverrides() {
 }
 
 /**
- * Hook to get a single content value with fallback to default
- * Usage: const text = useContent('hero_h1_line1', 'default text')
+ * Hook that returns a function to get content values
+ * Usage: const c = useContent(); then c("key", "default")
  */
-export function useContent(key, defaultValue = null) {
-  const [value, setValue] = useState(() => {
-    return defaultValue ?? CONTENT_DEFAULTS[key] ?? key;
-  });
+export function useContent() {
+  const [overrides, setOverrides] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    getContentOverrides().then((overrides) => {
+    getContentOverrides().then((data) => {
       if (!mounted) return;
-      const contentValue = overrides[key] ?? defaultValue ?? CONTENT_DEFAULTS[key] ?? key;
-      setValue(contentValue);
+      setOverrides(data);
       setIsLoading(false);
     });
 
     // Listen for cache invalidation
     const listener = () => {
-      getContentOverrides().then((overrides) => {
+      getContentOverrides().then((data) => {
         if (!mounted) return;
-        const contentValue = overrides[key] ?? defaultValue ?? CONTENT_DEFAULTS[key] ?? key;
-        setValue(contentValue);
+        setOverrides(data);
       });
     };
 
@@ -77,13 +73,16 @@ export function useContent(key, defaultValue = null) {
       mounted = false;
       contentListeners.delete(listener);
     };
-  }, [key, defaultValue]);
+  }, []);
 
-  return value;
+  // Return a function that looks up content
+  return (key, defaultValue = null) => {
+    return overrides[key] ?? defaultValue ?? CONTENT_DEFAULTS[key] ?? key;
+  };
 }
 
 /**
- * Hook to get all content overrides
+ * Hook to get all content overrides as an object
  * Usage: const overrides = useAllContent()
  */
 export function useAllContent() {
