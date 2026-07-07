@@ -12,6 +12,8 @@ import requests
 import secrets
 import bcrypt
 import jwt
+import json
+from anthropic import Anthropic
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import Optional, Dict, Any, List
@@ -31,6 +33,9 @@ ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+
+# Initialize Claude client
+anthropic_client = Anthropic()
 
 app = FastAPI(title="Planlete API")
 api_router = APIRouter(prefix="/api")
@@ -73,6 +78,126 @@ def get_object(path: str):
     )
     resp.raise_for_status()
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+# ===== Claude AI Plan Generation =====
+async def generate_plan_with_claude(answers: dict) -> dict:
+    """
+    Generate a personalised training plan using Claude AI based on user's questionnaire answers.
+    Returns a plan structure ready to store in MongoDB.
+    """
+    
+    name = answers.get("name", "User")
+    goal = answers.get("goal", "General fitness")
+    experience = answers.get("experience", "Brand new")
+    days = answers.get("days", "3")
+    equipment = answers.get("equipment", "Full gym")
+    session = answers.get("session", "60 min")
+    nutrition = answers.get("nutrition", "No — training only")
+    
+    # Construct the prompt for Claude
+    prompt = f"""You are an expert strength coach and training program designer. 
+Create a personalised {session} training plan for {name}.
+
+User Profile:
+- Main Goal: {goal}
+- Training Experience: {experience}
+- Availability: {days} days per week
+- Equipment: {equipment}
+- Typical Session Length: {session}
+- Include Nutrition: {nutrition}
+
+Create a WEEK 1 training plan in this exact JSON format (NO markdown, NO code blocks, just raw JSON):
+
+{{
+  "name": "{name}'s Personalised Plan",
+  "goal": "{goal}",
+  "weeks": [
+    {{
+      "weekNumber": 1,
+      "theme": "Introduction & Assessment",
+      "days": [
+        {{
+          "day": "MON",
+          "session": "Upper Body",
+          "focus": "Strength assessment",
+          "exercises": [
+            {{"name": "Bench Press", "sets": "4x5", "rest": "3min", "notes": "Find your 5RM"}},
+            {{"name": "Bent Over Row", "sets": "4x5", "rest": "3min", "notes": "Match bench press"}},
+            {{"name": "Incline Dumbbell Press", "sets": "3x8", "rest": "2min", "notes": ""}}
+          ]
+        }},
+        {{
+          "day": "WED",
+          "session": "Lower Body",
+          "focus": "Strength assessment",
+          "exercises": [
+            {{"name": "Back Squat", "sets": "4x5", "rest": "3min", "notes": "Find your 5RM"}},
+            {{"name": "Deadlift", "sets": "4x3", "rest": "3min", "notes": "Sub squat if injured"}},
+            {{"name": "Leg Press", "sets": "3x8", "rest": "2min", "notes": ""}}
+          ]
+        }},
+        {{
+          "day": "FRI",
+          "session": "Full Body",
+          "focus": "Conditioning",
+          "exercises": [
+            {{"name": "Power Clean", "sets": "5x3", "rest": "2min", "notes": "Or kettlebell swings"}},
+            {{"name": "Front Squat", "sets": "3x5", "rest": "2min", "notes": ""}},
+            {{"name": "Farmer's Carry", "sets": "3x40m", "rest": "1min", "notes": ""}}
+          ]
+        }}
+      ],
+      "nutrition": {{
+        "daily_protein": "1g per lb of bodyweight",
+        "daily_calories": "TDEE (estimated)",
+        "meal_timing": "Post-workout: carbs + protein within 2 hours"
+      }}
+    }}
+  ]
+}}
+
+Important:
+- Be realistic and safe — no extreme recommendations
+- Adapt to the experience level
+- Include rest days
+- Return valid JSON only
+- Exercises should match the equipment available
+"""
+
+    try:
+        # Call Claude API
+        message = anthropic_client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=2000,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        # Extract the response text
+        response_text = message.content[0].text
+        
+        # Parse the JSON response
+        plan_data = json.loads(response_text)
+        
+        # Add metadata
+        plan_data["answers"] = answers
+        plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        plan_data["brand"] = f"{name}'s App"
+        plan_data["tagline"] = goal
+        
+        return plan_data
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse Claude response as JSON: {e}")
+        raise Exception("Plan generation failed - invalid response format")
+    except Exception as e:
+        logger.error(f"Claude API error: {e}")
+        raise Exception(f"Plan generation failed: {str(e)}")
 
 
 # ===== Auth helpers =====
@@ -252,11 +377,37 @@ async def waitlist_count():
     return {"count": await db.waitlist.count_documents({})}
 
 
-@api_router.post("/plans/generate", response_model=Plan)
+@api_router.post("/plans/generate")
 async def generate_plan(payload: PlanGenerateRequest):
-    plan = Plan(answers=payload.answers, status="draft")
-    await db.plans.insert_one(plan.model_dump())
-    return plan
+    """
+    Generate a personalised training plan using Claude AI.
+    Stores in MongoDB and returns plan ID.
+    """
+    try:
+        # Generate plan with Claude
+        plan_data = await generate_plan_with_claude(payload.answers)
+        
+        # Generate unique ID
+        plan_id = str(uuid.uuid4())
+        plan_data["id"] = plan_id
+        
+        # Store in MongoDB
+        await db.plans.insert_one(plan_data)
+        
+        logger.info(f"Plan generated: {plan_id}")
+        
+        return {
+            "id": plan_id,
+            "message": "Plan generated successfully",
+            "link": f"/app/u/{plan_id}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Plan generation error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate plan. Please try again."
+        )
 
 
 @api_router.get("/plans/{plan_id}", response_model=Plan)
