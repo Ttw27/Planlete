@@ -82,6 +82,19 @@ export default function SiteFooter() {
             Your plan · Your app · No gym required
           </p>
         </div>
+        <div className="mt-4 text-xs text-zinc-600">
+          <p>
+            Website created by{" "}
+            <a
+              href="https://www.weavixstudio.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-400 hover:text-[#D4FF00] transition-colors underline"
+            >
+              Weavix Studio
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
