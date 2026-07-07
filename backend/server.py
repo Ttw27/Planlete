@@ -34,8 +34,14 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
 
-# Initialize Claude client
-anthropic_client = Anthropic()
+# Initialize Claude client (will be created on first use)
+anthropic_client = None
+
+def get_anthropic_client():
+    global anthropic_client
+    if not anthropic_client:
+        anthropic_client = Anthropic()
+    return anthropic_client
 
 app = FastAPI(title="Planlete API")
 api_router = APIRouter(prefix="/api")
@@ -167,7 +173,8 @@ Important:
 
     try:
         # Call Claude API
-        message = anthropic_client.messages.create(
+        client = get_anthropic_client()
+        message = client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=2000,
             messages=[
