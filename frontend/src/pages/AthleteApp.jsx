@@ -24,7 +24,7 @@ const ATHLETE_DATA = {
       { name: "Weighted Pull-up", sets: "5×4", load: "BW+15kg", rest: "3min" },
       { name: "Barbell Row", sets: "4×6", load: "80%", rest: "2min" },
       { name: "Cable Row", sets: "3×10", load: "Moderate", rest: "90s" },
-      { name: "Face Pull", sets: "3×15", load: "Light\", rest: "60s\" },
+      { name: "Face Pull", sets: "3×15", load: "Light", rest: "60s" },
       { name: "Barbell Curl", sets: "3×8", load: "Moderate\", rest: "90s\" },
     ]},
     { day: "Thu", label: "Lower Strength", focus: "Quads + hamstrings", workouts: [
