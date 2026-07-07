@@ -65,6 +65,90 @@ const IMAGE_SLOTS = [
     default:
       "https://images.pexels.com/photos/2526878/pexels-photo-2526878.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
   },
+  // Athlete sample carousel
+  {
+    key: "athlete_carousel_1",
+    label: "Athlete sample — Carousel image 1",
+    default: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80",
+  },
+  {
+    key: "athlete_carousel_2",
+    label: "Athlete sample — Carousel image 2",
+    default: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&q=80",
+  },
+  {
+    key: "athlete_carousel_3",
+    label: "Athlete sample — Carousel image 3",
+    default: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=1200&q=80",
+  },
+  {
+    key: "athlete_carousel_4",
+    label: "Athlete sample — Carousel image 4",
+    default: "https://images.unsplash.com/photo-1581009137042-c552e485697a?w=1200&q=80",
+  },
+  // Longevity sample carousel
+  {
+    key: "longevity_carousel_1",
+    label: "Longevity sample — Carousel image 1",
+    default: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
+  },
+  {
+    key: "longevity_carousel_2",
+    label: "Longevity sample — Carousel image 2",
+    default: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200&q=80",
+  },
+  {
+    key: "longevity_carousel_3",
+    label: "Longevity sample — Carousel image 3",
+    default: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1200&q=80",
+  },
+  {
+    key: "longevity_carousel_4",
+    label: "Longevity sample — Carousel image 4",
+    default: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&q=80",
+  },
+  // Football sample carousel
+  {
+    key: "football_carousel_1",
+    label: "Football sample — Carousel image 1",
+    default: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=80",
+  },
+  {
+    key: "football_carousel_2",
+    label: "Football sample — Carousel image 2",
+    default: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=1200&q=80",
+  },
+  {
+    key: "football_carousel_3",
+    label: "Football sample — Carousel image 3",
+    default: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=1200&q=80",
+  },
+  {
+    key: "football_carousel_4",
+    label: "Football sample — Carousel image 4",
+    default: "https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?w=1200&q=80",
+  },
+  // Sprinter sample carousel
+  {
+    key: "sprinter_carousel_1",
+    label: "Sprinter sample — Carousel image 1",
+    default: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&q=80",
+  },
+  {
+    key: "sprinter_carousel_2",
+    label: "Sprinter sample — Carousel image 2",
+    default: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=1200&q=80",
+  },
+  {
+    key: "sprinter_carousel_3",
+    label: "Sprinter sample — Carousel image 3",
+    default: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80",
+  },
+  {
+    key: "sprinter_carousel_4",
+    label: "Sprinter sample — Carousel image 4",
+    default: "https://images.unsplash.com/photo-1594882645126-14ac19a0c6e7?w=1200&q=80",
+  },
 ];
 
 function resolveUrl(url) {
