@@ -8,6 +8,7 @@ import FootballApp from "@/pages/FootballApp";
 import SprinterApp from "@/pages/SprinterApp";
 import BuildApp from "@/pages/BuildApp";
 import GeneratedApp from "@/pages/GeneratedApp";
+import SaveToPhoneInstructions from "@/pages/SaveToPhoneInstructions";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminImages from "@/pages/AdminImages";
 import AdminContent from "@/pages/AdminContent";
@@ -26,6 +27,7 @@ function App() {
           <Route path="/app/longevity" element={<LongevityApp />} />
           <Route path="/app/football" element={<FootballApp />} />
           <Route path="/app/sprinter" element={<SprinterApp />} />
+          <Route path="/app/u/:id/save-instructions" element={<SaveToPhoneInstructions />} />
           <Route path="/app/u/:id" element={<GeneratedApp />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/content" element={<AdminContent />} />
