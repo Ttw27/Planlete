@@ -14,11 +14,11 @@ const MARQUEE_ITEMS = [
 
 function Marquee() {
   return (
-    <div className="overflow-hidden border-y border-white/10 py-4 bg-black/40 backdrop-blur">
-      <div className="flex gap-12 animate-marquee whitespace-nowrap">
-        {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-          <span key={i} className="text-overline text-zinc-400 shrink-0">
-            <span className="text-[#D4FF00] mr-3">·</span>{item}
+    <div className="bg-black/40 border-y border-white/5 py-4 overflow-hidden">
+      <div className="flex gap-6 whitespace-nowrap animate-scroll">
+        {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+          <span key={i} className="text-xs text-zinc-500 uppercase tracking-widest">
+            • {item}
           </span>
         ))}
       </div>
@@ -26,7 +26,7 @@ function Marquee() {
   );
 }
 
-// ─── Plan Cards ──────────────────────────────────────────────────────────────
+// ─── Sample Plans ────────────────────────────────────────────────────────────
 const PLANS = [
   {
     id: "athlete",
@@ -154,20 +154,16 @@ export default function Landing() {
       {/* ── HOW IT WORKS ── */}
       <section id="how" className="py-24 md:py-32 max-w-7xl mx-auto px-5 md:px-8">
         <p className="text-overline text-zinc-500 mb-4">— How it works</p>
-        <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-16">
-          <span className="block">Three steps.</span>
-          <span className="block text-[#D4FF00]">No friction.</span>
+        <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-16 max-w-2xl">
+          <span className="block">{c("how_headline_a", "Three steps.")}</span>
+          <span className="block text-[#D4FF00]">{c("how_headline_b", "No friction.")}</span>
         </h2>
-        <div className="grid md:grid-cols-3 gap-12">
-          {[
-            { n: "01", title: "Pick your goal", body: "Athlete, longevity, football, sprint or something else entirely." },
-            { n: "02", title: "Answer a few questions", body: "Eight questions. Two minutes. We do the rest." },
-            { n: "03", title: "Get your app", body: "Live link, on your phone, ready to use. Yours to keep." },
-          ].map((step) => (
-            <div key={step.n}>
-              <span className="font-mono-display text-5xl text-[#D4FF00] opacity-40 block mb-4">{step.n}</span>
-              <h3 className="font-display text-xl uppercase tracking-tight mb-3">{step.title}</h3>
-              <p className="text-zinc-400 leading-relaxed">{step.body}</p>
+        <div className="grid md:grid-cols-3 gap-8">
+          {[1, 2, 3].map((n) => (
+            <div key={n}>
+              <p className="text-overline text-[#D4FF00] mb-3">{n.toString().padStart(2, "0")}</p>
+              <h3 className="font-display text-2xl mb-3">{c(`how_step${n}_title`, `Step ${n}`)}</h3>
+              <p className="text-zinc-400">{c(`how_step${n}_body`, `Do step ${n} here.`)}</p>
             </div>
           ))}
         </div>
@@ -194,62 +190,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── PRICING ── */}
-      <section id="pricing" className="py-24 md:py-32 max-w-7xl mx-auto px-5 md:px-8">
-        <div className="inline-flex items-center gap-2 bg-[#D4FF00]/10 border border-[#D4FF00]/30 px-4 py-2 mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#D4FF00] animate-pulse" />
-          <span className="text-overline text-[#D4FF00]">
-            {c("pricing_badge", "Launch offer · 75% off · Limited time")}
-          </span>
-        </div>
-        <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-6">
-          <span className="block">Your own app.</span>
-          <span className="block text-[#D4FF00]">Normally £20. Now £4.99.</span>
-        </h2>
-        <p className="text-zinc-400 max-w-lg leading-relaxed mb-16">
-          {c("pricing_explainer", "Launch offer to seed the first wave of users. Once we hit our cap, the price reverts to £20.")}
-        </p>
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl">
-          {/* Free */}
-          <div className="border border-white/10 p-8">
-            <p className="text-overline text-zinc-500 mb-2">Free</p>
-            <p className="font-display text-4xl uppercase mb-6">Sample plans</p>
-            <ul className="space-y-3 mb-8">
-              {["Athlete performance plan", "Longevity & fitness plan", "Football player plan", "Sprint training plan", "Save to your phone"].map((f) => (
-                <li key={f} className="flex items-center gap-3 text-sm text-zinc-300">
-                  <Check size={14} className="text-[#D4FF00] shrink-0" />{f}
-                </li>
-              ))}
-            </ul>
-            <a href="#samples" className="block border border-white/20 text-white font-bold uppercase tracking-wide text-xs px-6 py-3 text-center hover:border-white transition-colors">
-              Browse free plans
-            </a>
-          </div>
-          {/* Paid */}
-          <div className="border border-[#D4FF00] p-8 relative">
-            <div className="absolute -top-3 left-6 bg-[#D4FF00] text-black text-[10px] font-bold uppercase tracking-widest px-3 py-1">
-              Most popular
-            </div>
-            <p className="text-overline text-[#D4FF00] mb-2">
-              <span className="line-through text-zinc-500 mr-2">£20</span>£4.99
-            </p>
-            <p className="font-display text-4xl uppercase mb-6">Your plan</p>
-            <ul className="space-y-3 mb-8">
-              {["Answer 8 questions", "AI builds your personalised app", "Your name, your goals, your sessions", "Nutrition plan built around your training", "Live link — bookmark it, use it daily", "Yours to keep"].map((f) => (
-                <li key={f} className="flex items-center gap-3 text-sm text-zinc-300">
-                  <Check size={14} className="text-[#D4FF00] shrink-0" />{f}
-                </li>
-              ))}
-            </ul>
-            <Link to="/build" className="block bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-6 py-3 text-center hover:bg-white transition-colors">
-              Build my plan — £4.99
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* ── FOR COACHES ── */}
-      <section id="b2b" className="py-24 md:py-32 bg-zinc-950">
+      <section id="b2b" className="py-24 md:py-32 bg-black">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <p className="text-overline text-zinc-500 mb-4">— For coaches & gyms</p>
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-2xl">
@@ -257,16 +199,16 @@ export default function Landing() {
             <span className="block text-[#D4FF00]">for your clients.</span>
           </h2>
           <p className="text-zinc-400 max-w-xl leading-relaxed mb-4">
-            PTs, gyms, sports clubs and rehab clinics — create fully branded training apps for your clients with your own logo, colours and content.
+            {c("coaches_body", "PTs, gyms, sports clubs and rehab clinics — create fully branded training apps for your clients with your own logo, colours and content.")}
           </p>
           <p className="text-zinc-500 text-sm max-w-xl leading-relaxed mb-10">
-            No monthly subscription. No lock-in. Pay only when you create a client plan.
+            {c("coaches_no_subscription", "No monthly subscription. No lock-in. Pay only when you create a client plan.")}
           </p>
           <Link
             to="/coach"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            Create your first client — free
+            {c("coaches_cta", "Create your first client — free")}
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -276,13 +218,13 @@ export default function Landing() {
       <section className="py-24 md:py-32 border-t border-white/10">
         <div className="max-w-7xl mx-auto px-5 md:px-8 text-center">
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-3xl mx-auto">
-            Stop saving plans to your camera roll. Get an app that actually works.
+            {c("footer_headline", "Stop saving plans to your camera roll. Get an app that actually works.")}
           </h2>
           <Link
             to="/build"
-            className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-10 py-5 hover:bg-white transition-colors"
+            className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            Build my plan — £4.99
+            {c("footer_cta", "Build my plan — £4.99")}
             <ArrowRight size={16} />
           </Link>
           <p className="mt-6 text-zinc-600 text-xs uppercase tracking-widest">

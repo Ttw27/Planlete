@@ -111,10 +111,11 @@ export default function BuildApp() {
     try {
       const res = await axios.post(`${API}/plans/generate`, { answers });
       const id = res.data.id;
-      toast.success("Plan ready. Redirecting to payment…");
-      // For now skip Stripe and go straight to generated app preview
-      setTimeout(() => navigate(`/app/u/${id}?preview=1`), 600);
-    } catch {
+      toast.success("Plan ready. Showing you how to save it…");
+      // Redirect to save-to-phone instructions page
+      setTimeout(() => navigate(`/app/u/${id}/save-instructions`), 600);
+    } catch (error) {
+      console.error("Generation error:", error);
       toast.error("Couldn't build your plan. Try again.");
     } finally {
       setSubmitting(false);
