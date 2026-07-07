@@ -12,6 +12,7 @@ import SaveToPhoneInstructions from "@/pages/SaveToPhoneInstructions";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminImages from "@/pages/AdminImages";
 import AdminContent from "@/pages/AdminContent";
+import AdminLeads from "@/pages/AdminLeads";
 import CoachAuth from "@/pages/CoachAuth";
 import CoachDashboard from "@/pages/CoachDashboard";
 import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
@@ -32,6 +33,7 @@ function App() {
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/images" element={<AdminImages />} />
+          <Route path="/admin/leads" element={<AdminLeads />} />
           <Route path="/coach" element={<CoachAuth />} />
           <Route path="/coach/dashboard" element={<CoachDashboard />} />
           <Route path="/c/:coachSlug/:clientSlug" element={<PublicBrandedPlan />} />
