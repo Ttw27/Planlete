@@ -1,30 +1,5 @@
 import { useState } from "react";
 import AppShell from "../components/AppShell";
-import PlanCarousel from "../components/PlanCarousel";
-import { useImages } from "../hooks/useImages";
-
-const SLIDES = [
-  {
-    imageKey: "football_carousel_1",
-    fallback: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80",
-    caption: "Off-season — rebuild base fitness and strength",
-  },
-  {
-    imageKey: "football_carousel_2",
-    fallback: "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&q=80",
-    caption: "Pre-season — football-specific conditioning and pitch work",
-  },
-  {
-    imageKey: "football_carousel_3",
-    fallback: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80",
-    caption: "In-season — maintain without fatigue. MD-1, MD, MD+1 structure",
-  },
-  {
-    imageKey: "football_carousel_4",
-    fallback: "https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?w=800&q=80",
-    caption: "Recovery nutrition and sleep priority — built into every phase",
-  },
-];
 
 const MODES = ["off-season", "pre-season", "in-season"];
 
@@ -214,7 +189,6 @@ const FOOTBALL_DATA = {
 
 export default function FootballApp() {
   const [mode, setMode] = useState("in-season");
-  const { images } = useImages();
 
   const modeToggle = (
     <div className="flex border-b border-white/10">
@@ -235,13 +209,6 @@ export default function FootballApp() {
   );
 
   return (
-    <div>
-      <PlanCarousel
-        images={images}
-        slides={SLIDES}
-        planLabel="Football Player Plan"
-      />
-      <AppShell data={FOOTBALL_DATA} mode={mode} modeToggle={modeToggle} />
-    </div>
+    <AppShell data={FOOTBALL_DATA} mode={mode} modeToggle={modeToggle} />
   );
 }

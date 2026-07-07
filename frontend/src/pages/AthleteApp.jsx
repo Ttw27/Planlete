@@ -1,29 +1,5 @@
 import AppShell from "../components/AppShell";
-import PlanCarousel from "../components/PlanCarousel";
 import { useImages } from "../hooks/useImages";
-
-const SLIDES = [
-  {
-    imageKey: "athlete_carousel_1",
-    fallback: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
-    caption: "Six day split — strength, power and conditioning",
-  },
-  {
-    imageKey: "athlete_carousel_2",
-    fallback: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80",
-    caption: "Progressive overload built into every session",
-  },
-  {
-    imageKey: "athlete_carousel_3",
-    fallback: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=800&q=80",
-    caption: "Nutrition targets, meal timing and supplement stack included",
-  },
-  {
-    imageKey: "athlete_carousel_4",
-    fallback: "https://images.unsplash.com/photo-1581009137042-c552e485697a?w=800&q=80",
-    caption: "Recovery protocols — sleep, HRV and morning movement",
-  },
-];
 
 const ATHLETE_DATA = {
   brand: "Planlete",
@@ -48,26 +24,24 @@ const ATHLETE_DATA = {
       { name: "Weighted Pull-up", sets: "5×4", load: "BW+15kg", rest: "3min" },
       { name: "Barbell Row", sets: "4×6", load: "80%", rest: "2min" },
       { name: "Cable Row", sets: "3×10", load: "Moderate", rest: "90s" },
-      { name: "Face Pull", sets: "3×15", load: "Light", rest: "45s" },
-      { name: "Barbell Curl", sets: "3×12", load: "Moderate", rest: "60s" },
+      { name: "Face Pull", sets: "3×15", load: "Light\", rest: "60s\" },
+      { name: "Barbell Curl", sets: "3×8", load: "Moderate\", rest: "90s\" },
     ]},
-    { day: "Thu", label: "Power", focus: "Explosive output", workouts: [
-      { name: "Power Clean", sets: "5×3", load: "80% 1RM", rest: "3min" },
-      { name: "Box Jump", sets: "4×5", load: "Max height", rest: "2min" },
-      { name: "Trap Bar Jump", sets: "4×4", load: "40% 1RM", rest: "2min" },
-      { name: "Med Ball Slam", sets: "4×6", load: "Heavy", rest: "90s" },
+    { day: "Thu", label: "Lower Strength", focus: "Quads + hamstrings", workouts: [
+      { name: "Front Squat", sets: "5×3", load: "85% 1RM", rest: "3min" },
+      { name: "Trap Bar Deadlift", sets: "4×5", load: "80%", rest: "3min" },
+      { name: "Leg Curl", sets: "3×8", load: "Moderate", rest: "2min" },
+      { name: "Belt Squat", sets: "3×10", load: "Moderate", rest: "90s" },
+      { name: "Seated Leg Extension", sets: "3×12", load: "Light", rest: "60s" },
     ]},
-    { day: "Fri", label: "Posterior Chain", focus: "Hinge dominant", workouts: [
-      { name: "Deadlift", sets: "5×3", load: "90% 1RM", rest: "4min" },
-      { name: "Hip Thrust", sets: "4×8", load: "Heavy", rest: "2min" },
-      { name: "Good Morning", sets: "3×10", load: "Light-mod", rest: "90s" },
-      { name: "Back Extension", sets: "3×12", load: "BW", rest: "60s" },
-      { name: "Pallof Press", sets: "3×10 each", load: "Moderate", rest: "60s" },
-    ]},
-    { day: "Sat", label: "Conditioning", focus: "Zone 2 + speed", workouts: [
-      { name: "Zone 2 Run", sets: "30min", load: "65% HRmax", rest: "—" },
+    { day: "Fri", label: "Full Body Conditioning", focus: "Work capacity", workouts: [
       { name: "Sled Push", sets: "6×20m", load: "Heavy", rest: "2min" },
       { name: "Battle Ropes", sets: "4×30s", load: "Max effort", rest: "90s" },
+    ]},
+    { day: "Sat", label: "Active Recovery", focus: "Mobility + parasympathetic", workouts: [
+      { name: "Walk", sets: "60min", load: "Easy", rest: "—" },
+      { name: "Yoga or Mobility", sets: "30min", load: "Light", rest: "—" },
+      { name: "Breathwork", sets: "10min", load: "Diaphragmatic", rest: "—" },
     ]},
     { day: "Sun", label: "Rest", focus: "Full recovery", workouts: [
       { name: "Walk", sets: "30min", load: "Easy", rest: "—" },
@@ -108,11 +82,5 @@ const ATHLETE_DATA = {
 };
 
 export default function AthleteApp() {
-  const { images } = useImages();
-  return (
-    <div>
-      <PlanCarousel images={images} slides={SLIDES} planLabel="Athlete Performance Plan" />
-      <AppShell data={ATHLETE_DATA} />
-    </div>
-  );
+  return <AppShell data={ATHLETE_DATA} />;
 }
