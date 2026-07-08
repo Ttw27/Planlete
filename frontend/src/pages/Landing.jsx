@@ -7,8 +7,8 @@ import SiteFooter from "../components/SiteFooter";
 
 // ─── Marquee ────────────────────────────────────────────────────────────────
 const MARQUEE_ITEMS = [
-  "Athlete Performance", "Longevity & Fitness", "Football Specific",
-  "Sprint Training", "Rehab & Recovery", "Strength & Conditioning",
+  "Rehab & Recovery", "Longevity & Fitness", "Football Specific",
+  "Sprint Training", "Strength & Conditioning", "One-off payment",
   "Personalised Plans", "Built For You",
 ];
 
@@ -29,12 +29,12 @@ function Marquee() {
 // ─── Sample Plans ────────────────────────────────────────────────────────────
 const PLANS = [
   {
-    id: "athlete",
-    label: "Athlete Performance",
-    body: "Six day split. Strength, power, conditioning and recovery all in one place.",
-    href: "/app/athlete",
-    imageKey: "card_athlete",
-    fallback: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+    id: "rehab",
+    label: "Rehab & Recovery",
+    body: "Structured return from injury. Mobility, load management and a safe path back to full training.",
+    href: "/app/rehab",
+    imageKey: "card_rehab",
+    fallback: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80",
     tag: "Free sample",
   },
   {
@@ -66,8 +66,9 @@ const PLANS = [
   },
 ];
 
-function PlanCard({ plan, images }) {
+function PlanCard({ plan, images, c }) {
   const img = images?.[plan.imageKey] || plan.fallback;
+  const body = c(`card_${plan.id}_body`, plan.body);
   return (
     <Link
       to={plan.href}
@@ -88,7 +89,7 @@ function PlanCard({ plan, images }) {
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-5">
         <h3 className="font-display text-xl uppercase tracking-tight mb-1">{plan.label}</h3>
-        <p className="text-sm text-zinc-400 leading-relaxed mb-4">{plan.body}</p>
+        <p className="text-sm text-zinc-400 leading-relaxed mb-4">{body}</p>
         <span className="inline-flex items-center gap-2 text-[#D4FF00] text-xs font-bold uppercase tracking-wide group-hover:gap-3 transition-all">
           View sample <ArrowRight size={12} />
         </span>
@@ -184,9 +185,26 @@ export default function Landing() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PLANS.map((plan) => (
-              <PlanCard key={plan.id} plan={plan} images={images} />
+              <PlanCard key={plan.id} plan={plan} images={images} c={c} />
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── FLEXIBILITY / ONE-OFF ── */}
+      <section id="flexibility" className="py-24 md:py-32 bg-black border-y border-white/10">
+        <div className="max-w-7xl mx-auto px-5 md:px-8">
+          <p className="text-overline text-zinc-500 mb-4">— {c("flex_overline", "One payment. Built to last.")}</p>
+          <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-2xl">
+            <span className="block">{c("flex_headline_a", "Life changes.")}</span>
+            <span className="block text-[#D4FF00]">{c("flex_headline_b", "So can your plan.")}</span>
+          </h2>
+          <p className="text-zinc-400 max-w-2xl leading-relaxed text-lg">
+            {c(
+              "flex_body",
+              "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same £4.99, brand new app, made for where you are now."
+            )}
+          </p>
         </div>
       </section>
 

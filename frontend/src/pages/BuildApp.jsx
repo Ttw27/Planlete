@@ -31,6 +31,19 @@ const QUESTIONS = [
     ],
   },
   {
+    id: "age",
+    label: "What's your age range?",
+    type: "choice",
+    options: ["Under 18", "18–24", "25–34", "35–44", "45–54", "55+"],
+  },
+  {
+    id: "sex",
+    label: "What's your sex?",
+    type: "choice",
+    options: ["Male", "Female", "Prefer not to say"],
+    hint: "Helps us set accurate calorie and training targets.",
+  },
+  {
     id: "experience",
     label: "How long have you been training?",
     type: "choice",
@@ -66,6 +79,14 @@ const QUESTIONS = [
     options: ["Yes — full plan", "Yes — just targets", "No — training only"],
   },
   {
+    id: "notes",
+    label: "Any injuries, allergies or anything else we should know?",
+    type: "text",
+    placeholder: "e.g. dodgy left knee, avoid dairy — or leave blank",
+    hint: "Optional — but this is your only chance to tell us before we build your app.",
+    optional: true,
+  },
+  {
     id: "email",
     label: "Where should we send your live app link?",
     type: "email",
@@ -86,7 +107,7 @@ export default function BuildApp() {
   const setAnswer = (val) => setAnswers((a) => ({ ...a, [q.id]: val }));
 
   const next = () => {
-    if (!answers[q.id]) {
+    if (!answers[q.id] && !q.optional) {
       toast.error("Pick or type an answer to continue");
       return;
     }
@@ -219,6 +240,8 @@ export default function BuildApp() {
               ? "Building…"
               : step === QUESTIONS.length - 1
               ? "Build my app"
+              : q.optional && !answers[q.id]
+              ? "Skip"
               : "Continue"}
             <ArrowRight size={16} />
           </button>

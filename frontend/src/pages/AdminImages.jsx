@@ -18,10 +18,10 @@ const IMAGE_SLOTS = [
     note: "Full-bleed image behind the main headline.",
   },
   {
-    key: "card_athlete",
-    label: "Landing — Athlete card",
+    key: "card_rehab",
+    label: "Landing — Rehab card",
     default:
-      "https://images.pexels.com/photos/9944894/pexels-photo-9944894.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "https://images.pexels.com/photos/6975474/pexels-photo-6975474.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
   },
   {
     key: "card_longevity",
@@ -42,10 +42,10 @@ const IMAGE_SLOTS = [
       "https://images.pexels.com/photos/2526878/pexels-photo-2526878.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
   },
   {
-    key: "app_athlete_hero",
-    label: "Athlete app — Inside hero",
+    key: "app_rehab_hero",
+    label: "Rehab app — Inside hero",
     default:
-      "https://images.pexels.com/photos/9944894/pexels-photo-9944894.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "https://images.pexels.com/photos/6975474/pexels-photo-6975474.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
   },
   {
     key: "app_longevity_hero",
@@ -65,26 +65,26 @@ const IMAGE_SLOTS = [
     default:
       "https://images.pexels.com/photos/2526878/pexels-photo-2526878.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
   },
-  // Athlete sample carousel
+  // Rehab sample carousel
   {
-    key: "athlete_carousel_1",
-    label: "Athlete sample — Carousel image 1",
-    default: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80",
+    key: "rehab_carousel_1",
+    label: "Rehab sample — Carousel image 1",
+    default: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
   },
   {
-    key: "athlete_carousel_2",
-    label: "Athlete sample — Carousel image 2",
-    default: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&q=80",
+    key: "rehab_carousel_2",
+    label: "Rehab sample — Carousel image 2",
+    default: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200&q=80",
   },
   {
-    key: "athlete_carousel_3",
-    label: "Athlete sample — Carousel image 3",
-    default: "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=1200&q=80",
+    key: "rehab_carousel_3",
+    label: "Rehab sample — Carousel image 3",
+    default: "https://images.unsplash.com/photo-1544216717-3bbf52512659?w=1200&q=80",
   },
   {
-    key: "athlete_carousel_4",
-    label: "Athlete sample — Carousel image 4",
-    default: "https://images.unsplash.com/photo-1581009137042-c552e485697a?w=1200&q=80",
+    key: "rehab_carousel_4",
+    label: "Rehab sample — Carousel image 4",
+    default: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&q=80",
   },
   // Longevity sample carousel
   {
