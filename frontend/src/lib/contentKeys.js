@@ -58,12 +58,22 @@ export const CONTENT_GROUPS = [
       { key: "progressive_overline", label: "Overline", default: "Built to progress" },
       { key: "progressive_headline_a", label: "Headline line 1", default: "Not a one-week PDF." },
       { key: "progressive_headline_b", label: "Headline line 2 (accent)", default: "A programme that builds." },
-      {
-        key: "progressive_body",
-        label: "Body paragraph",
-        default: "Every app runs a real 4-week programme — three weeks of progressive overload, then a deload week to recover, before it cycles again. Whether you're coming back from injury, chasing longevity, prepping for a season, or training for speed — the structure is built around your goal, and keeps adapting as you go.",
-        long: true,
-      },
+      { key: "progressive_point1_title", label: "Point 1 title", default: "4 weeks, not 1" },
+      { key: "progressive_point1_body", label: "Point 1 body", default: "Three weeks of progressive overload, then a deload week to recover — before it cycles again. A real programme, not a single static week repeated forever.", long: true },
+      { key: "progressive_point2_title", label: "Point 2 title", default: "Every exercise explained" },
+      { key: "progressive_point2_body", label: "Point 2 body", default: "Tap the (i) next to any exercise in your app and see exactly why it's there — for your goal, your experience level, or any injury you told us about. Nothing thrown in at random.", long: true },
+      { key: "progressive_point3_title", label: "Point 3 title", default: "Built for your sport" },
+      { key: "progressive_point3_body", label: "Point 3 body", default: "Rehab, longevity, football, HYROX, boxing, bodybuilding or something else entirely — the structure and exercise selection is designed around your specific goal, not a generic template.", long: true },
+    ],
+  },
+  {
+    id: "sports",
+    label: "Sports covered section",
+    fields: [
+      { key: "sports_overline", label: "Overline", default: "Most sports covered" },
+      { key: "sports_headline_a", label: "Headline line 1", default: "Whatever you train for," },
+      { key: "sports_headline_b", label: "Headline line 2 (accent)", default: "it's covered." },
+      { key: "sports_footnote", label: "Footnote", default: "Don't see yours listed? Pick \"Something else\" in the questionnaire and tell us — we'll still build it around your sport.", long: true },
     ],
   },
   {
