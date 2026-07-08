@@ -170,6 +170,23 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── PROGRESSIVE PROGRAMME ── */}
+      <section id="progressive" className="py-24 md:py-32 bg-zinc-950 border-y border-white/10">
+        <div className="max-w-7xl mx-auto px-5 md:px-8">
+          <p className="text-overline text-zinc-500 mb-4">— {c("progressive_overline", "Built to progress")}</p>
+          <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-2xl">
+            <span className="block">{c("progressive_headline_a", "Not a one-week PDF.")}</span>
+            <span className="block text-[#D4FF00]">{c("progressive_headline_b", "A programme that builds.")}</span>
+          </h2>
+          <p className="text-zinc-400 max-w-2xl leading-relaxed text-lg">
+            {c(
+              "progressive_body",
+              "Every app runs a real 4-week programme — three weeks of progressive overload, then a deload week to recover, before it cycles again. Whether you're coming back from injury, chasing longevity, prepping for a season, or training for speed — the structure is built around your goal, and keeps adapting as you go."
+            )}
+          </p>
+        </div>
+      </section>
+
       {/* ── SAMPLE PLANS ── */}
       <section id="samples" className="py-24 md:py-32 bg-zinc-950">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
