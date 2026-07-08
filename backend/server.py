@@ -124,6 +124,16 @@ If the notes mention any injury, condition, or limitation, you MUST adapt exerci
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
 dietary restrictions are mentioned, avoid those foods entirely in the nutrition section.
 
+Design the exercise selection and weekly structure specifically for the stated
+goal/sport rather than a generic template — e.g. combat sports (boxing,
+kickboxing) should include footwork, conditioning and appropriate strength
+work; HYROX/hybrid athlete goals should include station-specific conditioning
+(sled, rowing, burpee broad jumps, farmer's carries etc.) alongside strength;
+bodybuilding should prioritise hypertrophy rep ranges and muscle-group splits;
+football/team sports should include change-of-direction and match-specific
+conditioning; rehab should prioritise safe, staged loading. Use your expertise
+in that specific discipline.
+
 This plan runs on a 4-week repeating cycle (a "mesocycle"). Weeks 1–3 should
 progressively increase load, volume or intensity based on the training goal.
 Week 4 must be a DELOAD week — meaningfully reduced volume/intensity so the
@@ -149,8 +159,8 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
           {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—"}}
         ]}},
         {{"day": "Mon", "label": "Lower Body", "focus": "Strength", "workouts": [
-          {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min"}},
-          {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s"}}
+          {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min", "reason": "Builds the foundational lower-body strength this goal depends on most, loaded conservatively in week 1 to groove technique."}},
+          {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s", "reason": "Targets the posterior chain and hamstrings, which support the squat and protect the lower back."}}
         ]}},
         {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ ... ]}},
         {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ ... ]}},
@@ -191,6 +201,7 @@ Important:
 - Adapt every exercise choice to the stated equipment and experience level
 - "sets" should look like "4x6" (sets x reps) or a duration like "30min" for cardio/rest entries
 - "load" is a short string like "70% 1RM", "Moderate", "Bodyweight", or "Easy" — never leave it blank
+- Every workout entry MUST include a "reason" field: one short sentence (max ~20 words) explaining why THIS exercise was chosen for THIS person's goal, experience level, or any injury noted — not a generic description. Rest/recovery day entries can use "reason" to explain why rest is programmed there too.
 - If any injury, condition or limitation was noted, prioritise safety and note substitutions directly in the exercise name or via a safer alternative exercise choice
 - If nutrition was declined ("No — training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
 - Return valid JSON only — no markdown, no commentary, no trailing commas
@@ -200,7 +211,7 @@ Important:
         client = get_anthropic_client()
         message = client.messages.create(
             model="claude-sonnet-5",
-            max_tokens=8000,
+            max_tokens=10000,
             messages=[
                 {
                     "role": "user",
