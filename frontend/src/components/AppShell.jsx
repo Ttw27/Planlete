@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2 } from "lucide-react";
+import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -258,15 +258,43 @@ function TrainingView({ days }) {
 }
 
 function WorkoutRow({ w }) {
+  const [showReason, setShowReason] = useState(false);
+  const hasReason = Boolean(w.reason);
+
   return (
-    <div className="bg-[#121212] border-l-2 border-[var(--accent)] px-3 py-3 flex items-center justify-between">
-      <div>
-        <p className="text-sm text-white">{w.name}</p>
-        <p className="text-[11px] text-zinc-500 mt-0.5">
-          {w.load} · rest {w.rest}
-        </p>
+    <div className="bg-[#121212] border-l-2 border-[var(--accent)]">
+      <div className="px-3 py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="min-w-0">
+            <p className="text-sm text-white truncate">{w.name}</p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
+              {w.load} · rest {w.rest}
+            </p>
+          </div>
+          {hasReason && (
+            <button
+              onClick={() => setShowReason((v) => !v)}
+              aria-label="Why this exercise"
+              className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                showReason
+                  ? "bg-[var(--accent)] text-black"
+                  : "text-zinc-500 hover:text-[var(--accent)]"
+              }`}
+            >
+              <Info size={13} />
+            </button>
+          )}
+        </div>
+        <p className="font-mono-display text-sm text-[var(--accent)] shrink-0">{w.sets}</p>
       </div>
-      <p className="font-mono-display text-sm text-[var(--accent)]">{w.sets}</p>
+      {hasReason && showReason && (
+        <div className="px-3 pb-3 -mt-1">
+          <p className="text-[11px] text-zinc-400 leading-relaxed border-t border-white/5 pt-2">
+            <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">Why:</span>
+            {w.reason}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
