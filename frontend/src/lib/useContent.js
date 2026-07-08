@@ -77,7 +77,7 @@ export function useContent() {
 
   // Return a function that looks up content
   return (key, defaultValue = null) => {
-    return overrides[key] ?? defaultValue ?? CONTENT_DEFAULTS[key] ?? key;
+    return overrides[key] ?? CONTENT_DEFAULTS[key] ?? defaultValue ?? key;
   };
 }
 

@@ -41,8 +41,8 @@ export const CONTENT_GROUPS = [
     id: "samples",
     label: "Sample cards",
     fields: [
-      { key: "card_athlete_title", label: "Athlete card title", default: "For people training\nseriously.", long: true },
-      { key: "card_athlete_body", label: "Athlete card body", default: "Strength, conditioning, recovery and nutrition all in one place." },
+      { key: "card_rehab_title", label: "Rehab card title", default: "Back from injury.\nProperly.", long: true },
+      { key: "card_rehab_body", label: "Rehab card body", default: "Structured return to training with load management built in." },
       { key: "card_longevity_title", label: "Longevity card title", default: "Look good. Feel\ngreat. For years.", long: true },
       { key: "card_longevity_body", label: "Longevity card body", default: "Training that fits around life. Joints, posture, energy." },
       { key: "card_football_title", label: "Football card title", default: "Built around the\ncalendar.", long: true },
@@ -52,11 +52,26 @@ export const CONTENT_GROUPS = [
     ],
   },
   {
+    id: "flexibility",
+    label: "One-off payment section",
+    fields: [
+      { key: "flex_overline", label: "Overline", default: "One payment. Built to last." },
+      { key: "flex_headline_a", label: "Headline line 1", default: "Life changes." },
+      { key: "flex_headline_b", label: "Headline line 2 (accent)", default: "So can your plan." },
+      {
+        key: "flex_body",
+        label: "Body paragraph",
+        default: "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same £4.99, brand new app, made for where you are now.",
+        long: true,
+      },
+    ],
+  },
+  {
     id: "sample_apps",
     label: "Sample apps — brand & tagline",
     fields: [
-      { key: "app_athlete_brand", label: "Athlete app brand", default: "Athlete Performance" },
-      { key: "app_athlete_tagline", label: "Athlete app tagline", default: "Elite training, every day." },
+      { key: "app_rehab_brand", label: "Rehab app brand", default: "Rehab & Recovery" },
+      { key: "app_rehab_tagline", label: "Rehab app tagline", default: "Back to full training, safely." },
       { key: "app_longevity_brand", label: "Longevity app brand", default: "Longevity & Fitness" },
       { key: "app_longevity_tagline", label: "Longevity app tagline", default: "Look good. Feel great. For decades." },
       { key: "app_football_brand", label: "Football app brand", default: "Football Player" },
@@ -119,7 +134,7 @@ export const CONTENT_GROUPS = [
     id: "sample_links",
     label: "Sample plan links (emailed to leads)",
     fields: [
-      { key: "sample_link_athlete", label: "Athlete sample link", default: "https://planlete.vercel.app/app/athlete" },
+      { key: "sample_link_rehab", label: "Rehab sample link", default: "https://planlete.vercel.app/app/rehab" },
       { key: "sample_link_longevity", label: "Longevity sample link", default: "https://planlete.vercel.app/app/longevity" },
       { key: "sample_link_football", label: "Football sample link", default: "https://planlete.vercel.app/app/football" },
       { key: "sample_link_sprinter", label: "Sprinter sample link", default: "https://planlete.vercel.app/app/sprinter" },
