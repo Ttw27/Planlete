@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info } from "lucide-react";
+import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -258,25 +258,35 @@ function TrainingView({ days }) {
 }
 
 function WorkoutRow({ w }) {
-  const [showReason, setShowReason] = useState(false);
+  const [panel, setPanel] = useState(null); // null | "reason" | "lookup"
   const hasReason = Boolean(w.reason);
+
+  const query = encodeURIComponent(`${w.name} exercise`);
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(`how to do ${w.name} exercise`)}`;
+  const youtubeUrl = `https://www.youtube.com/results?search_query=${query}+tutorial`;
+
+  const toggle = (key) => setPanel((p) => (p === key ? null : key));
 
   return (
     <div className="bg-[#121212] border-l-2 border-[var(--accent)]">
-      <div className="px-3 py-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="min-w-0">
-            <p className="text-sm text-white truncate">{w.name}</p>
-            <p className="text-[11px] text-zinc-500 mt-0.5">
-              {w.load} · rest {w.rest}
-            </p>
-          </div>
+      {/* Line 1: name + sets */}
+      <div className="px-3 pt-3 flex items-center justify-between gap-2">
+        <p className="text-sm text-white truncate">{w.name}</p>
+        <p className="font-mono-display text-sm text-[var(--accent)] shrink-0">{w.sets}</p>
+      </div>
+
+      {/* Line 2: load/rest + icon buttons */}
+      <div className="px-3 pb-3 pt-0.5 flex items-center justify-between gap-2">
+        <p className="text-[11px] text-zinc-500">
+          {w.load} · rest {w.rest}
+        </p>
+        <div className="flex items-center gap-1 shrink-0">
           {hasReason && (
             <button
-              onClick={() => setShowReason((v) => !v)}
+              onClick={() => toggle("reason")}
               aria-label="Why this exercise"
-              className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                showReason
+              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                panel === "reason"
                   ? "bg-[var(--accent)] text-black"
                   : "text-zinc-500 hover:text-[var(--accent)]"
               }`}
@@ -284,15 +294,52 @@ function WorkoutRow({ w }) {
               <Info size={13} />
             </button>
           )}
+          <button
+            onClick={() => toggle("lookup")}
+            aria-label="What is this exercise"
+            className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+              panel === "lookup"
+                ? "bg-[var(--accent)] text-black"
+                : "text-zinc-500 hover:text-[var(--accent)]"
+            }`}
+          >
+            <HelpCircle size={13} />
+          </button>
         </div>
-        <p className="font-mono-display text-sm text-[var(--accent)] shrink-0">{w.sets}</p>
       </div>
-      {hasReason && showReason && (
+
+      {/* Reason panel */}
+      {panel === "reason" && hasReason && (
         <div className="px-3 pb-3 -mt-1">
           <p className="text-[11px] text-zinc-400 leading-relaxed border-t border-white/5 pt-2">
             <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">Why:</span>
             {w.reason}
           </p>
+        </div>
+      )}
+
+      {/* Lookup panel */}
+      {panel === "lookup" && (
+        <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-2">
+          <p className="text-[11px] text-zinc-500 mb-2">Not sure what this is?</p>
+          <div className="flex gap-2">
+            <a
+              href={googleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 border border-white/15 hover:border-[var(--accent)] text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wide px-2 py-2 transition-colors"
+            >
+              Google <ExternalLink size={11} />
+            </a>
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 border border-white/15 hover:border-[var(--accent)] text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wide px-2 py-2 transition-colors"
+            >
+              YouTube <ExternalLink size={11} />
+            </a>
+          </div>
         </div>
       )}
     </div>
