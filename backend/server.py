@@ -89,10 +89,12 @@ def get_object(path: str):
 # ===== Claude AI Plan Generation =====
 async def generate_plan_with_claude(answers: dict) -> dict:
     """
-    Generate a personalised training plan using Claude AI based on user's questionnaire answers.
-    Returns a plan structure ready to store in MongoDB.
+    Generate a personalised, 4-week periodised training plan using Claude AI,
+    matching the exact JSON schema the AppShell component expects (the same
+    schema used by the static sample apps), so every generated app renders
+    through the same UI — only the exercises/nutrition content differs.
     """
-    
+
     name = answers.get("name", "User")
     goal = answers.get("goal", "General fitness")
     age = answers.get("age", "Not specified")
@@ -101,12 +103,11 @@ async def generate_plan_with_claude(answers: dict) -> dict:
     days = answers.get("days", "3")
     equipment = answers.get("equipment", "Full gym")
     session = answers.get("session", "60 min")
-    nutrition = answers.get("nutrition", "No — training only")
+    nutrition_pref = answers.get("nutrition", "No — training only")
     notes = answers.get("notes", "").strip() or "None provided"
 
-    # Construct the prompt for Claude
-    prompt = f"""You are an expert strength coach and training program designer. 
-Create a personalised {session} training plan for {name}.
+    prompt = f"""You are an expert strength coach and training program designer.
+Create a personalised, 4-WEEK PERIODISED training plan for {name}, session length {session}.
 
 User Profile:
 - Main Goal: {goal}
@@ -116,78 +117,90 @@ User Profile:
 - Availability: {days} days per week
 - Equipment: {equipment}
 - Typical Session Length: {session}
-- Include Nutrition: {nutrition}
+- Include Nutrition: {nutrition_pref}
 - Injuries, allergies or other notes from the user: {notes}
 
 If the notes mention any injury, condition, or limitation, you MUST adapt exercise
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
 dietary restrictions are mentioned, avoid those foods entirely in the nutrition section.
 
-Create a WEEK 1 training plan in this exact JSON format (NO markdown, NO code blocks, just raw JSON):
+This plan runs on a 4-week repeating cycle (a "mesocycle"). Weeks 1–3 should
+progressively increase load, volume or intensity based on the training goal.
+Week 4 must be a DELOAD week — meaningfully reduced volume/intensity so the
+person recovers before the cycle repeats from week 1 again.
+
+Return EVERY day of the week (Sun through Sat, in that exact order) for EVERY
+week — 7 day-entries x 4 weeks = 28 total. Days that are not a training day for
+this person must still appear, with a rest/active-recovery entry (e.g. a short
+mobility or walk session) rather than being omitted. Match the number of actual
+training days to "{days} days per week" — remaining days are rest/recovery days.
+
+Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
 
 {{
-  "name": "{name}'s Personalised Plan",
-  "goal": "{goal}",
+  "brand": "{name}'s App",
+  "tagline": "{goal}",
   "weeks": [
     {{
       "weekNumber": 1,
-      "theme": "Introduction & Assessment",
+      "theme": "Foundation",
       "days": [
-        {{
-          "day": "MON",
-          "session": "Upper Body",
-          "focus": "Strength assessment",
-          "exercises": [
-            {{"name": "Bench Press", "sets": "4x5", "rest": "3min", "notes": "Find your 5RM"}},
-            {{"name": "Bent Over Row", "sets": "4x5", "rest": "3min", "notes": "Match bench press"}},
-            {{"name": "Incline Dumbbell Press", "sets": "3x8", "rest": "2min", "notes": ""}}
-          ]
-        }},
-        {{
-          "day": "WED",
-          "session": "Lower Body",
-          "focus": "Strength assessment",
-          "exercises": [
-            {{"name": "Back Squat", "sets": "4x5", "rest": "3min", "notes": "Find your 5RM"}},
-            {{"name": "Deadlift", "sets": "4x3", "rest": "3min", "notes": "Sub squat if injured"}},
-            {{"name": "Leg Press", "sets": "3x8", "rest": "2min", "notes": ""}}
-          ]
-        }},
-        {{
-          "day": "FRI",
-          "session": "Full Body",
-          "focus": "Conditioning",
-          "exercises": [
-            {{"name": "Power Clean", "sets": "5x3", "rest": "2min", "notes": "Or kettlebell swings"}},
-            {{"name": "Front Squat", "sets": "3x5", "rest": "2min", "notes": ""}},
-            {{"name": "Farmer's Carry", "sets": "3x40m", "rest": "1min", "notes": ""}}
-          ]
-        }}
-      ],
-      "nutrition": {{
-        "daily_protein": "1g per lb of bodyweight",
-        "daily_calories": "TDEE (estimated)",
-        "meal_timing": "Post-workout: carbs + protein within 2 hours"
-      }}
-    }}
-  ]
+        {{"day": "Sun", "label": "Rest", "focus": "Recovery", "workouts": [
+          {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—"}}
+        ]}},
+        {{"day": "Mon", "label": "Lower Body", "focus": "Strength", "workouts": [
+          {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min"}},
+          {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s"}}
+        ]}},
+        {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ ... ]}},
+        {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ ... ]}},
+        {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ ... ]}},
+        {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ ... ]}},
+        {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ ... ]}}
+      ]
+    }},
+    {{ "weekNumber": 2, "theme": "Build", "days": [ ...same 7-day shape, slightly progressed... ] }},
+    {{ "weekNumber": 3, "theme": "Peak", "days": [ ...same 7-day shape, further progressed... ] }},
+    {{ "weekNumber": 4, "theme": "Deload", "days": [ ...same 7-day shape, reduced volume/intensity... ] }}
+  ],
+  "nutrition": {{
+    "calories": 2400,
+    "protein": 160,
+    "carbs": 260,
+    "fats": 80,
+    "note": "One or two sentences of nutrition guidance tailored to the goal and any allergies noted.",
+    "meals": [
+      {{"time": "08:00", "name": "Breakfast", "items": "..."}},
+      {{"time": "11:00", "name": "Mid-morning", "items": "..."}},
+      {{"time": "13:00", "name": "Lunch", "items": "..."}},
+      {{"time": "16:00", "name": "Snack", "items": "..."}},
+      {{"time": "19:00", "name": "Dinner", "items": "..."}}
+    ],
+    "supplements": ["...", "..."]
+  }},
+  "recovery": {{
+    "sleepTarget": "7-9h",
+    "hrvTrend": "↑ Optimal",
+    "protocols": ["...", "...", "...", "..."]
+  }},
+  "morningRoutine": ["...", "...", "...", "..."]
 }}
 
 Important:
 - Be realistic and safe — no extreme recommendations
-- Adapt to the experience level
-- Include rest days
-- Return valid JSON only
-- Exercises should match the equipment available
-- If any injury, condition or limitation was noted, prioritise safety over intensity and explain substitutions in the "notes" field of affected exercises
+- Adapt every exercise choice to the stated equipment and experience level
+- "sets" should look like "4x6" (sets x reps) or a duration like "30min" for cardio/rest entries
+- "load" is a short string like "70% 1RM", "Moderate", "Bodyweight", or "Easy" — never leave it blank
+- If any injury, condition or limitation was noted, prioritise safety and note substitutions directly in the exercise name or via a safer alternative exercise choice
+- If nutrition was declined ("No — training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
+- Return valid JSON only — no markdown, no commentary, no trailing commas
 """
 
     try:
-        # Call Claude API
         client = get_anthropic_client()
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=2000,
+            model="claude-sonnet-5",
+            max_tokens=8000,
             messages=[
                 {
                     "role": "user",
@@ -195,21 +208,18 @@ Important:
                 }
             ]
         )
-        
-        # Extract the response text
+
         response_text = message.content[0].text
-        
-        # Parse the JSON response
         plan_data = json.loads(response_text)
-        
+
         # Add metadata
         plan_data["answers"] = answers
         plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
-        plan_data["brand"] = f"{name}'s App"
-        plan_data["tagline"] = goal
-        
+        plan_data.setdefault("brand", f"{name}'s App")
+        plan_data.setdefault("tagline", goal)
+
         return plan_data
-        
+
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse Claude response as JSON: {e}")
         raise Exception("Plan generation failed - invalid response format")
@@ -266,11 +276,17 @@ class PlanGenerateRequest(BaseModel):
 
 
 class Plan(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    answers: Dict[str, Any]
+    answers: Dict[str, Any] = {}
     status: str = "draft"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    brand: Optional[str] = None
+    tagline: Optional[str] = None
+    weeks: Optional[List[Dict[str, Any]]] = None
+    nutrition: Optional[Dict[str, Any]] = None
+    recovery: Optional[Dict[str, Any]] = None
+    morningRoutine: Optional[List[str]] = None
 
 
 class AdminLoginRequest(BaseModel):
