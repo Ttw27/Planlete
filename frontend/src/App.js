@@ -2,7 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import Landing from "@/pages/Landing";
-import AthleteApp from "@/pages/AthleteApp";
+import RehabApp from "@/pages/RehabApp";
 import LongevityApp from "@/pages/LongevityApp";
 import FootballApp from "@/pages/FootballApp";
 import SprinterApp from "@/pages/SprinterApp";
@@ -24,7 +24,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/build" element={<BuildApp />} />
-          <Route path="/app/athlete" element={<AthleteApp />} />
+          <Route path="/app/rehab" element={<RehabApp />} />
           <Route path="/app/longevity" element={<LongevityApp />} />
           <Route path="/app/football" element={<FootballApp />} />
           <Route path="/app/sprinter" element={<SprinterApp />} />
