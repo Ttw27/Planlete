@@ -95,23 +95,33 @@ async def generate_plan_with_claude(answers: dict) -> dict:
     
     name = answers.get("name", "User")
     goal = answers.get("goal", "General fitness")
+    age = answers.get("age", "Not specified")
+    sex = answers.get("sex", "Not specified")
     experience = answers.get("experience", "Brand new")
     days = answers.get("days", "3")
     equipment = answers.get("equipment", "Full gym")
     session = answers.get("session", "60 min")
     nutrition = answers.get("nutrition", "No — training only")
-    
+    notes = answers.get("notes", "").strip() or "None provided"
+
     # Construct the prompt for Claude
     prompt = f"""You are an expert strength coach and training program designer. 
 Create a personalised {session} training plan for {name}.
 
 User Profile:
 - Main Goal: {goal}
+- Age range: {age}
+- Sex: {sex}
 - Training Experience: {experience}
 - Availability: {days} days per week
 - Equipment: {equipment}
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition}
+- Injuries, allergies or other notes from the user: {notes}
+
+If the notes mention any injury, condition, or limitation, you MUST adapt exercise
+selection to avoid aggravating it and substitute safer alternatives. If allergies or
+dietary restrictions are mentioned, avoid those foods entirely in the nutrition section.
 
 Create a WEEK 1 training plan in this exact JSON format (NO markdown, NO code blocks, just raw JSON):
 
@@ -169,6 +179,7 @@ Important:
 - Include rest days
 - Return valid JSON only
 - Exercises should match the equipment available
+- If any injury, condition or limitation was noted, prioritise safety over intensity and explain substitutions in the "notes" field of affected exercises
 """
 
     try:
