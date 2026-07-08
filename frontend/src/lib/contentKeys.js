@@ -52,6 +52,21 @@ export const CONTENT_GROUPS = [
     ],
   },
   {
+    id: "progressive",
+    label: "Progressive programme section",
+    fields: [
+      { key: "progressive_overline", label: "Overline", default: "Built to progress" },
+      { key: "progressive_headline_a", label: "Headline line 1", default: "Not a one-week PDF." },
+      { key: "progressive_headline_b", label: "Headline line 2 (accent)", default: "A programme that builds." },
+      {
+        key: "progressive_body",
+        label: "Body paragraph",
+        default: "Every app runs a real 4-week programme — three weeks of progressive overload, then a deload week to recover, before it cycles again. Whether you're coming back from injury, chasing longevity, prepping for a season, or training for speed — the structure is built around your goal, and keeps adapting as you go.",
+        long: true,
+      },
+    ],
+  },
+  {
     id: "flexibility",
     label: "One-off payment section",
     fields: [
