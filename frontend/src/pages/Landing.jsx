@@ -26,6 +26,13 @@ function Marquee() {
   );
 }
 
+const SPORTS = [
+  "Bodybuilding", "Hybrid athlete / HYROX", "Boxing", "Kickboxing & martial arts",
+  "Football", "Rugby", "Sprinting & athletics", "Powerlifting", "Rehab & recovery",
+  "Longevity & general fitness", "Fat loss", "Muscle building", "CrossFit-style training",
+  "Endurance & running", "And more",
+];
+
 // ─── Sample Plans ────────────────────────────────────────────────────────────
 const PLANS = [
   {
@@ -174,15 +181,56 @@ export default function Landing() {
       <section id="progressive" className="py-24 md:py-32 bg-zinc-950 border-y border-white/10">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <p className="text-overline text-zinc-500 mb-4">— {c("progressive_overline", "Built to progress")}</p>
-          <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-2xl">
+          <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-12 max-w-2xl">
             <span className="block">{c("progressive_headline_a", "Not a one-week PDF.")}</span>
             <span className="block text-[#D4FF00]">{c("progressive_headline_b", "A programme that builds.")}</span>
           </h2>
-          <p className="text-zinc-400 max-w-2xl leading-relaxed text-lg">
-            {c(
-              "progressive_body",
-              "Every app runs a real 4-week programme — three weeks of progressive overload, then a deload week to recover, before it cycles again. Whether you're coming back from injury, chasing longevity, prepping for a season, or training for speed — the structure is built around your goal, and keeps adapting as you go."
-            )}
+          <div className="grid md:grid-cols-3 gap-8">
+            <div>
+              <p className="text-overline text-[#D4FF00] mb-3">01</p>
+              <h3 className="font-display text-xl mb-3">{c("progressive_point1_title", "4 weeks, not 1")}</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {c("progressive_point1_body", "Three weeks of progressive overload, then a deload week to recover — before it cycles again. A real programme, not a single static week repeated forever.")}
+              </p>
+            </div>
+            <div>
+              <p className="text-overline text-[#D4FF00] mb-3">02</p>
+              <h3 className="font-display text-xl mb-3">{c("progressive_point2_title", "Every exercise explained")}</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {c("progressive_point2_body", "Tap the (i) next to any exercise in your app and see exactly why it's there — for your goal, your experience level, or any injury you told us about. Nothing thrown in at random.")}
+              </p>
+            </div>
+            <div>
+              <p className="text-overline text-[#D4FF00] mb-3">03</p>
+              <h3 className="font-display text-xl mb-3">{c("progressive_point3_title", "Built for your sport")}</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {c("progressive_point3_body", "Rehab, longevity, football, HYROX, boxing, bodybuilding or something else entirely — the structure and exercise selection is designed around your specific goal, not a generic template.")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SPORTS COVERED ── */}
+      <section id="sports" className="py-24 md:py-32 bg-black">
+        <div className="max-w-7xl mx-auto px-5 md:px-8">
+          <p className="text-overline text-zinc-500 mb-4">— {c("sports_overline", "Most sports covered")}</p>
+          <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-10 max-w-2xl">
+            <span className="block">{c("sports_headline_a", "Whatever you train for,")}</span>
+            <span className="block text-[#D4FF00]">{c("sports_headline_b", "it's covered.")}</span>
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            {SPORTS.map((sport) => (
+              <span
+                key={sport}
+                className="border border-white/15 text-zinc-300 text-sm px-4 py-2 hover:border-[#D4FF00] hover:text-white transition-colors"
+              >
+                {sport}
+              </span>
+            ))}
+          </div>
+          <p className="text-zinc-500 text-sm mt-8 max-w-xl">
+            {c("sports_footnote", "Don't see yours listed? Pick \"Something else\" in the questionnaire and tell us — we'll still build it around your sport.")}
           </p>
         </div>
       </section>
@@ -205,6 +253,35 @@ export default function Landing() {
               <PlanCard key={plan.id} plan={plan} images={images} c={c} />
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ── */}
+      <section id="pricing" className="py-24 md:py-32 bg-zinc-950 border-y border-white/10">
+        <div className="max-w-7xl mx-auto px-5 md:px-8 text-center">
+          <span className="inline-block bg-[#D4FF00] text-black text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 mb-8">
+            {c("pricing_badge", "Launch offer · 75% off · Limited time")}
+          </span>
+          <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-6">
+            <span className="block">{c("pricing_headline_a", "Your own app.")}</span>
+            <span className="block text-[#D4FF00]">{c("pricing_headline_b", "Normally £20. Now £4.99.")}</span>
+          </h2>
+          <p className="text-zinc-400 max-w-xl mx-auto leading-relaxed mb-10">
+            {c(
+              "pricing_explainer",
+              "We're running a launch offer to seed the first wave of users with real feedback. Once we hit our cap, the price reverts to £20."
+            )}
+          </p>
+          <Link
+            to="/build"
+            className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
+          >
+            Build my plan — £4.99
+            <ArrowRight size={16} />
+          </Link>
+          <p className="mt-4 text-zinc-600 text-xs uppercase tracking-widest">
+            One-off payment · No subscription · Yours to keep
+          </p>
         </div>
       </section>
 

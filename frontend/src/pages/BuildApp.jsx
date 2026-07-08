@@ -23,11 +23,16 @@ const QUESTIONS = [
     type: "choice",
     options: [
       "Athlete performance",
-      "Look good & stay healthy (longevity)",
+      "Bodybuilding / muscle building",
+      "Hybrid athlete / HYROX",
+      "Boxing",
+      "Kickboxing / martial arts",
       "Football specific",
+      "Sprint / athletics",
+      "Look good & stay healthy (longevity)",
       "Rehab / return from injury",
-      "Build muscle",
       "Lose fat",
+      "Something else (tell us below)",
     ],
   },
   {
@@ -80,10 +85,10 @@ const QUESTIONS = [
   },
   {
     id: "notes",
-    label: "Any injuries, allergies or anything else we should know?",
+    label: "Any injuries, allergies, sport specifics or anything else we should know?",
     type: "text",
-    placeholder: "e.g. dodgy left knee, avoid dairy — or leave blank",
-    hint: "Optional — but this is your only chance to tell us before we build your app.",
+    placeholder: "e.g. dodgy left knee, avoid dairy, training for a Muay Thai fight — or leave blank",
+    hint: "Optional — if you picked 'Something else', tell us your sport here. Otherwise, this is your only chance to add detail before we build your app.",
     optional: true,
   },
   {
