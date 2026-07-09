@@ -598,6 +598,20 @@ class ClientPlanCreate(BaseModel):
     # Mandatory professional disclaimer — see /coach/clients endpoint for
     # what this actually gates.
     disclaimer_accepted: bool
+
+
+# Same structured shape as ClientPlanCreate, minus the disclaimer requirement
+# — this is only reachable behind the admin token, so there's no third party
+# whose professional responsibility needs establishing.
+class ManualPlanCreate(BaseModel):
+    client_name: str
+    client_email: Optional[EmailStr] = None
+    notes: Optional[str] = None
+    days: List[PhysioDayEntry] = []
+    nutrition: Optional[PhysioNutrition] = None
+    recovery: Optional[PhysioRecovery] = None
+    morningRoutine: List[str] = []
+    allow_logging: bool = True
     # Legacy path, kept so existing static-template clients don't break:
     template: Optional[str] = None
 
@@ -726,6 +740,40 @@ async def get_plan(plan_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Plan not found")
     return Plan(**doc)
+
+
+@api_router.post("/admin/plans/manual")
+async def create_manual_plan(payload: ManualPlanCreate, _: bool = Depends(require_admin)):
+    """
+    ADMIN-ONLY: save a hand-authored plan (same builder UI as the coach
+    flow, no AI, no disclaimer needed since this never leaves your control)
+    directly into the same `plans` collection AI-generated plans use — so it
+    plays back through the exact same /app/u/{id} page with zero new
+    rendering code needed. Wrapping the single authored week as the only
+    entry in `weeks` means the existing week-cycling logic in the frontend
+    always resolves to that same week, forever — i.e. no auto-progression,
+    exactly as intended for manually-authored content.
+    """
+    plan_id = str(uuid.uuid4())
+    plan_data = {
+        "id": plan_id,
+        "brand": f"{payload.client_name}'s App" if payload.client_name else "Your App",
+        "tagline": "Your plan",
+        "answers": {"name": payload.client_name, "email": payload.client_email, "notes": payload.notes},
+        "weeks": [{
+            "weekNumber": 1,
+            "theme": "Your plan",
+            "days": [d.model_dump() for d in payload.days],
+        }],
+        "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
+        "recovery": payload.recovery.model_dump() if payload.recovery else None,
+        "morningRoutine": payload.morningRoutine,
+        "manually_authored": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.plans.insert_one(plan_data)
+    logger.info(f"Manual plan created (admin builder): {plan_id}")
+    return {"id": plan_id, "link": f"/app/u/{plan_id}"}
 
 
 # ===== Stripe checkout (real payment flow) =====
