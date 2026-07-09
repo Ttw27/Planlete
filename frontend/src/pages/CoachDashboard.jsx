@@ -10,6 +10,9 @@ import {
   Save,
   Copy,
   Building2,
+  Pencil,
+  CreditCard,
+  Check,
 } from "lucide-react";
 import {
   coachApi,
@@ -18,18 +21,12 @@ import {
   formatApiError,
 } from "@/lib/coachApi";
 
-const TEMPLATES = [
-  { id: "athlete", label: "Athlete Performance" },
-  { id: "longevity", label: "Longevity & Fitness" },
-  { id: "football", label: "Football Player" },
-  { id: "sprinter", label: "Sprinter" },
-];
-
 export default function CoachDashboard() {
   const navigate = useNavigate();
   const [coach, setCoach] = useState(null);
   const [clients, setClients] = useState([]);
   const [tab, setTab] = useState("clients");
+  const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
     coachApi
@@ -64,6 +61,17 @@ export default function CoachDashboard() {
     }
   };
 
+  const subscribe = async () => {
+    setSubscribing(true);
+    try {
+      const res = await coachApi.post("/coach/subscribe/create-session");
+      window.location.href = res.data.checkout_url;
+    } catch (err) {
+      toast.error(formatApiError(err, "Couldn't start checkout"));
+      setSubscribing(false);
+    }
+  };
+
   if (!coach) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center text-zinc-400">
@@ -71,6 +79,8 @@ export default function CoachDashboard() {
       </div>
     );
   }
+
+  const subscribed = coach.subscription_status === "active";
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -84,6 +94,20 @@ export default function CoachDashboard() {
             <span className="text-overline">{coach.brand_name}</span>
           </div>
           <div className="flex items-center gap-4">
+            {subscribed ? (
+              <span className="text-overline text-[#D4FF00] inline-flex items-center gap-2">
+                <Check size={14} /> Subscribed
+              </span>
+            ) : (
+              <button
+                onClick={subscribe}
+                disabled={subscribing}
+                className="text-overline text-black bg-[#D4FF00] hover:bg-white px-4 py-2 inline-flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <CreditCard size={14} />
+                {subscribing ? "Redirecting…" : "Subscribe"}
+              </button>
+            )}
             <Link
               to="/"
               target="_blank"
@@ -114,8 +138,9 @@ export default function CoachDashboard() {
               <span className="text-[#D4FF00]">for your clients.</span>
             </h1>
             <p className="text-sm text-zinc-400 mt-4 max-w-xl">
-              No subscription. No tie-ins. Create a plan when you need one,
-              never when you don&apos;t.
+              {subscribed
+                ? "You're subscribed — every client plan you create is included, no extra charge."
+                : "No subscription? Each client pays a one-off fee to unlock their plan. Subscribe above for unlimited clients included."}
             </p>
           </div>
         </div>
@@ -161,18 +186,17 @@ function TabButton({ id, tab, setTab, children }) {
 }
 
 function ClientsTab({ coach, clients, refresh }) {
-  const [open, setOpen] = useState(false);
   return (
     <div>
       <div className="mb-6">
-        <button
+        <Link
+          to="/coach/builder"
           data-testid="new-client-button"
-          onClick={() => setOpen(true)}
           className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white transition-colors"
         >
           <Plus size={16} />
           New client plan
-        </button>
+        </Link>
       </div>
 
       {clients.length === 0 ? (
@@ -193,17 +217,6 @@ function ClientsTab({ coach, clients, refresh }) {
             />
           ))}
         </div>
-      )}
-
-      {open && (
-        <NewClientModal
-          coach={coach}
-          onClose={() => setOpen(false)}
-          onCreated={() => {
-            setOpen(false);
-            refresh();
-          }}
-        />
       )}
     </div>
   );
@@ -229,6 +242,13 @@ function ClientCard({ client, coach, refresh }) {
       toast.error("Delete failed");
     }
   };
+
+  const statusBadge = {
+    included: { label: "Included", classes: "text-[#D4FF00] border-[#D4FF00]/30" },
+    paid: { label: "Paid", classes: "text-[#D4FF00] border-[#D4FF00]/30" },
+    pending_payment: { label: "Awaiting client payment", classes: "text-yellow-400 border-yellow-400/30" },
+  }[client.payment_status] || { label: client.payment_status, classes: "text-zinc-500 border-white/10" };
+
   return (
     <div
       data-testid={`client-card-${client.slug}`}
@@ -238,7 +258,7 @@ function ClientCard({ client, coach, refresh }) {
         <div>
           <p className="font-display text-xl">{client.client_name}</p>
           <p className="text-overline text-[10px] mt-1">
-            {client.template} · {new Date(client.created_at).toLocaleDateString()}
+            {new Date(client.created_at).toLocaleDateString()}
           </p>
         </div>
         <button
@@ -250,6 +270,11 @@ function ClientCard({ client, coach, refresh }) {
           <Trash2 size={14} />
         </button>
       </div>
+
+      <span className={`self-start text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 border ${statusBadge.classes}`}>
+        {statusBadge.label}
+      </span>
+
       {client.notes && (
         <p className="text-xs text-zinc-400 leading-relaxed border-l-2 border-white/10 pl-3">
           {client.notes}
@@ -264,141 +289,20 @@ function ClientCard({ client, coach, refresh }) {
         >
           <ExternalLink size={12} /> Open
         </Link>
+        <Link
+          to={`/coach/builder/${client.id}`}
+          className="border border-white/15 text-white font-bold uppercase tracking-wider text-[11px] px-3 py-2 inline-flex items-center gap-2 hover:bg-white/5 transition-colors"
+        >
+          <Pencil size={12} /> Edit
+        </Link>
         <button
           data-testid={`copy-client-${client.slug}`}
           onClick={copy}
           className="border border-white/15 text-white font-bold uppercase tracking-wider text-[11px] px-3 py-2 inline-flex items-center gap-2 hover:bg-white/5 transition-colors"
         >
-          <Copy size={12} /> Copy
+          <Copy size={12} />
         </button>
       </div>
-    </div>
-  );
-}
-
-function NewClientModal({ coach, onClose, onCreated }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [template, setTemplate] = useState("athlete");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await coachApi.post("/coach/clients", {
-        client_name: name,
-        client_email: email || undefined,
-        template,
-        notes: notes || undefined,
-      });
-      toast.success(`Plan created for ${name}`);
-      onCreated();
-    } catch (err) {
-      toast.error(formatApiError(err, "Couldn't create plan"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div
-      data-testid="new-client-modal"
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-[#0a0a0a] border border-white/10 p-6 md:p-10 my-12"
-      >
-        <p className="text-overline text-[#D4FF00] mb-3">— New client plan</p>
-        <h3 className="font-display text-3xl mb-8">
-          Build a plan for a
-          <br />
-          new client.
-        </h3>
-
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-overline">Client name</label>
-            <input
-              data-testid="new-client-name"
-              required
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Sam Jones"
-              className="bg-transparent border-b border-white/20 focus:border-[#D4FF00] outline-none py-3 text-lg"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-overline">Client email (optional)</label>
-            <input
-              data-testid="new-client-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="client@email.com"
-              className="bg-transparent border-b border-white/20 focus:border-[#D4FF00] outline-none py-3"
-            />
-          </div>
-          <div className="flex flex-col gap-3">
-            <label className="text-overline">Template</label>
-            <div className="grid grid-cols-2 gap-2">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  data-testid={`tpl-${t.id}`}
-                  onClick={() => setTemplate(t.id)}
-                  className={`text-left px-4 py-3 border transition-colors ${
-                    template === t.id
-                      ? "border-[#D4FF00] text-white bg-[#D4FF00]/5"
-                      : "border-white/15 text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-overline">Notes (optional)</label>
-            <textarea
-              data-testid="new-client-notes"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Anything you want the client to see — coach note, focus, schedule reminders."
-              className="bg-transparent border border-white/10 px-3 py-2 text-sm focus:border-[#D4FF00] outline-none resize-y"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 mt-10">
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-overline text-zinc-400 hover:text-white px-3 py-3"
-          >
-            Cancel
-          </button>
-          <button
-            data-testid="new-client-submit"
-            type="submit"
-            disabled={saving || !name}
-            className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-6 py-3 hover:bg-white transition-colors disabled:opacity-50"
-          >
-            {saving ? "Creating…" : "Create plan"}
-          </button>
-        </div>
-        <p className="text-xs text-zinc-500 mt-5">
-          {coach.brand_name} colours and logo apply to every client plan you
-          create.
-        </p>
-      </form>
     </div>
   );
 }

@@ -88,10 +88,12 @@ export default function GeneratedApp() {
   const weeks = Array.isArray(plan.weeks) ? plan.weeks : [];
 
   // Work out which week of the cycle to show, looping once the cycle ends.
+  // Single-week plans (manually authored, no auto-progression) just show
+  // that one week forever — no point labelling it "Week 1/1".
   let currentWeek = weeks[0];
   let weekLabel = "";
   let weekIndex = 0;
-  if (weeks.length > 0) {
+  if (weeks.length > 1) {
     const createdAt = plan.created_at ? new Date(plan.created_at) : new Date();
     const daysElapsed = Math.max(
       0,
