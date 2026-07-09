@@ -161,11 +161,13 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
+              setView={setView}
             />
           )}
           {view === "training" && (
             <TrainingView
               days={days}
+              morningRoutine={morningRoutine}
               weekNumber={weekNumber}
               completed={completed}
               onToggleDone={toggleDone}
@@ -186,7 +188,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
         <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-md border-t border-white/10 grid grid-cols-4">
           <BottomTab
             id="home"
-            label="Home"
+            label="Today"
             icon={<Home size={18} />}
             view={view}
             setView={setView}
@@ -218,16 +220,33 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
       </div>
 
       <div className="text-center mt-6">
-        <Link
-          to="/build"
-          data-testid="upgrade-cta"
-          className="inline-flex items-center gap-2 bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-xs px-5 py-3 hover:bg-white transition-colors"
-        >
-          Build mine — £4.99 →
-        </Link>
-        <p className="text-xs text-zinc-500 mt-3">
-          This is a sample. Yours is fully personalised.
-        </p>
+        {planId ? (
+          <>
+            <Link
+              to="/build"
+              data-testid="upgrade-cta"
+              className="inline-flex items-center gap-2 border border-white/20 text-white font-bold uppercase tracking-wider text-xs px-5 py-3 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+            >
+              Create your new plan — £4.99 →
+            </Link>
+            <p className="text-xs text-zinc-500 mt-3">
+              Goals changed? Injury? Just build a fresh app whenever you need to.
+            </p>
+          </>
+        ) : (
+          <>
+            <Link
+              to="/build"
+              data-testid="upgrade-cta"
+              className="inline-flex items-center gap-2 bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-xs px-5 py-3 hover:bg-white transition-colors"
+            >
+              Build mine — £4.99 →
+            </Link>
+            <p className="text-xs text-zinc-500 mt-3">
+              This is a sample. Yours is fully personalised.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
@@ -249,7 +268,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog }) {
+function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog, setView }) {
   const todayIndex = Math.min(new Date().getDay(), days.length - 1);
   const today = days[todayIndex] || days[0];
 
@@ -273,23 +292,6 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
         </div>
       </div>
 
-      {/* Days strip */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 py-4 border-b border-white/10">
-        {days.map((d, i) => (
-          <div
-            key={d.day + i}
-            className={`shrink-0 px-3 py-2 border ${
-              i === todayIndex
-                ? "border-[var(--accent)] text-[var(--accent)]"
-                : "border-white/10 text-zinc-400"
-            }`}
-          >
-            <p className="text-[10px] uppercase tracking-widest">{d.day}</p>
-            <p className="text-xs mt-1 text-white">{d.label}</p>
-          </div>
-        ))}
-      </div>
-
       {/* Today workouts */}
       <div className="px-5 py-5">
         <div className="flex items-center justify-between mb-3">
@@ -311,9 +313,12 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
             />
           ))}
           {today.workouts.length > 4 && (
-            <p className="text-xs text-zinc-500 mt-2">
+            <button
+              onClick={() => setView?.("training")}
+              className="text-xs text-zinc-500 mt-2 hover:text-[var(--accent)] transition-colors text-left"
+            >
               + {today.workouts.length - 4} more · open Train tab
-            </p>
+            </button>
           )}
         </div>
       </div>
@@ -368,46 +373,131 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
           </ul>
         </div>
       )}
+
+      {/* Quick links to fill remaining space */}
+      <div className="px-5 py-5 border-t border-white/10">
+        <p className="text-overline mb-3">Jump to</p>
+        <div className={`grid gap-2 ${nutrition ? "grid-cols-3" : "grid-cols-2"}`}>
+          <button
+            onClick={() => setView?.("training")}
+            className="border border-white/10 hover:border-[var(--accent)] px-3 py-4 flex flex-col items-center gap-2 text-zinc-300 hover:text-white transition-colors"
+          >
+            <Dumbbell size={18} />
+            <span className="text-[10px] uppercase tracking-widest">Train</span>
+          </button>
+          {nutrition && (
+            <button
+              onClick={() => setView?.("nutrition")}
+              className="border border-white/10 hover:border-[var(--accent)] px-3 py-4 flex flex-col items-center gap-2 text-zinc-300 hover:text-white transition-colors"
+            >
+              <Salad size={18} />
+              <span className="text-[10px] uppercase tracking-widest">Fuel</span>
+            </button>
+          )}
+          <button
+            onClick={() => setView?.("recovery")}
+            className="border border-white/10 hover:border-[var(--accent)] px-3 py-4 flex flex-col items-center gap-2 text-zinc-300 hover:text-white transition-colors"
+          >
+            <Moon size={18} />
+            <span className="text-[10px] uppercase tracking-widest">Recover</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function TrainingView({ days, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog }) {
+function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog }) {
+  const todayIndex = Math.min(new Date().getDay(), days.length - 1);
+  const [selected, setSelected] = useState(todayIndex);
+  const d = days[selected] || days[0];
+
+  const dayKeys = d.workouts.map((_, j) => `${weekNumber || 0}-${d.day}-${j}`);
+  const dayDone = dayKeys.filter((k) => completed.has(k)).length;
+
   return (
     <div className="flex flex-col">
-      {days.map((d, i) => {
-        const dayKeys = d.workouts.map((_, j) => `${weekNumber || 0}-${d.day}-${j}`);
-        const dayDone = dayKeys.filter((k) => completed.has(k)).length;
-        return (
-          <div key={i} className="border-b border-white/10 px-5 py-5">
-            <div className="flex items-baseline justify-between mb-3">
-              <div>
-                <p className="text-overline">{d.day}</p>
-                <h3 className="font-display text-xl mt-1">{d.label}</h3>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-zinc-500">{d.focus}</p>
-                <p className="text-[10px] font-mono-display text-zinc-600 mt-1">
-                  {dayDone}/{d.workouts.length} done
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              {d.workouts.map((w, j) => (
-                <WorkoutRow
-                  key={j}
-                  w={w}
-                  checked={completed.has(`${weekNumber || 0}-${d.day}-${j}`)}
-                  onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${d.day}-${j}`)}
-                  loggedValue={logs[`${weekNumber || 0}-${d.day}-${w.name}`]}
-                  onSaveLog={(value) => onSaveLog(d.day, w.name, value)}
-                  canLog={canLog}
-                />
-              ))}
-            </div>
+      {/* Clickable day selector */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0a0a0a] z-10">
+        {days.map((day, i) => (
+          <button
+            key={day.day + i}
+            onClick={() => setSelected(i)}
+            className={`shrink-0 px-3 py-2 border text-left transition-colors ${
+              i === selected
+                ? "border-[var(--accent)] text-[var(--accent)]"
+                : "border-white/10 text-zinc-400 hover:border-white/30 hover:text-white"
+            }`}
+          >
+            <p className="text-[10px] uppercase tracking-widest flex items-center gap-1">
+              {day.day}
+              {i === todayIndex && <span className="w-1 h-1 rounded-full bg-[var(--accent)]" />}
+            </p>
+            <p className="text-xs mt-1">{day.label}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="px-5 py-5">
+        <div className="flex items-baseline justify-between mb-4">
+          <div>
+            <p className="text-overline">{d.day}{selected === todayIndex ? " · Today" : ""}</p>
+            <h3 className="font-display text-xl mt-1">{d.label}</h3>
           </div>
-        );
-      })}
+          <div className="text-right">
+            <p className="text-xs text-zinc-500">{d.focus}</p>
+            <p className="text-[10px] font-mono-display text-zinc-600 mt-1">
+              {dayDone}/{d.workouts.length} done
+            </p>
+          </div>
+        </div>
+
+        {/* Morning routine for this day */}
+        {morningRoutine && morningRoutine.length > 0 && (
+          <div className="mb-6 pb-6 border-b border-white/10">
+            <p className="text-overline mb-3">Morning movement</p>
+            <ul className="flex flex-col gap-2 text-sm text-zinc-300">
+              {morningRoutine.map((m, i) => {
+                const key = `morning-${i}`;
+                const done = completed.has(key);
+                return (
+                  <li key={i} className="flex items-center justify-between border-b border-white/5 py-2">
+                    <button
+                      onClick={() => onToggleDone(key)}
+                      className="flex items-center gap-3 text-left flex-1 min-w-0"
+                    >
+                      <span
+                        className={`shrink-0 w-4 h-4 border flex items-center justify-center ${
+                          done ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30"
+                        }`}
+                      >
+                        {done && <Check size={11} className="text-black" />}
+                      </span>
+                      <span className={done ? "line-through text-zinc-600" : ""}>{m}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* Workout for selected day */}
+        <p className="text-overline mb-3">Workout</p>
+        <div className="flex flex-col gap-2">
+          {d.workouts.map((w, j) => (
+            <WorkoutRow
+              key={j}
+              w={w}
+              checked={completed.has(`${weekNumber || 0}-${d.day}-${j}`)}
+              onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${d.day}-${j}`)}
+              loggedValue={logs[`${weekNumber || 0}-${d.day}-${w.name}`]}
+              onSaveLog={(value) => onSaveLog(d.day, w.name, value)}
+              canLog={canLog}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -623,7 +713,8 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, onSaveLo
               onKeyDown={(e) => e.key === "Enter" && submitLog()}
               placeholder="e.g. 80kg or 12 reps"
               autoFocus
-              className="flex-1 bg-black/40 border border-white/15 focus:border-[var(--accent)] outline-none text-xs text-white px-3 py-2 placeholder:text-white/20"
+              className="flex-1 bg-black/40 border border-white/15 focus:border-[var(--accent)] outline-none text-white px-3 py-2 placeholder:text-white/20"
+              style={{ fontSize: "16px" }}
             />
             <button
               onClick={submitLog}
@@ -643,6 +734,9 @@ function NutritionView({ nutrition }) {
   const pPct = Math.round(((nutrition.protein * 4) / total) * 100);
   const cPct = Math.round(((nutrition.carbs * 4) / total) * 100);
   const fPct = 100 - pPct - cPct;
+
+  const FALLBACK_DISCLAIMER =
+    "Always speak to your GP or a qualified healthcare professional before starting any new supplement — especially if you have an existing health condition, take medication, or are pregnant or breastfeeding.";
 
   return (
     <div className="flex flex-col">
@@ -692,20 +786,32 @@ function NutritionView({ nutrition }) {
         <div className="px-5 py-5 border-b border-white/10">
           <p className="text-overline mb-3">Meal timing</p>
           <ul className="flex flex-col gap-3">
-            {nutrition.meals.map((m, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-4 border-b border-white/5 pb-3 last:border-0"
-              >
-                <span className="font-mono-display text-[var(--accent)] text-sm w-14 shrink-0">
-                  {m.time}
-                </span>
-                <div>
-                  <p className="text-sm text-white">{m.name}</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">{m.items}</p>
-                </div>
-              </li>
-            ))}
+            {nutrition.meals.map((m, i) => {
+              const hasMacros =
+                m.calories != null || m.protein != null || m.carbs != null || m.fats != null;
+              return (
+                <li
+                  key={i}
+                  className="flex items-start gap-4 border-b border-white/5 pb-3 last:border-0"
+                >
+                  <span className="font-mono-display text-[var(--accent)] text-sm w-14 shrink-0">
+                    {m.time}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm text-white">{m.name}</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">{m.items}</p>
+                    {hasMacros && (
+                      <p className="text-[10px] text-zinc-500 mt-1.5 font-mono-display">
+                        {m.calories != null && `${m.calories} kcal`}
+                        {m.protein != null && ` · P ${m.protein}g`}
+                        {m.carbs != null && ` · C ${m.carbs}g`}
+                        {m.fats != null && ` · F ${m.fats}g`}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -713,15 +819,26 @@ function NutritionView({ nutrition }) {
       {nutrition.supplements && (
         <div className="px-5 py-5">
           <p className="text-overline mb-3">Supplement stack</p>
-          <div className="grid grid-cols-2 gap-2">
-            {nutrition.supplements.map((s, i) => (
-              <div
-                key={i}
-                className="border border-white/10 px-3 py-2 text-xs text-zinc-300"
-              >
-                {s}
-              </div>
-            ))}
+          <div className="flex flex-col gap-2">
+            {nutrition.supplements.map((s, i) => {
+              const isObject = typeof s === "object" && s !== null;
+              const name = isObject ? s.name : s;
+              const reason = isObject ? s.reason : null;
+              return (
+                <div key={i} className="border border-white/10 px-3 py-3">
+                  <p className="text-sm text-white">{name}</p>
+                  {reason && (
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{reason}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 border border-yellow-500/20 bg-yellow-500/5 px-3 py-3">
+            <p className="text-[11px] text-yellow-200/80 leading-relaxed">
+              ⚠ {nutrition.supplement_disclaimer || FALLBACK_DISCLAIMER}
+            </p>
           </div>
         </div>
       )}
