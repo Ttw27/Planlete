@@ -78,9 +78,11 @@ export default function SiteFooter() {
 
         <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between gap-4 text-xs text-zinc-500 font-mono-display">
           <p>© {new Date().getFullYear()} PLANLETE — Built for You. All rights reserved.</p>
-          <p className="uppercase tracking-[0.2em]">
-            Your plan · Your app · No gym required
-          </p>
+          <div className="flex gap-5">
+            <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <Link to="/refunds" className="hover:text-white transition-colors">Refunds</Link>
+          </div>
         </div>
         <div className="mt-4 text-xs text-zinc-600">
           <p>

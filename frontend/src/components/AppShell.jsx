@@ -931,8 +931,20 @@ function NutritionView({ nutrition }) {
 function RecoveryView({ recovery, morningRoutine }) {
   if (!recovery) {
     return (
-      <div className="px-5 py-10 text-center text-sm text-zinc-400">
-        Recovery section is added in your personalised app.
+      <div className="flex flex-col">
+        <div className="px-5 py-10 text-center text-sm text-zinc-400">
+          Recovery section is added in your personalised app.
+        </div>
+        <div className="px-5 py-5 border-t border-white/10">
+          <div className="border border-yellow-500/20 bg-yellow-500/5 px-3 py-3">
+            <p className="text-[11px] text-yellow-200/80 leading-relaxed">
+              ⚠ This programme is generated automatically based on the information you provided
+              and isn't a substitute for professional coaching or medical advice. Consult a
+              doctor before starting any new exercise programme, especially if you have an
+              existing injury or health condition.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -978,6 +990,18 @@ function RecoveryView({ recovery, morningRoutine }) {
           </ul>
         </div>
       )}
+      <div className="px-5 py-5 border-t border-white/10">
+        <div className="border border-yellow-500/20 bg-yellow-500/5 px-3 py-3">
+          <p className="text-[11px] text-yellow-200/80 leading-relaxed">
+            ⚠ This programme is generated automatically based on the information you provided
+            and isn't a substitute for professional coaching or medical advice. Consult a
+            doctor before starting any new exercise programme, especially if you have an
+            existing injury or health condition. If any exercise causes pain, stop
+            immediately. Contact/combat elements (such as sparring) are intended only for
+            suitably experienced individuals in a supervised, appropriate setting.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
