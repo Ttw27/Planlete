@@ -14,6 +14,7 @@ import bcrypt
 import jwt
 import json
 from anthropic import Anthropic
+import stripe
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import Optional, Dict, Any, List
@@ -30,6 +31,11 @@ APP_NAME = os.environ.get("APP_NAME", "planlete")
 EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")
+
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://planlete.vercel.app")
+stripe.api_key = STRIPE_SECRET_KEY
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
@@ -87,13 +93,60 @@ def get_object(path: str):
 
 
 # ===== Claude AI Plan Generation =====
-async def generate_plan_with_claude(answers: dict) -> dict:
+
+EXPECTED_DAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+
+def validate_plan(plan_data: dict) -> None:
     """
-    Generate a personalised, 4-week periodised training plan using Claude AI,
-    matching the exact JSON schema the AppShell component expects (the same
-    schema used by the static sample apps), so every generated app renders
-    through the same UI — only the exercises/nutrition content differs.
+    Deterministic quality check on the plan Claude just generated. Raises a
+    descriptive ValueError if anything required is missing, so the caller can
+    retry generation rather than silently saving a broken/incomplete plan —
+    this is the automated check for "did it miss an exercise / a field".
     """
+    weeks = plan_data.get("weeks")
+    if not isinstance(weeks, list) or len(weeks) != 4:
+        raise ValueError(f"Expected 4 weeks, got {len(weeks) if isinstance(weeks, list) else 'none'}")
+
+    for w in weeks:
+        week_num = w.get("weekNumber", "?")
+        days = w.get("days")
+        if not isinstance(days, list) or len(days) != 7:
+            raise ValueError(f"Week {week_num}: expected 7 days, got {len(days) if isinstance(days, list) else 'none'}")
+
+        day_names = [d.get("day") for d in days]
+        if day_names != EXPECTED_DAY_ORDER:
+            raise ValueError(f"Week {week_num}: days out of order or mislabelled: {day_names}")
+
+        for d in days:
+            workouts = d.get("workouts")
+            if not isinstance(workouts, list) or len(workouts) == 0:
+                raise ValueError(f"Week {week_num}, {d.get('day')}: no workouts present")
+
+            for ex in workouts:
+                for field in ("name", "sets", "load", "rest", "reason"):
+                    if not str(ex.get(field, "")).strip():
+                        raise ValueError(
+                            f"Week {week_num}, {d.get('day')}, exercise '{ex.get('name', '?')}': "
+                            f"missing required field '{field}'"
+                        )
+
+    nutrition = plan_data.get("nutrition")
+    if not isinstance(nutrition, dict) or not nutrition.get("meals"):
+        raise ValueError("Missing or incomplete nutrition section")
+
+    recovery = plan_data.get("recovery")
+    if not isinstance(recovery, dict) or not recovery.get("protocols"):
+        raise ValueError("Missing or incomplete recovery section")
+
+    if not plan_data.get("morningRoutine"):
+        raise ValueError("Missing morningRoutine section")
+
+
+async def _call_claude_for_plan(answers: dict) -> dict:
+    """One attempt at generating a plan via Claude. May raise on API error,
+    invalid JSON, or failed validation — the caller (generate_plan_with_claude)
+    is responsible for retrying."""
 
     name = answers.get("name", "User")
     goal = answers.get("goal", "General fitness")
@@ -144,6 +197,8 @@ week — 7 day-entries x 4 weeks = 28 total. Days that are not a training day fo
 this person must still appear, with a rest/active-recovery entry (e.g. a short
 mobility or walk session) rather than being omitted. Match the number of actual
 training days to "{days} days per week" — remaining days are rest/recovery days.
+Every single day, including rest days, MUST have at least one entry in "workouts" —
+never return an empty workouts array.
 
 Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
 
@@ -156,17 +211,17 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
       "theme": "Foundation",
       "days": [
         {{"day": "Sun", "label": "Rest", "focus": "Recovery", "workouts": [
-          {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—"}}
+          {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—", "reason": "Active recovery keeps blood flow up without adding fatigue before the training week starts."}}
         ]}},
         {{"day": "Mon", "label": "Lower Body", "focus": "Strength", "workouts": [
           {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min", "reason": "Builds the foundational lower-body strength this goal depends on most, loaded conservatively in week 1 to groove technique."}},
           {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s", "reason": "Targets the posterior chain and hamstrings, which support the squat and protect the lower back."}}
         ]}},
-        {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ ... ]}},
-        {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ ... ]}},
-        {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ ... ]}},
-        {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ ... ]}},
-        {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ ... ]}}
+        {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
+        {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
+        {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
+        {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
+        {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}}
       ]
     }},
     {{ "weekNumber": 2, "theme": "Build", "days": [ ...same 7-day shape, slightly progressed... ] }},
@@ -201,42 +256,69 @@ Important:
 - Adapt every exercise choice to the stated equipment and experience level
 - "sets" should look like "4x6" (sets x reps) or a duration like "30min" for cardio/rest entries
 - "load" is a short string like "70% 1RM", "Moderate", "Bodyweight", or "Easy" — never leave it blank
+- "rest" must never be blank — use a real value like "90s", "2min", or "—" for entries with no meaningful rest period
 - Every workout entry MUST include a "reason" field: one short sentence (max ~20 words) explaining why THIS exercise was chosen for THIS person's goal, experience level, or any injury noted — not a generic description. Rest/recovery day entries can use "reason" to explain why rest is programmed there too.
 - If any injury, condition or limitation was noted, prioritise safety and note substitutions directly in the exercise name or via a safer alternative exercise choice
 - If nutrition was declined ("No — training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
 - Return valid JSON only — no markdown, no commentary, no trailing commas
+- Double-check before responding: every one of the 28 day-entries (4 weeks x 7 days) must be present, in Sun-Mon-Tue-Wed-Thu-Fri-Sat order, and every workout entry must have all five fields (name, sets, load, rest, reason) filled in — an incomplete plan is a failed response
 """
 
-    try:
-        client = get_anthropic_client()
-        message = client.messages.create(
-            model="claude-sonnet-5",
-            max_tokens=10000,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
+    client = get_anthropic_client()
+    message = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=10000,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
 
-        response_text = message.content[0].text
-        plan_data = json.loads(response_text)
+    response_text = message.content[0].text
+    plan_data = json.loads(response_text)
 
-        # Add metadata
-        plan_data["answers"] = answers
-        plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
-        plan_data.setdefault("brand", f"{name}'s App")
-        plan_data.setdefault("tagline", goal)
+    plan_data["answers"] = answers
+    plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
+    plan_data.setdefault("brand", f"{name}'s App")
+    plan_data.setdefault("tagline", goal)
 
-        return plan_data
+    validate_plan(plan_data)
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse Claude response as JSON: {e}")
-        raise Exception("Plan generation failed - invalid response format")
-    except Exception as e:
-        logger.error(f"Claude API error: {e}")
-        raise Exception(f"Plan generation failed: {str(e)}")
+    return plan_data
+
+
+async def generate_plan_with_claude(answers: dict) -> dict:
+    """
+    Generate a personalised, 4-week periodised training plan using Claude AI,
+    matching the exact JSON schema the AppShell component expects. Runs a
+    deterministic QA check (validate_plan) on the result and automatically
+    retries once if anything required is missing (a day, an exercise, a
+    field) rather than saving a broken plan.
+    """
+    last_error = None
+    max_attempts = 2
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            plan_data = await _call_claude_for_plan(answers)
+            if attempt > 1:
+                logger.info(f"Plan generation succeeded on retry attempt {attempt}")
+            return plan_data
+        except json.JSONDecodeError as e:
+            last_error = f"Invalid JSON from Claude: {e}"
+            logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
+        except ValueError as e:
+            last_error = f"Failed QA validation: {e}"
+            logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
+        except Exception as e:
+            last_error = f"Claude API error: {e}"
+            logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
+
+    logger.error(f"Plan generation failed after {max_attempts} attempts: {last_error}")
+    raise Exception(f"Plan generation failed after {max_attempts} attempts: {last_error}")
+
 
 
 # ===== Auth helpers =====
@@ -298,6 +380,34 @@ class Plan(BaseModel):
     nutrition: Optional[Dict[str, Any]] = None
     recovery: Optional[Dict[str, Any]] = None
     morningRoutine: Optional[List[str]] = None
+
+
+class CheckoutSessionRequest(BaseModel):
+    answers: Dict[str, Any]
+
+
+class CheckoutSessionResponse(BaseModel):
+    checkout_url: str
+    order_id: str
+
+
+class WeightLogCreate(BaseModel):
+    plan_id: str
+    week_number: int
+    day: str
+    exercise_name: str
+    value: str  # e.g. "82.5kg" or "10 reps" — kept as a simple string, deliberately basic
+
+
+class WeightLog(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    plan_id: str
+    week_number: int
+    day: str
+    exercise_name: str
+    value: str
+    logged_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class AdminLoginRequest(BaseModel):
@@ -436,10 +546,11 @@ async def waitlist_count():
 
 
 @api_router.post("/plans/generate")
-async def generate_plan(payload: PlanGenerateRequest):
+async def generate_plan(payload: PlanGenerateRequest, _: bool = Depends(require_admin)):
     """
-    Generate a personalised training plan using Claude AI.
-    Stores in MongoDB and returns plan ID.
+    ADMIN-ONLY: generate a plan directly without payment, for testing.
+    Real customers go through /checkout/create-session -> Stripe -> /checkout/confirm,
+    which is what actually charges them before a plan is generated.
     """
     try:
         # Generate plan with Claude
@@ -452,7 +563,7 @@ async def generate_plan(payload: PlanGenerateRequest):
         # Store in MongoDB
         await db.plans.insert_one(plan_data)
         
-        logger.info(f"Plan generated: {plan_id}")
+        logger.info(f"Plan generated (admin test): {plan_id}")
         
         return {
             "id": plan_id,
@@ -474,6 +585,174 @@ async def get_plan(plan_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Plan not found")
     return Plan(**doc)
+
+
+# ===== Stripe checkout (real payment flow) =====
+@api_router.post("/checkout/create-session", response_model=CheckoutSessionResponse)
+async def create_checkout_session(payload: CheckoutSessionRequest):
+    """
+    Customer-facing entry point. Stores the questionnaire answers against a
+    pending order, creates a Stripe Checkout session for £4.99, and returns
+    the hosted checkout URL for the frontend to redirect to. The plan itself
+    is NOT generated here — that only happens after payment is confirmed,
+    in /checkout/confirm, so nobody gets a plan without paying.
+    """
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Payments are not configured yet.")
+
+    order_id = str(uuid.uuid4())
+    order = {
+        "id": order_id,
+        "answers": payload.answers,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.pending_orders.insert_one(order)
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "gbp",
+                    "product_data": {"name": "Planlete — Personalised Training App"},
+                    "unit_amount": 499,
+                },
+                "quantity": 1,
+            }],
+            success_url=f"{FRONTEND_URL}/build/success?session_id={{CHECKOUT_SESSION_ID}}&order_id={order_id}",
+            cancel_url=f"{FRONTEND_URL}/build?cancelled=1",
+            metadata={"order_id": order_id},
+        )
+    except Exception as e:
+        logger.error(f"Stripe session creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not start checkout. Please try again.")
+
+    await db.pending_orders.update_one(
+        {"id": order_id}, {"$set": {"stripe_session_id": session.id}}
+    )
+
+    return CheckoutSessionResponse(checkout_url=session.url, order_id=order_id)
+
+
+@api_router.get("/checkout/confirm")
+async def confirm_checkout(session_id: str, order_id: str):
+    """
+    Called by the success page after Stripe redirects back. Verifies the
+    session was actually paid (never trusts the redirect alone), then
+    generates the plan and links it to the order. Safe to call more than
+    once (e.g. on refresh) — if the plan already exists, just returns it.
+    """
+    order = await db.pending_orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.get("status") == "plan_created" and order.get("plan_id"):
+        return {"id": order["plan_id"], "link": f"/app/u/{order['plan_id']}"}
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        logger.error(f"Stripe session retrieve failed: {e}")
+        raise HTTPException(status_code=400, detail="Could not verify payment.")
+
+    if session.payment_status != "paid":
+        raise HTTPException(status_code=402, detail="Payment has not completed yet.")
+
+    try:
+        plan_data = await generate_plan_with_claude(order["answers"])
+    except Exception as e:
+        logger.error(f"Plan generation after payment failed for order {order_id}: {e}")
+        # Payment succeeded but generation failed — mark clearly so it can be
+        # spotted and manually resolved rather than silently losing the sale.
+        await db.pending_orders.update_one(
+            {"id": order_id},
+            {"$set": {"status": "paid_generation_failed", "error": str(e)}}
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Payment succeeded but plan generation failed. Support has been notified — check your email shortly."
+        )
+
+    plan_id = str(uuid.uuid4())
+    plan_data["id"] = plan_id
+    plan_data["order_id"] = order_id
+    await db.plans.insert_one(plan_data)
+
+    await db.pending_orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "status": "plan_created",
+            "plan_id": plan_id,
+            "paid_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    logger.info(f"Order {order_id} paid and plan {plan_id} generated")
+
+    return {"id": plan_id, "link": f"/app/u/{plan_id}"}
+
+
+@api_router.post("/webhooks/stripe")
+async def stripe_webhook(request: Request):
+    """
+    Safety-net audit trail: marks an order as 'paid' in the database even if
+    the customer never makes it back to the success page. Does NOT generate
+    the plan itself (that only happens via /checkout/confirm, to avoid two
+    code paths racing to generate the same plan twice) — this exists so a
+    payment is never silently invisible to you even if the redirect fails.
+    """
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    try:
+        if STRIPE_WEBHOOK_SECRET:
+            event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        else:
+            event = json.loads(payload)
+    except Exception as e:
+        logger.error(f"Stripe webhook verification failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid webhook payload")
+
+    event_type = event["type"] if isinstance(event, dict) else event.type
+    data_object = event["data"]["object"] if isinstance(event, dict) else event.data.object
+
+    if event_type == "checkout.session.completed":
+        metadata = data_object.get("metadata", {}) if isinstance(data_object, dict) else (data_object.metadata or {})
+        order_id = metadata.get("order_id")
+        if order_id:
+            order = await db.pending_orders.find_one({"id": order_id})
+            if order and order.get("status") == "pending":
+                await db.pending_orders.update_one(
+                    {"id": order_id},
+                    {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logger.info(f"Stripe webhook: order {order_id} confirmed paid")
+
+    return {"received": True}
+
+
+@api_router.get("/admin/orders")
+async def admin_list_orders(_: bool = Depends(require_admin)):
+    """Admin visibility into payment/order status — mainly to spot the rare
+    'paid but plan generation failed' case so it can be resolved manually."""
+    docs = await db.pending_orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return docs
+
+
+# ===== Weight logging (simple current-value log, backend-stored) =====
+@api_router.post("/logs", response_model=WeightLog)
+async def create_weight_log(payload: WeightLogCreate):
+    log = WeightLog(**payload.model_dump())
+    await db.weight_logs.insert_one(log.model_dump())
+    return log
+
+
+@api_router.get("/logs/{plan_id}", response_model=List[WeightLog])
+async def get_weight_logs(plan_id: str):
+    docs = await db.weight_logs.find({"plan_id": plan_id}, {"_id": 0}).sort("logged_at", -1).to_list(2000)
+    return [WeightLog(**d) for d in docs]
 
 
 # ===== Admin =====
