@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import AppShell from "@/components/AppShell";
+import ContactSupportPanel from "@/components/ContactSupportPanel";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -53,12 +54,17 @@ export default function GeneratedApp() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md w-full">
           <p className="text-overline mb-4">404</p>
-          <h2 className="font-display text-4xl">This plan doesn&apos;t exist.</h2>
+          <h2 className="font-display text-4xl mb-8">This plan doesn&apos;t exist.</h2>
+
+          <ContactSupportPanel
+            context={`Plan link not found on Planlete.\nPlan ID in URL: ${id}`}
+          />
+
           <Link
             to="/build"
-            className="inline-block mt-8 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-6 py-3"
+            className="inline-block mt-6 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-6 py-3"
           >
             Build a new one
           </Link>

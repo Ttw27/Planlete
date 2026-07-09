@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { Check, X } from "lucide-react";
+import ContactSupportPanel from "@/components/ContactSupportPanel";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -17,10 +18,12 @@ export default function PaymentSuccess() {
   const navigate = useNavigate();
   const [status, setStatus] = useState("confirming"); // confirming | error
   const [errorMessage, setErrorMessage] = useState("");
+  const [orderInfo, setOrderInfo] = useState({ orderId: null, sessionId: null });
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
     const orderId = searchParams.get("order_id");
+    setOrderInfo({ orderId, sessionId });
 
     if (!sessionId || !orderId) {
       setStatus("error");
@@ -52,17 +55,25 @@ export default function PaymentSuccess() {
   }, []);
 
   if (status === "error") {
+    const context = `Payment issue on Planlete.\nOrder ID: ${orderInfo.orderId || "unknown"}\nSession ID: ${orderInfo.sessionId || "unknown"}\nError shown: ${errorMessage}`;
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md w-full">
           <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-6">
             <X size={24} className="text-red-400" />
           </div>
           <h2 className="font-display text-3xl mb-4">We couldn't confirm that</h2>
           <p className="text-zinc-400 text-sm leading-relaxed mb-8">{errorMessage}</p>
+
+          <ContactSupportPanel
+            context={context}
+            orderId={orderInfo.orderId}
+            sessionId={orderInfo.sessionId}
+          />
+
           <Link
             to="/build"
-            className="inline-block bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-6 py-3"
+            className="inline-block mt-6 border border-white/20 text-white font-bold uppercase tracking-wider text-xs px-6 py-3 hover:border-white transition-colors"
           >
             Back to the questionnaire
           </Link>
