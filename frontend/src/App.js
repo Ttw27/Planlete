@@ -7,6 +7,7 @@ import LongevityApp from "@/pages/LongevityApp";
 import FootballApp from "@/pages/FootballApp";
 import SprinterApp from "@/pages/SprinterApp";
 import BuildApp from "@/pages/BuildApp";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 import GeneratedApp from "@/pages/GeneratedApp";
 import SaveToPhoneInstructions from "@/pages/SaveToPhoneInstructions";
 import AdminLogin from "@/pages/AdminLogin";
@@ -24,6 +25,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/build" element={<BuildApp />} />
+          <Route path="/build/success" element={<PaymentSuccess />} />
           <Route path="/app/rehab" element={<RehabApp />} />
           <Route path="/app/longevity" element={<LongevityApp />} />
           <Route path="/app/football" element={<FootballApp />} />
