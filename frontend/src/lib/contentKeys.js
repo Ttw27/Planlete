@@ -15,10 +15,10 @@ export const CONTENT_GROUPS = [
         key: "hero_subhead",
         label: "Sub-headline",
         default:
-          "Stop screenshot-ing workout plans from Instagram. Get a proper training app — personalised to you, on your phone, ready to go. Built on protocols from longevity doctors, biohackers, physios and sport-specific coaches.",
+          "Stop screenshot-ing workout plans from Instagram. Get a proper training app — personalised to you, on your phone, ready to go. Built on a foundation of widely published training science and coaching methodology.",
         long: true,
       },
-      { key: "hero_primary_cta", label: "Primary CTA button", default: "Get my free plan" },
+      { key: "hero_primary_cta", label: "Primary CTA button", default: "Build my plan — £4.99" },
       { key: "hero_secondary_cta", label: "Secondary CTA button", default: "Try a free sample" },
     ],
   },
