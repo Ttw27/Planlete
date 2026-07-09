@@ -291,7 +291,7 @@ Important:
     client = get_anthropic_client()
     message = client.messages.create(
         model="claude-sonnet-5",
-        max_tokens=10000,
+        max_tokens=20000,
         messages=[
             {
                 "role": "user",
