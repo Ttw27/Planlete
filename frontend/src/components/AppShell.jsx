@@ -1,13 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink } from "lucide-react";
+import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink, Clock, PenLine, Check } from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+function parseRestSeconds(rest) {
+  if (!rest) return null;
+  const str = String(rest).trim().toLowerCase();
+  const minMatch = str.match(/(\d+)\s*min/);
+  if (minMatch) return parseInt(minMatch[1], 10) * 60;
+  const secMatch = str.match(/(\d+)\s*s/);
+  if (secMatch) return parseInt(secMatch[1], 10);
+  const bareNum = str.match(/^(\d+)$/);
+  if (bareNum) return parseInt(bareNum[1], 10);
+  return null;
+}
 
 /**
  * AppShell — phone-style container for the sample/generated training apps.
  * Includes a top bar, content area, and bottom nav with view switching.
  */
-export default function AppShell({ data, mode, modeToggle = null }) {
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null }) {
   const [view, setView] = useState("home");
   const navigate = useNavigate();
 
@@ -15,6 +31,75 @@ export default function AppShell({ data, mode, modeToggle = null }) {
   const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;
   const recovery = data.recovery;
   const morningRoutine = data.morningRoutine;
+
+  // ── Checklist completion (localStorage — losing a tick is no big deal) ──
+  const checklistStorageKey = `planlete_checklist_${planId || "sample"}`;
+  const [completed, setCompleted] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(checklistStorageKey);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const toggleDone = (key) => {
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        window.localStorage.setItem(checklistStorageKey, JSON.stringify([...next]));
+      } catch {
+        // localStorage unavailable — completion just won't persist, not fatal
+      }
+      return next;
+    });
+  };
+
+  // ── Weight/effort logging (backend-stored — this is data people actually
+  // want to keep, so it lives on the server, not the phone) ──
+  const [logs, setLogs] = useState({}); // key: `${week}-${day}-${exerciseName}` -> latest value
+
+  useEffect(() => {
+    if (!planId) return;
+    let alive = true;
+    axios
+      .get(`${API}/logs/${planId}`)
+      .then((res) => {
+        if (!alive) return;
+        const map = {};
+        // API returns newest first — first occurrence per key wins, so it's the latest
+        for (const entry of res.data) {
+          const key = `${entry.week_number}-${entry.day}-${entry.exercise_name}`;
+          if (!(key in map)) map[key] = entry.value;
+        }
+        setLogs(map);
+      })
+      .catch(() => {
+        // Non-fatal — logging just won't show prior values this session
+      });
+    return () => {
+      alive = false;
+    };
+  }, [planId]);
+
+  const saveLog = async (day, exerciseName, value) => {
+    const key = `${weekNumber || 0}-${day}-${exerciseName}`;
+    setLogs((prev) => ({ ...prev, [key]: value })); // optimistic
+    if (!planId) return;
+    try {
+      await axios.post(`${API}/logs`, {
+        plan_id: planId,
+        week_number: weekNumber || 0,
+        day,
+        exercise_name: exerciseName,
+        value,
+      });
+    } catch {
+      toast.error("Couldn't save that log — check your connection and try again.");
+    }
+  };
 
   const share = async () => {
     try {
@@ -70,9 +155,25 @@ export default function AppShell({ data, mode, modeToggle = null }) {
               days={days}
               morningRoutine={morningRoutine}
               nutrition={nutrition}
+              weekNumber={weekNumber}
+              completed={completed}
+              onToggleDone={toggleDone}
+              logs={logs}
+              onSaveLog={saveLog}
+              canLog={Boolean(planId)}
             />
           )}
-          {view === "training" && <TrainingView days={days} />}
+          {view === "training" && (
+            <TrainingView
+              days={days}
+              weekNumber={weekNumber}
+              completed={completed}
+              onToggleDone={toggleDone}
+              logs={logs}
+              onSaveLog={saveLog}
+              canLog={Boolean(planId)}
+            />
+          )}
           {view === "nutrition" && nutrition && (
             <NutritionView nutrition={nutrition} />
           )}
@@ -148,9 +249,12 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition }) {
+function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog }) {
   const todayIndex = Math.min(new Date().getDay(), days.length - 1);
   const today = days[todayIndex] || days[0];
+
+  const todayKeys = today.workouts.map((_, i) => `${weekNumber || 0}-${today.day}-${i}`);
+  const todayDone = todayKeys.filter((k) => completed.has(k)).length;
 
   return (
     <div className="flex flex-col">
@@ -188,10 +292,23 @@ function HomeView({ data, days, morningRoutine, nutrition }) {
 
       {/* Today workouts */}
       <div className="px-5 py-5">
-        <p className="text-overline mb-3">Today&apos;s session</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-overline">Today&apos;s session</p>
+          <p className="text-[10px] font-mono-display text-zinc-500">
+            {todayDone}/{today.workouts.length} done
+          </p>
+        </div>
         <div className="flex flex-col gap-2">
           {today.workouts.slice(0, 4).map((w, i) => (
-            <WorkoutRow key={i} w={w} />
+            <WorkoutRow
+              key={i}
+              w={w}
+              checked={completed.has(`${weekNumber || 0}-${today.day}-${i}`)}
+              onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${today.day}-${i}`)}
+              loggedValue={logs[`${weekNumber || 0}-${today.day}-${w.name}`]}
+              onSaveLog={(value) => onSaveLog(today.day, w.name, value)}
+              canLog={canLog}
+            />
           ))}
           {today.workouts.length > 4 && (
             <p className="text-xs text-zinc-500 mt-2">
@@ -214,19 +331,40 @@ function HomeView({ data, days, morningRoutine, nutrition }) {
       {/* Morning routine */}
       {morningRoutine && (
         <div className="px-5 py-5 border-t border-white/10">
-          <p className="text-overline mb-3">Morning movement</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-overline">Morning movement</p>
+            <p className="text-[10px] font-mono-display text-zinc-500">
+              {morningRoutine.filter((_, i) => completed.has(`morning-${i}`)).length}/{morningRoutine.length} done
+            </p>
+          </div>
           <ul className="flex flex-col gap-2 text-sm text-zinc-300">
-            {morningRoutine.map((m, i) => (
-              <li
-                key={i}
-                className="flex items-center justify-between border-b border-white/5 py-2"
-              >
-                <span>{m}</span>
-                <span className="text-zinc-500 font-mono-display text-xs">
-                  0{i + 1}
-                </span>
-              </li>
-            ))}
+            {morningRoutine.map((m, i) => {
+              const key = `morning-${i}`;
+              const done = completed.has(key);
+              return (
+                <li
+                  key={i}
+                  className="flex items-center justify-between border-b border-white/5 py-2"
+                >
+                  <button
+                    onClick={() => onToggleDone(key)}
+                    className="flex items-center gap-3 text-left flex-1 min-w-0"
+                  >
+                    <span
+                      className={`shrink-0 w-4 h-4 border flex items-center justify-center ${
+                        done ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30"
+                      }`}
+                    >
+                      {done && <Check size={11} className="text-black" />}
+                    </span>
+                    <span className={done ? "line-through text-zinc-600" : ""}>{m}</span>
+                  </button>
+                  <span className="text-zinc-500 font-mono-display text-xs shrink-0">
+                    0{i + 1}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -234,49 +372,140 @@ function HomeView({ data, days, morningRoutine, nutrition }) {
   );
 }
 
-function TrainingView({ days }) {
+function TrainingView({ days, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog }) {
   return (
     <div className="flex flex-col">
-      {days.map((d, i) => (
-        <div key={i} className="border-b border-white/10 px-5 py-5">
-          <div className="flex items-baseline justify-between mb-3">
-            <div>
-              <p className="text-overline">{d.day}</p>
-              <h3 className="font-display text-xl mt-1">{d.label}</h3>
+      {days.map((d, i) => {
+        const dayKeys = d.workouts.map((_, j) => `${weekNumber || 0}-${d.day}-${j}`);
+        const dayDone = dayKeys.filter((k) => completed.has(k)).length;
+        return (
+          <div key={i} className="border-b border-white/10 px-5 py-5">
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <p className="text-overline">{d.day}</p>
+                <h3 className="font-display text-xl mt-1">{d.label}</h3>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-zinc-500">{d.focus}</p>
+                <p className="text-[10px] font-mono-display text-zinc-600 mt-1">
+                  {dayDone}/{d.workouts.length} done
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-zinc-500">{d.focus}</p>
+            <div className="flex flex-col gap-2">
+              {d.workouts.map((w, j) => (
+                <WorkoutRow
+                  key={j}
+                  w={w}
+                  checked={completed.has(`${weekNumber || 0}-${d.day}-${j}`)}
+                  onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${d.day}-${j}`)}
+                  loggedValue={logs[`${weekNumber || 0}-${d.day}-${w.name}`]}
+                  onSaveLog={(value) => onSaveLog(d.day, w.name, value)}
+                  canLog={canLog}
+                />
+              ))}
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
-            {d.workouts.map((w, j) => (
-              <WorkoutRow key={j} w={w} />
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function WorkoutRow({ w }) {
-  const [panel, setPanel] = useState(null); // null | "reason" | "lookup"
+function RestTimer({ seconds }) {
+  const [remaining, setRemaining] = useState(seconds);
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (!running || remaining <= 0) return;
+    const t = setTimeout(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [running, remaining]);
+
+  const mm = Math.floor(remaining / 60);
+  const ss = remaining % 60;
+  const finished = remaining <= 0;
+
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p className={`font-mono-display text-2xl ${finished ? "text-white" : "text-[var(--accent)]"}`}>
+        {finished ? "Done" : `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`}
+      </p>
+      <div className="flex gap-2">
+        {!finished && (
+          <button
+            onClick={() => setRunning((r) => !r)}
+            className="border border-white/15 hover:border-[var(--accent)] text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 transition-colors"
+          >
+            {running ? "Pause" : "Start"}
+          </button>
+        )}
+        {!finished && (
+          <button
+            onClick={() => setRemaining(0)}
+            className="border border-white/15 hover:border-[var(--accent)] text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 transition-colors"
+          >
+            Skip
+          </button>
+        )}
+        {finished && (
+          <button
+            onClick={() => {
+              setRemaining(seconds);
+              setRunning(false);
+            }}
+            className="border border-white/15 hover:border-[var(--accent)] text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 transition-colors"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, onSaveLog, canLog = false }) {
+  const [panel, setPanel] = useState(null); // null | "reason" | "lookup" | "timer" | "log"
+  const [logInput, setLogInput] = useState("");
   const hasReason = Boolean(w.reason);
+  const restSeconds = parseRestSeconds(w.rest);
 
   const query = encodeURIComponent(`${w.name} exercise`);
   const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(`how to do ${w.name} exercise`)}`;
   const youtubeUrl = `https://www.youtube.com/results?search_query=${query}+tutorial`;
 
-  const toggle = (key) => setPanel((p) => (p === key ? null : key));
+  const toggle = (key) => {
+    setPanel((p) => (p === key ? null : key));
+    if (key === "log") setLogInput(loggedValue || "");
+  };
+
+  const submitLog = () => {
+    if (!logInput.trim()) return;
+    onSaveLog?.(logInput.trim());
+    setPanel(null);
+  };
 
   return (
-    <div className="bg-[#121212] border-l-2 border-[var(--accent)]">
-      {/* Line 1: name + sets */}
-      <div className="px-3 pt-3 flex items-center justify-between gap-2">
-        <p className="text-sm text-white truncate">{w.name}</p>
+    <div className={`bg-[#121212] border-l-2 transition-colors ${checked ? "border-zinc-700" : "border-[var(--accent)]"}`}>
+      {/* Line 1: checkbox + name + sets */}
+      <div className="px-3 pt-3 flex items-center gap-2">
+        <button
+          onClick={onToggleChecked}
+          aria-label={checked ? "Mark as not done" : "Mark as done"}
+          className={`shrink-0 w-4 h-4 border flex items-center justify-center transition-colors ${
+            checked ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30 hover:border-[var(--accent)]"
+          }`}
+        >
+          {checked && <Check size={11} className="text-black" />}
+        </button>
+        <p className={`text-sm flex-1 truncate ${checked ? "text-zinc-600 line-through" : "text-white"}`}>
+          {w.name}
+        </p>
         <p className="font-mono-display text-sm text-[var(--accent)] shrink-0">{w.sets}</p>
       </div>
 
       {/* Line 2: load/rest + icon buttons */}
-      <div className="px-3 pb-3 pt-0.5 flex items-center justify-between gap-2">
+      <div className="pl-9 pr-3 pb-3 pt-0.5 flex items-center justify-between gap-2">
         <p className="text-[11px] text-zinc-500">
           {w.load} · rest {w.rest}
         </p>
@@ -305,8 +534,40 @@ function WorkoutRow({ w }) {
           >
             <HelpCircle size={13} />
           </button>
+          {restSeconds !== null && (
+            <button
+              onClick={() => toggle("timer")}
+              aria-label="Rest timer"
+              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                panel === "timer"
+                  ? "bg-[var(--accent)] text-black"
+                  : "text-zinc-500 hover:text-[var(--accent)]"
+              }`}
+            >
+              <Clock size={13} />
+            </button>
+          )}
+          {canLog && (
+            <button
+              onClick={() => toggle("log")}
+              aria-label="Log what you did"
+              className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                panel === "log"
+                  ? "bg-[var(--accent)] text-black"
+                  : "text-zinc-500 hover:text-[var(--accent)]"
+              }`}
+            >
+              <PenLine size={13} />
+            </button>
+          )}
         </div>
       </div>
+
+      {loggedValue && panel !== "log" && (
+        <div className="pl-9 pr-3 -mt-2 pb-2">
+          <p className="text-[10px] text-zinc-600">Last logged: <span className="text-zinc-400">{loggedValue}</span></p>
+        </div>
+      )}
 
       {/* Reason panel */}
       {panel === "reason" && hasReason && (
@@ -339,6 +600,37 @@ function WorkoutRow({ w }) {
             >
               YouTube <ExternalLink size={11} />
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Timer panel */}
+      {panel === "timer" && restSeconds !== null && (
+        <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-3">
+          <RestTimer seconds={restSeconds} />
+        </div>
+      )}
+
+      {/* Log panel */}
+      {panel === "log" && canLog && (
+        <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-2">
+          <p className="text-[11px] text-zinc-500 mb-2">Log what you did — weight, reps, whatever's useful</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={logInput}
+              onChange={(e) => setLogInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitLog()}
+              placeholder="e.g. 80kg or 12 reps"
+              autoFocus
+              className="flex-1 bg-black/40 border border-white/15 focus:border-[var(--accent)] outline-none text-xs text-white px-3 py-2 placeholder:text-white/20"
+            />
+            <button
+              onClick={submitLog}
+              className="bg-[var(--accent)] text-black text-[11px] font-bold uppercase tracking-wide px-3 py-2 hover:bg-white transition-colors"
+            >
+              Save
+            </button>
           </div>
         </div>
       )}
