@@ -38,6 +38,13 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://planlete.vercel.app")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 RESEND_FROM = os.environ.get("RESEND_FROM", "Planlete <hello@planlete.co.uk>")
 
+# Coach/physio builder pricing. COACH_SUBSCRIPTION_PRICE_ID must be created as
+# a recurring Price in the Stripe Dashboard first (Products -> Add product ->
+# recurring) — Stripe subscriptions need a pre-created Price object, unlike
+# the one-off consumer checkout which creates its price inline.
+COACH_SUBSCRIPTION_PRICE_ID = os.environ.get("COACH_SUBSCRIPTION_PRICE_ID")
+COACH_CLIENT_PLAN_PENCE = int(os.environ.get("COACH_CLIENT_PLAN_PENCE", "499"))
+
 
 def send_email(to: str, subject: str, html: str) -> None:
     """Best-effort transactional email via Resend. Never raises — a failed
@@ -524,11 +531,75 @@ class CoachBrandUpdate(BaseModel):
     secondary_color: Optional[str] = None
 
 
+# ── Structured, manually-authored plan content ──
+# Physios/coaches type this in directly — no AI involvement in the content
+# itself. This deliberately mirrors the exact schema AppShell already renders
+# (days/workouts, nutrition with per-meal macros, recovery, morning routine)
+# so a physio-built plan and an AI-generated plan look and behave identically
+# to the person using the app; only the authorship differs.
+class PhysioWorkoutEntry(BaseModel):
+    name: str
+    sets: str
+    load: str
+    rest: str
+    reason: Optional[str] = None
+    timerEnabled: bool = True
+
+
+class PhysioDayEntry(BaseModel):
+    day: str  # "Sun".."Sat"
+    label: str
+    focus: str
+    workouts: List[PhysioWorkoutEntry] = []
+
+
+class PhysioMealEntry(BaseModel):
+    time: str
+    name: str
+    items: str
+    calories: Optional[int] = None
+    protein: Optional[int] = None
+    carbs: Optional[int] = None
+    fats: Optional[int] = None
+
+
+class PhysioSupplementEntry(BaseModel):
+    name: str
+    reason: Optional[str] = None
+
+
+class PhysioNutrition(BaseModel):
+    calories: Optional[int] = None
+    protein: Optional[int] = None
+    carbs: Optional[int] = None
+    fats: Optional[int] = None
+    note: Optional[str] = None
+    meals: List[PhysioMealEntry] = []
+    supplements: List[PhysioSupplementEntry] = []
+    supplement_disclaimer: Optional[str] = None
+
+
+class PhysioRecovery(BaseModel):
+    sleepTarget: Optional[str] = None
+    hrvTrend: Optional[str] = None
+    protocols: List[str] = []
+
+
 class ClientPlanCreate(BaseModel):
     client_name: str
     client_email: Optional[EmailStr] = None
-    template: str  # athlete | longevity | football | sprinter
     notes: Optional[str] = None
+    # Structured, manually-authored content (preferred path):
+    days: List[PhysioDayEntry] = []
+    nutrition: Optional[PhysioNutrition] = None
+    recovery: Optional[PhysioRecovery] = None
+    morningRoutine: List[str] = []
+    allow_logging: bool = True
+    # Mandatory professional disclaimer — see /coach/clients endpoint for
+    # what this actually gates.
+    disclaimer_accepted: bool
+    # Legacy path, kept so existing static-template clients don't break:
+    template: Optional[str] = None
 
 
 class CoachPublic(BaseModel):
@@ -539,17 +610,26 @@ class CoachPublic(BaseModel):
     logo_url: Optional[str] = None
     primary_color: str = "#D4FF00"
     secondary_color: str = "#050505"
+    subscription_status: str = "none"  # none | active | cancelled
     created_at: str
 
 
 class ClientPlanPublic(BaseModel):
+    model_config = ConfigDict(extra="allow")
     id: str
     coach_id: str
     client_name: str
     client_email: Optional[EmailStr] = None
-    template: str
+    template: Optional[str] = None
     notes: Optional[str] = None
     slug: str
+    days: List[Dict[str, Any]] = []
+    nutrition: Optional[Dict[str, Any]] = None
+    recovery: Optional[Dict[str, Any]] = None
+    morningRoutine: List[str] = []
+    allow_logging: bool = True
+    payment_status: str = "included"  # included | pending_payment | paid
+    disclaimer_accepted: bool = False
     created_at: str
 
 
@@ -843,15 +923,60 @@ async def stripe_webhook(request: Request):
 
     if event_type == "checkout.session.completed":
         metadata = data_object.get("metadata", {}) if isinstance(data_object, dict) else (data_object.metadata or {})
-        order_id = metadata.get("order_id")
-        if order_id:
-            order = await db.pending_orders.find_one({"id": order_id})
-            if order and order.get("status") == "pending":
-                await db.pending_orders.update_one(
-                    {"id": order_id},
-                    {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
-                )
-                logger.info(f"Stripe webhook: order {order_id} confirmed paid")
+        kind = metadata.get("kind")
+
+        if kind == "client_plan":
+            # Client-pays-per-plan: mark it paid here too as a safety net,
+            # in case they never make it back to the plan page after paying.
+            client_plan_id = metadata.get("client_plan_id")
+            if client_plan_id:
+                plan = await db.client_plans.find_one({"id": client_plan_id})
+                if plan and plan.get("payment_status") == "pending_payment":
+                    await db.client_plans.update_one(
+                        {"id": client_plan_id},
+                        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
+                    )
+                    logger.info(f"Stripe webhook: client plan {client_plan_id} confirmed paid")
+
+        elif metadata.get("coach_id") and (data_object.get("mode") == "subscription" if isinstance(data_object, dict) else data_object.mode == "subscription"):
+            # Coach subscription checkout completed — capture the Stripe
+            # customer/subscription IDs for future billing management.
+            coach_id = metadata.get("coach_id")
+            customer_id = data_object.get("customer") if isinstance(data_object, dict) else data_object.customer
+            subscription_id = data_object.get("subscription") if isinstance(data_object, dict) else data_object.subscription
+            await db.coaches.update_one(
+                {"id": coach_id},
+                {"$set": {
+                    "subscription_status": "active",
+                    "stripe_customer_id": customer_id,
+                    "stripe_subscription_id": subscription_id,
+                }}
+            )
+            logger.info(f"Stripe webhook: coach {coach_id} subscription activated")
+
+        else:
+            # Regular consumer order (the original, pre-coach-system flow)
+            order_id = metadata.get("order_id")
+            if order_id:
+                order = await db.pending_orders.find_one({"id": order_id})
+                if order and order.get("status") == "pending":
+                    await db.pending_orders.update_one(
+                        {"id": order_id},
+                        {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
+                    )
+                    logger.info(f"Stripe webhook: order {order_id} confirmed paid")
+
+    elif event_type in ("customer.subscription.deleted", "customer.subscription.updated"):
+        subscription_id = data_object.get("id") if isinstance(data_object, dict) else data_object.id
+        status = data_object.get("status") if isinstance(data_object, dict) else data_object.status
+        coach = await db.coaches.find_one({"stripe_subscription_id": subscription_id})
+        if coach:
+            new_status = "active" if status in ("active", "trialing") else "cancelled"
+            await db.coaches.update_one(
+                {"id": coach["id"]},
+                {"$set": {"subscription_status": new_status}}
+            )
+            logger.info(f"Stripe webhook: coach {coach['id']} subscription -> {new_status}")
 
     return {"received": True}
 
@@ -1039,6 +1164,9 @@ async def coach_signup(payload: CoachSignup, response: Response):
         "logo_url": None,
         "primary_color": "#D4FF00",
         "secondary_color": "#050505",
+        "subscription_status": "none",
+        "stripe_customer_id": None,
+        "stripe_subscription_id": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.coaches.insert_one(coach_doc)
@@ -1108,14 +1236,31 @@ VALID_TEMPLATES = {"athlete", "longevity", "football", "sprinter"}
 
 @api_router.post("/coach/clients", response_model=ClientPlanPublic)
 async def coach_create_client(payload: ClientPlanCreate, coach: dict = Depends(get_current_coach)):
-    if payload.template not in VALID_TEMPLATES:
+    # The disclaimer is the whole legal foundation of this feature: it puts
+    # authorship and professional responsibility for the content on the
+    # coach/physio, not on Planlete or any AI. Refuse to save anything
+    # without it, regardless of how the request was made.
+    if not payload.disclaimer_accepted:
+        raise HTTPException(
+            status_code=400,
+            detail="You must confirm you're qualified to give this advice and that this content is entirely your own before it can be saved."
+        )
+
+    if payload.template and payload.template not in VALID_TEMPLATES:
         raise HTTPException(status_code=400, detail="Invalid template")
+
     base_slug = slugify(payload.client_name)
     slug = base_slug
     i = 1
     while await db.client_plans.find_one({"coach_id": coach["id"], "slug": slug}):
         i += 1
         slug = f"{base_slug}-{i}"
+
+    # If the coach has an active subscription, their clients' plans are
+    # already covered — no separate charge. Otherwise this client will need
+    # to pay individually before the plan content is unlocked for them.
+    payment_status = "included" if coach.get("subscription_status") == "active" else "pending_payment"
+
     doc = {
         "id": str(uuid.uuid4()),
         "coach_id": coach["id"],
@@ -1124,10 +1269,54 @@ async def coach_create_client(payload: ClientPlanCreate, coach: dict = Depends(g
         "template": payload.template,
         "notes": payload.notes,
         "slug": slug,
+        "days": [d.model_dump() for d in payload.days],
+        "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
+        "recovery": payload.recovery.model_dump() if payload.recovery else None,
+        "morningRoutine": payload.morningRoutine,
+        "allow_logging": payload.allow_logging,
+        "payment_status": payment_status,
+        "disclaimer_accepted": True,
+        "disclaimer_accepted_at": datetime.now(timezone.utc).isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.client_plans.insert_one(doc)
     return ClientPlanPublic(**{k: v for k, v in doc.items() if k != "_id"})
+
+
+@api_router.patch("/coach/clients/{client_id}", response_model=ClientPlanPublic)
+async def coach_update_client(client_id: str, payload: ClientPlanCreate, coach: dict = Depends(get_current_coach)):
+    """Lets a coach revise a plan later — progression for manually-authored
+    plans is the professional's job, done by editing and saving again."""
+    if not payload.disclaimer_accepted:
+        raise HTTPException(
+            status_code=400,
+            detail="You must confirm you're qualified to give this advice and that this content is entirely your own before it can be saved."
+        )
+    existing = await db.client_plans.find_one({"id": client_id, "coach_id": coach["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Client plan not found")
+
+    updates = {
+        "client_name": payload.client_name.strip(),
+        "client_email": payload.client_email,
+        "notes": payload.notes,
+        "days": [d.model_dump() for d in payload.days],
+        "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
+        "recovery": payload.recovery.model_dump() if payload.recovery else None,
+        "morningRoutine": payload.morningRoutine,
+        "allow_logging": payload.allow_logging,
+    }
+    await db.client_plans.update_one({"id": client_id}, {"$set": updates})
+    new_doc = await db.client_plans.find_one({"id": client_id}, {"_id": 0})
+    return ClientPlanPublic(**new_doc)
+
+
+@api_router.get("/coach/clients/{client_id}", response_model=ClientPlanPublic)
+async def coach_get_client(client_id: str, coach: dict = Depends(get_current_coach)):
+    doc = await db.client_plans.find_one({"id": client_id, "coach_id": coach["id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Client plan not found")
+    return ClientPlanPublic(**doc)
 
 
 @api_router.get("/coach/clients", response_model=List[ClientPlanPublic])
@@ -1144,6 +1333,108 @@ async def coach_delete_client(client_id: str, coach: dict = Depends(get_current_
     return {"ok": True}
 
 
+# ===== Client-pays checkout (per-plan, for coaches without a subscription) =====
+@api_router.post("/coach/clients/{client_id}/checkout/create-session")
+async def create_client_plan_checkout(client_id: str):
+    """Public endpoint — the CLIENT hits this from their plan page to pay
+    and unlock it, not the coach. No auth required, but the client_id has to
+    exist and actually be pending payment."""
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Payments are not configured yet.")
+
+    client_plan = await db.client_plans.find_one({"id": client_id}, {"_id": 0})
+    if not client_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    if client_plan.get("payment_status") == "paid" or client_plan.get("payment_status") == "included":
+        raise HTTPException(status_code=400, detail="This plan is already unlocked.")
+
+    coach = await db.coaches.find_one({"id": client_plan["coach_id"]}, {"_id": 0})
+    coach_slug = coach["slug"] if coach else ""
+    client_slug = client_plan["slug"]
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "gbp",
+                    "product_data": {"name": f"Training plan — {coach.get('brand_name', 'Coach') if coach else 'Coach'}"},
+                    "unit_amount": COACH_CLIENT_PLAN_PENCE,
+                },
+                "quantity": 1,
+            }],
+            success_url=f"{FRONTEND_URL}/c/{coach_slug}/{client_slug}?paid_session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{FRONTEND_URL}/c/{coach_slug}/{client_slug}?cancelled=1",
+            metadata={"client_plan_id": client_id, "kind": "client_plan"},
+        )
+    except Exception as e:
+        logger.error(f"Client plan checkout creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not start checkout. Please try again.")
+
+    return {"checkout_url": session.url}
+
+
+@api_router.get("/coach/clients/{client_id}/checkout/confirm")
+async def confirm_client_plan_checkout(client_id: str, session_id: str):
+    """Called from the client's plan page after Stripe redirects back."""
+    client_plan = await db.client_plans.find_one({"id": client_id}, {"_id": 0})
+    if not client_plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    if client_plan.get("payment_status") in ("paid", "included"):
+        return {"payment_status": client_plan["payment_status"]}
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        logger.error(f"Stripe session retrieve failed (client plan): {e}")
+        raise HTTPException(status_code=400, detail="Could not verify payment.")
+
+    if session.payment_status != "paid":
+        raise HTTPException(status_code=402, detail="Payment has not completed yet.")
+
+    await db.client_plans.update_one(
+        {"id": client_id},
+        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"payment_status": "paid"}
+
+
+# ===== Coach subscription (B2B — unlimited clients while active) =====
+@api_router.post("/coach/subscribe/create-session")
+async def create_coach_subscription_session(coach: dict = Depends(get_current_coach)):
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Payments are not configured yet.")
+    if not COACH_SUBSCRIPTION_PRICE_ID:
+        raise HTTPException(status_code=500, detail="Subscription pricing is not configured yet.")
+
+    if coach.get("subscription_status") == "active":
+        raise HTTPException(status_code=400, detail="You already have an active subscription.")
+
+    try:
+        session_kwargs = {
+            "mode": "subscription",
+            "payment_method_types": ["card"],
+            "line_items": [{"price": COACH_SUBSCRIPTION_PRICE_ID, "quantity": 1}],
+            "success_url": f"{FRONTEND_URL}/coach/dashboard?subscribed=1",
+            "cancel_url": f"{FRONTEND_URL}/coach/dashboard?subscribe_cancelled=1",
+            "metadata": {"coach_id": coach["id"]},
+            "subscription_data": {"metadata": {"coach_id": coach["id"]}},
+        }
+        if coach.get("stripe_customer_id"):
+            session_kwargs["customer"] = coach["stripe_customer_id"]
+        else:
+            session_kwargs["customer_email"] = coach["email"]
+
+        session = stripe.checkout.Session.create(**session_kwargs)
+    except Exception as e:
+        logger.error(f"Coach subscription session creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not start checkout. Please try again.")
+
+    return {"checkout_url": session.url}
+
+
 # ===== Public branded plan =====
 @api_router.get("/c/{coach_slug}/{client_slug}")
 async def public_branded_plan(coach_slug: str, client_slug: str):
@@ -1155,7 +1446,10 @@ async def public_branded_plan(coach_slug: str, client_slug: str):
     )
     if not client_plan:
         raise HTTPException(status_code=404, detail="Client plan not found")
-    return {
+
+    unlocked = client_plan.get("payment_status") in ("paid", "included")
+
+    response = {
         "coach": {
             "brand_name": coach["brand_name"],
             "slug": coach["slug"],
@@ -1164,12 +1458,23 @@ async def public_branded_plan(coach_slug: str, client_slug: str):
             "secondary_color": coach.get("secondary_color", "#050505"),
         },
         "client": {
+            "id": client_plan["id"],
             "client_name": client_plan["client_name"],
-            "template": client_plan["template"],
+            "template": client_plan.get("template"),
             "notes": client_plan.get("notes"),
             "slug": client_plan["slug"],
+            "payment_status": client_plan.get("payment_status", "included"),
         },
     }
+
+    if unlocked:
+        response["client"]["days"] = client_plan.get("days", [])
+        response["client"]["nutrition"] = client_plan.get("nutrition")
+        response["client"]["recovery"] = client_plan.get("recovery")
+        response["client"]["morningRoutine"] = client_plan.get("morningRoutine", [])
+        response["client"]["allow_logging"] = client_plan.get("allow_logging", True)
+
+    return response
 
 
 app.include_router(api_router)
