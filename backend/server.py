@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Header, Depends, Query, Response, Request
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Header, Depends, Query, Response, Request, BackgroundTasks
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -35,6 +35,30 @@ ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN")
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://planlete.vercel.app")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+RESEND_FROM = os.environ.get("RESEND_FROM", "Planlete <hello@planlete.co.uk>")
+
+
+def send_email(to: str, subject: str, html: str) -> None:
+    """Best-effort transactional email via Resend. Never raises — a failed
+    email should never crash plan generation or the checkout flow; it just
+    gets logged so it can be spotted."""
+    if not RESEND_API_KEY:
+        logger.warning(f"RESEND_API_KEY not set — skipped email to {to}: {subject}")
+        return
+    try:
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+            json={"from": RESEND_FROM, "to": [to], "subject": subject, "html": html},
+            timeout=10,
+        )
+        if resp.status_code >= 300:
+            logger.error(f"Resend email failed ({resp.status_code}) to {to}: {resp.text}")
+        else:
+            logger.info(f"Email sent to {to}: {subject}")
+    except Exception as e:
+        logger.error(f"Resend email error sending to {to}: {e}")
 stripe.api_key = STRIPE_SECRET_KEY
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
@@ -276,7 +300,16 @@ Important:
         ]
     )
 
-    response_text = message.content[0].text
+    # Claude Sonnet 5 can include a "thinking" block ahead of the actual
+    # answer for complex prompts like this one — don't assume content[0] is
+    # the text block, find the one that actually is.
+    response_text = None
+    for block in message.content:
+        if getattr(block, "type", None) == "text":
+            response_text = block.text
+            break
+    if response_text is None:
+        raise Exception("Claude response contained no text block")
     plan_data = json.loads(response_text)
 
     plan_data["answers"] = answers
@@ -654,20 +687,91 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
     return CheckoutSessionResponse(checkout_url=session.url, order_id=order_id)
 
 
+async def process_paid_order(order_id: str, answers: dict) -> None:
+    """
+    Runs after the response has already gone back to the browser. Generates
+    the plan, saves it, and emails the customer their link + install
+    instructions — so nobody has to sit and wait on a loading screen for an
+    AI generation that can take up to 20-30 seconds.
+    """
+    email = answers.get("email")
+    name = answers.get("name", "there")
+
+    try:
+        plan_data = await generate_plan_with_claude(answers)
+        plan_id = str(uuid.uuid4())
+        plan_data["id"] = plan_id
+        plan_data["order_id"] = order_id
+        await db.plans.insert_one(plan_data)
+
+        await db.pending_orders.update_one(
+            {"id": order_id},
+            {"$set": {
+                "status": "plan_created",
+                "plan_id": plan_id,
+                "paid_at": datetime.now(timezone.utc).isoformat(),
+            }}
+        )
+        logger.info(f"Order {order_id} paid and plan {plan_id} generated (background)")
+
+        if email:
+            link = f"{FRONTEND_URL}/app/u/{plan_id}/save-instructions"
+            send_email(
+                to=email,
+                subject="Your Planlete app is ready 🎉",
+                html=f"""
+                    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
+                        <h2 style="color: #111;">Hey {name},</h2>
+                        <p>Your personalised training app is ready — a 4-week programme built around your goal.</p>
+                        <p style="margin: 24px 0;">
+                            <a href="{link}" style="background: #D4FF00; color: #000; font-weight: bold;
+                               text-decoration: none; padding: 14px 24px; display: inline-block;">
+                               Open your app &amp; save it to your phone
+                            </a>
+                        </p>
+                        <p style="color: #666; font-size: 13px;">
+                            That link will show you exactly how to bookmark it on iPhone, Samsung,
+                            or Android so it feels like a real app on your home screen.
+                        </p>
+                    </div>
+                """
+            )
+    except Exception as e:
+        logger.error(f"Plan generation after payment failed for order {order_id}: {e}")
+        await db.pending_orders.update_one(
+            {"id": order_id},
+            {"$set": {"status": "paid_generation_failed", "error": str(e)}}
+        )
+        if email:
+            send_email(
+                to=email,
+                subject="A quick update on your Planlete app",
+                html=f"""
+                    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
+                        <p>Hey {name},</p>
+                        <p>We hit a snag building your training app. Our team's already been notified
+                           and is on it — you'll hear from us again shortly with your link.</p>
+                        <p>Sorry for the delay, and thanks for your patience.</p>
+                    </div>
+                """
+            )
+
+
 @api_router.get("/checkout/confirm")
-async def confirm_checkout(session_id: str, order_id: str):
+async def confirm_checkout(session_id: str, order_id: str, background_tasks: BackgroundTasks):
     """
     Called by the success page after Stripe redirects back. Verifies the
-    session was actually paid (never trusts the redirect alone), then
-    generates the plan and links it to the order. Safe to call more than
-    once (e.g. on refresh) — if the plan already exists, just returns it.
+    session was actually paid (never trusts the redirect alone), then hands
+    plan generation off to a background task and returns immediately — the
+    customer doesn't wait on a spinner, they get an email once it's ready.
+    Safe to call more than once (e.g. on refresh).
     """
     order = await db.pending_orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if order.get("status") == "plan_created" and order.get("plan_id"):
-        return {"id": order["plan_id"], "link": f"/app/u/{order['plan_id']}"}
+    if order.get("status") in ("plan_created", "processing"):
+        return {"status": order["status"], "plan_id": order.get("plan_id")}
 
     try:
         session = stripe.checkout.Session.retrieve(session_id)
@@ -678,38 +782,10 @@ async def confirm_checkout(session_id: str, order_id: str):
     if session.payment_status != "paid":
         raise HTTPException(status_code=402, detail="Payment has not completed yet.")
 
-    try:
-        plan_data = await generate_plan_with_claude(order["answers"])
-    except Exception as e:
-        logger.error(f"Plan generation after payment failed for order {order_id}: {e}")
-        # Payment succeeded but generation failed — mark clearly so it can be
-        # spotted and manually resolved rather than silently losing the sale.
-        await db.pending_orders.update_one(
-            {"id": order_id},
-            {"$set": {"status": "paid_generation_failed", "error": str(e)}}
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Payment succeeded but plan generation failed. Support has been notified — check your email shortly."
-        )
+    await db.pending_orders.update_one({"id": order_id}, {"$set": {"status": "processing"}})
+    background_tasks.add_task(process_paid_order, order_id, order["answers"])
 
-    plan_id = str(uuid.uuid4())
-    plan_data["id"] = plan_id
-    plan_data["order_id"] = order_id
-    await db.plans.insert_one(plan_data)
-
-    await db.pending_orders.update_one(
-        {"id": order_id},
-        {"$set": {
-            "status": "plan_created",
-            "plan_id": plan_id,
-            "paid_at": datetime.now(timezone.utc).isoformat(),
-        }}
-    )
-
-    logger.info(f"Order {order_id} paid and plan {plan_id} generated")
-
-    return {"id": plan_id, "link": f"/app/u/{plan_id}"}
+    return {"status": "processing"}
 
 
 @api_router.post("/webhooks/stripe")
