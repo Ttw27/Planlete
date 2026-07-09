@@ -22,6 +22,8 @@ import AdminOrders from "@/pages/AdminOrders";
 import AdminTestPlan from "@/pages/AdminTestPlan";
 import CoachAuth from "@/pages/CoachAuth";
 import CoachDashboard from "@/pages/CoachDashboard";
+import CoachPlanBuilder from "@/pages/CoachPlanBuilder";
+import AdminPlanBuilder from "@/pages/AdminPlanBuilder";
 import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
 
 function App() {
@@ -50,6 +52,9 @@ function App() {
           <Route path="/admin/test-plan" element={<AdminTestPlan />} />
           <Route path="/coach" element={<CoachAuth />} />
           <Route path="/coach/dashboard" element={<CoachDashboard />} />
+          <Route path="/coach/builder" element={<CoachPlanBuilder />} />
+          <Route path="/coach/builder/:clientId" element={<CoachPlanBuilder />} />
+          <Route path="/admin/plan-builder" element={<AdminPlanBuilder />} />
           <Route path="/c/:coachSlug/:clientSlug" element={<PublicBrandedPlan />} />
         </Routes>
       </BrowserRouter>
