@@ -19,18 +19,25 @@ function parseRestSeconds(rest) {
   return null;
 }
 
-// Extracts the first number from a logged value like "82.5kg" or "12 reps",
-// so progressive-overload nudges can compare week to week. Returns null if
-// nothing numeric is found (e.g. "felt good" free text) so we never guess.
+// Extracts the first number AND trailing unit from a logged value like
+// "82.5kg" or "12 reps", so we can suggest a sensible next value in the same
+// units, not just compare raw numbers.
 function parseLoggedNumber(value) {
   if (!value) return null;
   const match = String(value).match(/(\d+(\.\d+)?)/);
   return match ? parseFloat(match[1]) : null;
 }
 
+function parseLoggedUnit(value) {
+  if (!value) return "";
+  const match = String(value).match(/\d+(\.\d+)?\s*([a-zA-Z]+)/);
+  return match ? match[2] : "";
+}
+
 // Looks at an exercise's logged history (already sorted by week ascending)
-// and returns a short, encouraging nudge — or null if there's not enough
+// and returns a short nudge with a colour — or null if there's not enough
 // data yet, or the values aren't numeric enough to compare.
+// tone: "up" (accent) | "flat" (yellow — same as last time) | "down" (red)
 function getProgressNudge(exerciseHistory, currentWeek) {
   if (!exerciseHistory || exerciseHistory.length < 2) return null;
 
@@ -52,19 +59,30 @@ function getProgressNudge(exerciseHistory, currentWeek) {
   }
 
   if (latestNum === prevNum) {
-    // Check if it's been flat for 3+ logs in a row, not just 2 — that's a
-    // stronger nudge to actually push the number up.
-    const lastThree = relevant.slice(-3);
-    const allSame =
-      lastThree.length === 3 &&
-      lastThree.every((h) => parseLoggedNumber(h.value) === latestNum);
-    if (allSame) {
-      return { tone: "stall", text: `Held at ${latest.value} for a few sessions — try adding a little more next time` };
-    }
-    return { tone: "flat", text: `Same as last time (${previous.value}) — push a bit more if it felt manageable` };
+    return { tone: "flat", text: `Same as last time (${previous.value}) — try pushing a little more` };
   }
 
   return { tone: "down", text: `Lower than last time (${previous.value}) — that's fine, listen to your body` };
+}
+
+// Proactively suggests a next value BEFORE they log this week, based on
+// their most recent entry — a small, sensible bump in the same units they
+// were already using. Returns null if there's no prior entry to build from,
+// or nothing numeric to suggest a bump on.
+function getSuggestedValue(exerciseHistory) {
+  if (!exerciseHistory || exerciseHistory.length === 0) return null;
+  const last = exerciseHistory[exerciseHistory.length - 1];
+  const num = parseLoggedNumber(last.value);
+  if (num === null) return null;
+  const unit = parseLoggedUnit(last.value);
+
+  let bump;
+  if (/kg|lb/i.test(unit)) bump = 2.5;
+  else if (/rep/i.test(unit)) bump = 1;
+  else bump = Math.max(1, Math.round(num * 0.025)); // ~2.5% generic fallback
+
+  const suggested = num + bump;
+  return `${suggested}${unit ? unit : ""}`;
 }
 
 /**
@@ -730,9 +748,10 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
         <div className="pl-9 pr-3 -mt-2 pb-2">
           <p className="text-[10px] text-zinc-600">Last logged: <span className="text-zinc-400">{loggedValue}</span></p>
           {nudge && (
-            <p className={`text-[10px] mt-1 ${
+            <p className={`text-[10px] mt-1 font-bold ${
               nudge.tone === "up" ? "text-[var(--accent)]"
-              : nudge.tone === "stall" ? "text-yellow-400"
+              : nudge.tone === "flat" ? "text-yellow-400"
+              : nudge.tone === "down" ? "text-red-400"
               : "text-zinc-500"
             }`}>
               {nudge.text}
@@ -787,6 +806,17 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
       {panel === "log" && canLog && (
         <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-2">
           <p className="text-[11px] text-zinc-500 mb-2">Log what you did — weight, reps, whatever's useful</p>
+          {(() => {
+            const suggested = getSuggestedValue(exerciseHistory);
+            return suggested ? (
+              <button
+                onClick={() => setLogInput(suggested)}
+                className="mb-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/10 px-2 py-1 transition-colors"
+              >
+                Suggested: {suggested} — tap to use
+              </button>
+            ) : null;
+          })()}
           <div className="flex gap-2">
             <input
               type="text"
