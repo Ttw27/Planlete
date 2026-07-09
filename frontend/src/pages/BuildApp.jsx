@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -102,9 +102,17 @@ const QUESTIONS = [
 
 export default function BuildApp() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("cancelled") === "1") {
+      toast.info("No problem — checkout was cancelled. Pick up where you left off whenever you're ready.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const q = QUESTIONS[step];
   const progress = ((step + 1) / (QUESTIONS.length + 1)) * 100;
@@ -135,15 +143,13 @@ export default function BuildApp() {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const res = await axios.post(`${API}/plans/generate`, { answers });
-      const id = res.data.id;
-      toast.success("Plan ready. Showing you how to save it…");
-      // Redirect to save-to-phone instructions page
-      setTimeout(() => navigate(`/app/u/${id}/save-instructions`), 600);
+      const res = await axios.post(`${API}/checkout/create-session`, { answers });
+      // Send them to Stripe's hosted checkout — the plan is generated only
+      // after payment is confirmed, on the /build/success page.
+      window.location.href = res.data.checkout_url;
     } catch (error) {
-      console.error("Generation error:", error);
-      toast.error("Couldn't build your plan. Try again.");
-    } finally {
+      console.error("Checkout error:", error);
+      toast.error("Couldn't start checkout. Try again.");
       setSubmitting(false);
     }
   };
@@ -242,9 +248,9 @@ export default function BuildApp() {
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white transition-colors disabled:opacity-50 active:scale-[0.98]"
           >
             {submitting
-              ? "Building…"
+              ? "Taking you to checkout…"
               : step === QUESTIONS.length - 1
-              ? "Build my app"
+              ? "Continue to payment — £4.99"
               : q.optional && !answers[q.id]
               ? "Skip"
               : "Continue"}

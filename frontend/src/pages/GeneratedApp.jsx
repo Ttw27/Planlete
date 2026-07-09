@@ -84,13 +84,14 @@ export default function GeneratedApp() {
   // Work out which week of the cycle to show, looping once the cycle ends.
   let currentWeek = weeks[0];
   let weekLabel = "";
+  let weekIndex = 0;
   if (weeks.length > 0) {
     const createdAt = plan.created_at ? new Date(plan.created_at) : new Date();
     const daysElapsed = Math.max(
       0,
       Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
     );
-    const weekIndex = Math.floor(daysElapsed / 7) % weeks.length;
+    weekIndex = Math.floor(daysElapsed / 7) % weeks.length;
     currentWeek = weeks[weekIndex] || weeks[0];
     weekLabel = ` · Week ${weekIndex + 1}/${weeks.length}${
       currentWeek?.theme ? ` — ${currentWeek.theme}` : ""
@@ -107,5 +108,5 @@ export default function GeneratedApp() {
     morningRoutine: plan.morningRoutine,
   };
 
-  return <AppShell data={data} />;
+  return <AppShell data={data} planId={plan.id} weekNumber={weekIndex + 1} />;
 }
