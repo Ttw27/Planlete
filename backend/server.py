@@ -410,6 +410,24 @@ class WeightLog(BaseModel):
     logged_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
+class SupportRequestCreate(BaseModel):
+    email: EmailStr
+    message: str
+    order_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+
+class SupportRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    message: str
+    order_id: Optional[str] = None
+    session_id: Optional[str] = None
+    resolved: bool = False
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
 class AdminLoginRequest(BaseModel):
     password: str
 
@@ -753,6 +771,30 @@ async def create_weight_log(payload: WeightLogCreate):
 async def get_weight_logs(plan_id: str):
     docs = await db.weight_logs.find({"plan_id": plan_id}, {"_id": 0}).sort("logged_at", -1).to_list(2000)
     return [WeightLog(**d) for d in docs]
+
+
+# ===== Support requests (shown on error pages so nobody's left stressed
+# about payment taken with no way to reach anyone) =====
+@api_router.post("/support/contact", response_model=SupportRequest)
+async def create_support_request(payload: SupportRequestCreate):
+    req = SupportRequest(**payload.model_dump())
+    await db.support_requests.insert_one(req.model_dump())
+    logger.info(f"Support request received from {req.email} (order: {req.order_id})")
+    return req
+
+
+@api_router.get("/admin/support", response_model=List[SupportRequest])
+async def admin_list_support_requests(_: bool = Depends(require_admin)):
+    docs = await db.support_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return [SupportRequest(**d) for d in docs]
+
+
+@api_router.patch("/admin/support/{request_id}/resolve")
+async def admin_resolve_support_request(request_id: str, _: bool = Depends(require_admin)):
+    result = await db.support_requests.update_one({"id": request_id}, {"$set": {"resolved": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Support request not found")
+    return {"ok": True}
 
 
 # ===== Admin =====
