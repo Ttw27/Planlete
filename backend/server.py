@@ -770,8 +770,21 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if order.get("status") in ("plan_created", "processing"):
-        return {"status": order["status"], "plan_id": order.get("plan_id")}
+    if order.get("status") == "plan_created":
+        return {"status": "plan_created", "plan_id": order.get("plan_id")}
+
+    # "processing" only counts as genuinely in-flight for a short window —
+    # if a deploy happened to kill the server mid-background-task, the order
+    # would otherwise be stuck saying "processing" forever with nothing
+    # actually running. Treat anything older than 3 minutes as dead and retry.
+    if order.get("status") == "processing":
+        started_at_str = order.get("processing_started_at")
+        if started_at_str:
+            started_at = datetime.fromisoformat(started_at_str)
+            elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
+            if elapsed < 180:
+                return {"status": "processing"}
+        # else: no timestamp recorded (shouldn't happen) or stale — fall through and retry
 
     try:
         session = stripe.checkout.Session.retrieve(session_id)
@@ -782,7 +795,13 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
     if session.payment_status != "paid":
         raise HTTPException(status_code=402, detail="Payment has not completed yet.")
 
-    await db.pending_orders.update_one({"id": order_id}, {"$set": {"status": "processing"}})
+    await db.pending_orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "status": "processing",
+            "processing_started_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
     background_tasks.add_task(process_paid_order, order_id, order["answers"])
 
     return {"status": "processing"}
