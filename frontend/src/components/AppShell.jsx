@@ -19,6 +19,54 @@ function parseRestSeconds(rest) {
   return null;
 }
 
+// Extracts the first number from a logged value like "82.5kg" or "12 reps",
+// so progressive-overload nudges can compare week to week. Returns null if
+// nothing numeric is found (e.g. "felt good" free text) so we never guess.
+function parseLoggedNumber(value) {
+  if (!value) return null;
+  const match = String(value).match(/(\d+(\.\d+)?)/);
+  return match ? parseFloat(match[1]) : null;
+}
+
+// Looks at an exercise's logged history (already sorted by week ascending)
+// and returns a short, encouraging nudge — or null if there's not enough
+// data yet, or the values aren't numeric enough to compare.
+function getProgressNudge(exerciseHistory, currentWeek) {
+  if (!exerciseHistory || exerciseHistory.length < 2) return null;
+
+  // Only compare weeks up to and including the one currently being viewed —
+  // no point nudging about a future week that hasn't happened yet.
+  const relevant = currentWeek
+    ? exerciseHistory.filter((h) => h.weekNumber <= currentWeek)
+    : exerciseHistory;
+  if (relevant.length < 2) return null;
+
+  const latest = relevant[relevant.length - 1];
+  const previous = relevant[relevant.length - 2];
+  const latestNum = parseLoggedNumber(latest.value);
+  const prevNum = parseLoggedNumber(previous.value);
+  if (latestNum === null || prevNum === null) return null;
+
+  if (latestNum > prevNum) {
+    return { tone: "up", text: `Up from ${previous.value} last time — nice progress 💪` };
+  }
+
+  if (latestNum === prevNum) {
+    // Check if it's been flat for 3+ logs in a row, not just 2 — that's a
+    // stronger nudge to actually push the number up.
+    const lastThree = relevant.slice(-3);
+    const allSame =
+      lastThree.length === 3 &&
+      lastThree.every((h) => parseLoggedNumber(h.value) === latestNum);
+    if (allSame) {
+      return { tone: "stall", text: `Held at ${latest.value} for a few sessions — try adding a little more next time` };
+    }
+    return { tone: "flat", text: `Same as last time (${previous.value}) — push a bit more if it felt manageable` };
+  }
+
+  return { tone: "down", text: `Lower than last time (${previous.value}) — that's fine, listen to your body` };
+}
+
 /**
  * AppShell — phone-style container for the sample/generated training apps.
  * Includes a top bar, content area, and bottom nav with view switching.
@@ -60,6 +108,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // ── Weight/effort logging (backend-stored — this is data people actually
   // want to keep, so it lives on the server, not the phone) ──
   const [logs, setLogs] = useState({}); // key: `${week}-${day}-${exerciseName}` -> latest value
+  const [history, setHistory] = useState({}); // exerciseName -> [{weekNumber, value}] sorted by week
 
   useEffect(() => {
     if (!planId) return;
@@ -75,6 +124,23 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           if (!(key in map)) map[key] = entry.value;
         }
         setLogs(map);
+
+        // Build per-exercise history for progressive-overload nudges: one
+        // (latest) value per exercise name per week, sorted week ascending.
+        const byExercise = {};
+        for (const entry of res.data) {
+          const list = byExercise[entry.exercise_name] || (byExercise[entry.exercise_name] = {});
+          // res.data is newest-first, so the first time we see a given week
+          // for this exercise is already its latest logged value that week.
+          if (!(entry.week_number in list)) list[entry.week_number] = entry.value;
+        }
+        const historyMap = {};
+        for (const [name, weekMap] of Object.entries(byExercise)) {
+          historyMap[name] = Object.entries(weekMap)
+            .map(([wk, value]) => ({ weekNumber: parseInt(wk, 10), value }))
+            .sort((a, b) => a.weekNumber - b.weekNumber);
+        }
+        setHistory(historyMap);
       })
       .catch(() => {
         // Non-fatal — logging just won't show prior values this session
@@ -159,6 +225,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               completed={completed}
               onToggleDone={toggleDone}
               logs={logs}
+              history={history}
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
               setView={setView}
@@ -172,6 +239,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               completed={completed}
               onToggleDone={toggleDone}
               logs={logs}
+              history={history}
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
             />
@@ -268,7 +336,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog, setView }) {
+function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView }) {
   const todayIndex = Math.min(new Date().getDay(), days.length - 1);
   const today = days[todayIndex] || days[0];
 
@@ -308,6 +376,8 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
               checked={completed.has(`${weekNumber || 0}-${today.day}-${i}`)}
               onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${today.day}-${i}`)}
               loggedValue={logs[`${weekNumber || 0}-${today.day}-${w.name}`]}
+              exerciseHistory={history?.[w.name]}
+              currentWeek={weekNumber}
               onSaveLog={(value) => onSaveLog(today.day, w.name, value)}
               canLog={canLog}
             />
@@ -407,7 +477,7 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
   );
 }
 
-function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, onSaveLog, canLog }) {
+function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog }) {
   const todayIndex = Math.min(new Date().getDay(), days.length - 1);
   const [selected, setSelected] = useState(todayIndex);
   const d = days[selected] || days[0];
@@ -492,6 +562,8 @@ function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDon
               checked={completed.has(`${weekNumber || 0}-${d.day}-${j}`)}
               onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${d.day}-${j}`)}
               loggedValue={logs[`${weekNumber || 0}-${d.day}-${w.name}`]}
+              exerciseHistory={history?.[w.name]}
+              currentWeek={weekNumber}
               onSaveLog={(value) => onSaveLog(d.day, w.name, value)}
               canLog={canLog}
             />
@@ -554,11 +626,12 @@ function RestTimer({ seconds }) {
   );
 }
 
-function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, onSaveLog, canLog = false }) {
+function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exerciseHistory, currentWeek, onSaveLog, canLog = false }) {
   const [panel, setPanel] = useState(null); // null | "reason" | "lookup" | "timer" | "log"
   const [logInput, setLogInput] = useState("");
   const hasReason = Boolean(w.reason);
   const restSeconds = parseRestSeconds(w.rest);
+  const nudge = getProgressNudge(exerciseHistory, currentWeek);
 
   const query = encodeURIComponent(`${w.name} exercise`);
   const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(`how to do ${w.name} exercise`)}`;
@@ -656,6 +729,15 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, onSaveLo
       {loggedValue && panel !== "log" && (
         <div className="pl-9 pr-3 -mt-2 pb-2">
           <p className="text-[10px] text-zinc-600">Last logged: <span className="text-zinc-400">{loggedValue}</span></p>
+          {nudge && (
+            <p className={`text-[10px] mt-1 ${
+              nudge.tone === "up" ? "text-[var(--accent)]"
+              : nudge.tone === "stall" ? "text-yellow-400"
+              : "text-zinc-500"
+            }`}>
+              {nudge.text}
+            </p>
+          )}
         </div>
       )}
 
