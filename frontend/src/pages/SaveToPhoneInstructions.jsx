@@ -147,10 +147,23 @@ export default function SaveToPhoneInstructions() {
             <strong className="text-zinc-300">💡 Tip:</strong> Bookmark this link or check your email — we sent you a link you can save.
           </p>
           <p>
-            <strong className="text-zinc-300">📱 Works offline:</strong> Once saved to your home screen, you can use it without internet (after first load).
+            <strong className="text-zinc-300">⚡ Fast to load:</strong> Once bookmarked, it opens straight to your plan — no app store, no download.
           </p>
           <p>
             <strong className="text-zinc-300">🔄 Updates:</strong> New features arrive automatically whenever we push updates.
+          </p>
+        </div>
+
+        {/* Legal disclaimer */}
+        <div className="mt-8 border border-yellow-500/20 bg-yellow-500/5 p-4 rounded">
+          <p className="text-xs text-yellow-200/80 leading-relaxed">
+            ⚠ This programme is generated automatically based on the information you provided
+            and isn't a substitute for professional coaching or medical advice. Consult a
+            doctor before starting any new exercise programme, especially if you have an
+            existing injury or health condition. See our{" "}
+            <a href="/terms" className="underline hover:text-yellow-100">Terms</a> and{" "}
+            <a href="/privacy" className="underline hover:text-yellow-100">Privacy Policy</a>{" "}
+            for full details.
           </p>
         </div>
       </div>

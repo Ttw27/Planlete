@@ -230,6 +230,13 @@ export default function BuildApp() {
           )}
 
           {q.hint && <p className="text-sm text-zinc-500 mt-4">{q.hint}</p>}
+          {q.id === "notes" && (
+            <p className="text-xs text-zinc-600 mt-3">
+              Anything health-related you share here (like an injury) is only ever used to
+              personalise your plan safely. See our{" "}
+              <Link to="/privacy" className="underline hover:text-zinc-400">Privacy Policy</Link> for details.
+            </p>
+          )}
         </div>
 
         {/* Navigation */}
@@ -260,7 +267,14 @@ export default function BuildApp() {
 
         <p className="text-xs text-zinc-500 mt-10 text-center">
           By continuing you agree to a one-off launch-offer charge of £4.99
-          (normally £20) to receive your personalised app.{" "}
+          (normally £20) to receive your personalised app, our{" "}
+          <Link to="/terms" className="text-zinc-300 underline hover:text-white">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link to="/refunds" className="text-zinc-300 underline hover:text-white">
+            Refund Policy
+          </Link>.{" "}
           <Link to="/" className="text-zinc-300 underline hover:text-white">
             Cancel
           </Link>
