@@ -9,14 +9,15 @@ const API = `${BACKEND_URL}/api`;
 
 /**
  * Landing point after Stripe redirects back from checkout. Confirms payment
- * with the backend (never trusts the redirect alone), which generates the
- * plan only once payment is verified, then sends the person on to the
- * save-to-phone instructions for their new app.
+ * with the backend (never trusts the redirect alone). Plan generation now
+ * happens in the background on the server — this page just confirms the
+ * payment went through and tells the person to expect an email, rather than
+ * making them wait on a loading screen for an AI generation that can take
+ * up to 20-30 seconds.
  */
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const [status, setStatus] = useState("confirming"); // confirming | error
+  const [status, setStatus] = useState("confirming"); // confirming | processing | error
   const [errorMessage, setErrorMessage] = useState("");
   const [orderInfo, setOrderInfo] = useState({ orderId: null, sessionId: null });
 
@@ -34,10 +35,9 @@ export default function PaymentSuccess() {
     let alive = true;
     axios
       .get(`${API}/checkout/confirm`, { params: { session_id: sessionId, order_id: orderId } })
-      .then((res) => {
+      .then(() => {
         if (!alive) return;
-        const id = res.data.id;
-        navigate(`/app/u/${id}/save-instructions`, { replace: true });
+        setStatus("processing");
       })
       .catch((err) => {
         if (!alive) return;
@@ -82,17 +82,35 @@ export default function PaymentSuccess() {
     );
   }
 
+  if (status === "processing") {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="w-14 h-14 rounded-full bg-[#D4FF00]/10 border border-[#D4FF00]/30 flex items-center justify-center mx-auto mb-6">
+            <Check size={24} className="text-[#D4FF00]" />
+          </div>
+          <p className="text-overline text-[#D4FF00] mb-3">Payment confirmed</p>
+          <h2 className="font-display text-3xl mb-4">You're all set.</h2>
+          <p className="text-zinc-400 text-sm leading-relaxed mb-2">
+            We're building your personalised 4-week programme now. You'll get an email at the
+            address you gave us with your app link and instructions on how to install it —
+            usually within a couple of hours.
+          </p>
+          <p className="text-zinc-600 text-xs mt-6">
+            You can close this page — there's nothing else to do here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
       <div className="text-center max-w-md">
         <div className="w-14 h-14 rounded-full bg-[#D4FF00]/10 border border-[#D4FF00]/30 flex items-center justify-center mx-auto mb-6 animate-pulse">
           <Check size={24} className="text-[#D4FF00]" />
         </div>
-        <p className="text-overline text-[#D4FF00] mb-3">Payment confirmed</p>
-        <h2 className="font-display text-3xl mb-4">Building your app…</h2>
-        <p className="text-zinc-400 text-sm">
-          This takes a few seconds — we're generating your personalised 4-week programme now.
-        </p>
+        <p className="text-overline text-[#D4FF00] mb-3">Confirming your payment…</p>
       </div>
     </div>
   );
