@@ -289,16 +289,26 @@ Important:
 """
 
     client = get_anthropic_client()
-    message = client.messages.create(
+
+    # Streamed rather than a single blocking call: this is purely about how
+    # the response is delivered between our server and Anthropic's API (a
+    # continuous flow of chunks vs. one blocking reply) — it changes nothing
+    # about the customer experience, since generation already happens in the
+    # background. What it does buy us is removing the ~21,333 token ceiling
+    # that applies to non-streamed requests, so a big, detailed plan (thinking
+    # + a full 4-week JSON) has real room to complete rather than risk being
+    # cut off mid-response.
+    with client.messages.stream(
         model="claude-sonnet-5",
-        max_tokens=20000,
+        max_tokens=32000,
         messages=[
             {
                 "role": "user",
                 "content": prompt
             }
         ]
-    )
+    ) as stream:
+        message = stream.get_final_message()
 
     # Claude Sonnet 5 can include a "thinking" block ahead of the actual
     # answer for complex prompts like this one — don't assume content[0] is
