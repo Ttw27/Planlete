@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Image as ImageIcon, Type, ExternalLink, Users, LifeBuoy } from "lucide-react";
+import { LogOut, Image as ImageIcon, Type, ExternalLink, Users, LifeBuoy, FlaskConical, ShoppingBag } from "lucide-react";
 
 export default function AdminLayout({ children, title }) {
   const location = useLocation();
@@ -13,8 +13,10 @@ export default function AdminLayout({ children, title }) {
   const nav = [
     { to: "/admin/content", label: "Text content", icon: <Type size={16} /> },
     { to: "/admin/images", label: "Images", icon: <ImageIcon size={16} /> },
+    { to: "/admin/orders", label: "Orders", icon: <ShoppingBag size={16} /> },
     { to: "/admin/leads", label: "Sample leads", icon: <Users size={16} /> },
     { to: "/admin/support", label: "Support requests", icon: <LifeBuoy size={16} /> },
+    { to: "/admin/test-plan", label: "Test plan generator", icon: <FlaskConical size={16} /> },
   ];
 
   return (
