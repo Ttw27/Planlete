@@ -433,7 +433,10 @@ class Plan(BaseModel):
 
 
 class CheckoutSessionRequest(BaseModel):
-    answers: Dict[str, Any]
+    # Exactly one of these two should be provided — answers for the AI
+    # questionnaire path, manual_plan for the self-serve builder path.
+    answers: Optional[Dict[str, Any]] = None
+    manual_plan: Optional[Dict[str, Any]] = None
 
 
 class CheckoutSessionResponse(BaseModel):
@@ -555,10 +558,14 @@ class PhysioWorkoutEntry(BaseModel):
 
 
 class PhysioDayEntry(BaseModel):
-    day: str  # "Sun".."Sat"
+    # "day" holds either a weekday ("Sun".."Sat") in day-based plans, or a
+    # phase name (e.g. "Phase 1") in phase-based plans — same field, the
+    # meaning just depends on the plan's structureType.
+    day: str
     label: str
     focus: str
     workouts: List[PhysioWorkoutEntry] = []
+    dateRange: Optional[str] = None  # phases only, e.g. "Weeks 1-2" — informational only, no auto-detection
 
 
 class PhysioMealEntry(BaseModel):
@@ -597,6 +604,10 @@ class ClientPlanCreate(BaseModel):
     client_name: str
     client_email: Optional[EmailStr] = None
     notes: Optional[str] = None
+    # "days" (Mon-Sun) or "phases" (Phase 1, Phase 2... — for things like
+    # rehab that don't map to a weekly cycle) — tells the frontend how to
+    # label and select between the entries in `days` below.
+    structureType: str = "days"
     # Structured, manually-authored content (preferred path):
     days: List[PhysioDayEntry] = []
     nutrition: Optional[PhysioNutrition] = None
@@ -615,6 +626,7 @@ class ManualPlanCreate(BaseModel):
     client_name: str
     client_email: Optional[EmailStr] = None
     notes: Optional[str] = None
+    structureType: str = "days"
     days: List[PhysioDayEntry] = []
     nutrition: Optional[PhysioNutrition] = None
     recovery: Optional[PhysioRecovery] = None
@@ -645,6 +657,7 @@ class ClientPlanPublic(BaseModel):
     template: Optional[str] = None
     notes: Optional[str] = None
     slug: str
+    structureType: str = "days"
     days: List[Dict[str, Any]] = []
     nutrition: Optional[Dict[str, Any]] = None
     recovery: Optional[Dict[str, Any]] = None
@@ -768,6 +781,7 @@ async def create_manual_plan(payload: ManualPlanCreate, _: bool = Depends(requir
         "brand": f"{payload.client_name}'s App" if payload.client_name else "Your App",
         "tagline": "Your plan",
         "answers": {"name": payload.client_name, "email": payload.client_email, "notes": payload.notes},
+        "structureType": payload.structureType,
         "weeks": [{
             "weekNumber": 1,
             "theme": "Your plan",
@@ -797,10 +811,21 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Payments are not configured yet.")
 
+    if bool(payload.answers) == bool(payload.manual_plan):
+        raise HTTPException(status_code=400, detail="Provide exactly one of answers or manual_plan.")
+
+    kind = "ai" if payload.answers else "manual"
+    product_name = (
+        "Planlete — Personalised Training App" if kind == "ai"
+        else "Planlete — Your Own Plan, Built Your Way"
+    )
+
     order_id = str(uuid.uuid4())
     order = {
         "id": order_id,
+        "kind": kind,
         "answers": payload.answers,
+        "manual_plan": payload.manual_plan,
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -813,7 +838,7 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
             line_items=[{
                 "price_data": {
                     "currency": "gbp",
-                    "product_data": {"name": "Planlete — Personalised Training App"},
+                    "product_data": {"name": product_name},
                     "unit_amount": 499,
                 },
                 "quantity": 1,
@@ -833,21 +858,47 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
     return CheckoutSessionResponse(checkout_url=session.url, order_id=order_id)
 
 
-async def process_paid_order(order_id: str, answers: dict) -> None:
+async def process_paid_order(order_id: str, order: dict) -> None:
     """
-    Runs after the response has already gone back to the browser. Generates
-    the plan, saves it, and emails the customer their link + install
-    instructions — so nobody has to sit and wait on a loading screen for an
-    AI generation that can take up to 20-30 seconds.
+    Runs after the response has already gone back to the browser.
+    - kind == "ai": generates the plan via Claude (can take up to ~30s).
+    - kind == "manual": the plan was already hand-authored in the builder —
+      just wrap and save it, no AI call, no wait. Either way the customer
+      gets an email once it's ready rather than watching a loading screen.
     """
-    email = answers.get("email")
-    name = answers.get("name", "there")
+    kind = order.get("kind", "ai")
+    answers = order.get("answers") or {}
+    manual_plan = order.get("manual_plan") or {}
+
+    email = (answers.get("email") if kind == "ai" else manual_plan.get("client_email")) or None
+    name = (answers.get("name") if kind == "ai" else manual_plan.get("client_name")) or "there"
 
     try:
-        plan_data = await generate_plan_with_claude(answers)
-        plan_id = str(uuid.uuid4())
-        plan_data["id"] = plan_id
-        plan_data["order_id"] = order_id
+        if kind == "manual":
+            plan_id = str(uuid.uuid4())
+            plan_data = {
+                "id": plan_id,
+                "brand": f"{name}'s App" if name != "there" else "Your App",
+                "tagline": "Your plan",
+                "answers": {"name": name, "email": email, "notes": manual_plan.get("notes")},
+                "structureType": manual_plan.get("structureType", "days"),
+                "weeks": [{
+                    "weekNumber": 1,
+                    "theme": "Your plan",
+                    "days": manual_plan.get("days", []),
+                }],
+                "nutrition": manual_plan.get("nutrition"),
+                "recovery": manual_plan.get("recovery"),
+                "morningRoutine": manual_plan.get("morningRoutine", []),
+                "manually_authored": True,
+                "order_id": order_id,
+            }
+        else:
+            plan_data = await generate_plan_with_claude(answers)
+            plan_id = str(uuid.uuid4())
+            plan_data["id"] = plan_id
+            plan_data["order_id"] = order_id
+
         await db.plans.insert_one(plan_data)
 
         await db.pending_orders.update_one(
@@ -858,7 +909,7 @@ async def process_paid_order(order_id: str, answers: dict) -> None:
                 "paid_at": datetime.now(timezone.utc).isoformat(),
             }}
         )
-        logger.info(f"Order {order_id} paid and plan {plan_id} generated (background)")
+        logger.info(f"Order {order_id} paid and plan {plan_id} ready (kind={kind})")
 
         if email:
             link = f"{FRONTEND_URL}/app/u/{plan_id}/save-instructions"
@@ -868,7 +919,7 @@ async def process_paid_order(order_id: str, answers: dict) -> None:
                 html=f"""
                     <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
                         <h2 style="color: #111;">Hey {name},</h2>
-                        <p>Your personalised training app is ready — a 4-week programme built around your goal.</p>
+                        <p>Your training app is ready{' — a 4-week programme built around your goal' if kind == 'ai' else ', built exactly the way you put it together'}.</p>
                         <p style="margin: 24px 0;">
                             <a href="{link}" style="background: #D4FF00; color: #000; font-weight: bold;
                                text-decoration: none; padding: 14px 24px; display: inline-block;">
@@ -948,7 +999,7 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
             "processing_started_at": datetime.now(timezone.utc).isoformat(),
         }}
     )
-    background_tasks.add_task(process_paid_order, order_id, order["answers"])
+    background_tasks.add_task(process_paid_order, order_id, order)
 
     return {"status": "processing"}
 
@@ -1325,6 +1376,7 @@ async def coach_create_client(payload: ClientPlanCreate, coach: dict = Depends(g
         "template": payload.template,
         "notes": payload.notes,
         "slug": slug,
+        "structureType": payload.structureType,
         "days": [d.model_dump() for d in payload.days],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
@@ -1356,6 +1408,7 @@ async def coach_update_client(client_id: str, payload: ClientPlanCreate, coach: 
         "client_name": payload.client_name.strip(),
         "client_email": payload.client_email,
         "notes": payload.notes,
+        "structureType": payload.structureType,
         "days": [d.model_dump() for d in payload.days],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
@@ -1524,6 +1577,7 @@ async def public_branded_plan(coach_slug: str, client_slug: str):
     }
 
     if unlocked:
+        response["client"]["structureType"] = client_plan.get("structureType", "days")
         response["client"]["days"] = client_plan.get("days", [])
         response["client"]["nutrition"] = client_plan.get("nutrition")
         response["client"]["recovery"] = client_plan.get("recovery")
