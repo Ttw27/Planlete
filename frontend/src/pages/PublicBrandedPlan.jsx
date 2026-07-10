@@ -119,6 +119,7 @@ export default function PublicBrandedPlan() {
   const data = {
     brand: coach.brand_name,
     tagline: `${client.client_name}'s plan`,
+    structureType: client.structureType || "days",
     days: client.days || [],
     nutrition: client.nutrition,
     recovery: client.recovery,

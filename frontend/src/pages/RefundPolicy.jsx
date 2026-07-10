@@ -15,7 +15,7 @@ export default function RefundPolicy() {
 
         <div className="flex flex-col gap-8 text-zinc-300 leading-relaxed">
           <section>
-            <h2 className="text-white font-display text-xl mb-3">Digital content and your right to cancel</h2>
+            <h2 className="text-white font-display text-xl mb-3">One-off plan purchases — your right to cancel</h2>
             <p>
               Under UK consumer law, you normally have a 14-day right to cancel an online
               purchase. However, because Planlete generates and delivers your personalised
@@ -24,7 +24,9 @@ export default function RefundPolicy() {
               would be for any instantly-delivered digital product. By completing your
               purchase and providing your questionnaire answers, you acknowledge and agree
               that generation begins promptly and that your cancellation right ends once your
-              plan has been delivered.
+              plan has been delivered. This section covers one-off plan purchases (the AI
+              questionnaire and self-serve builder); coach subscriptions and client plans are
+              covered separately below.
             </p>
           </section>
 
@@ -35,6 +37,30 @@ export default function RefundPolicy() {
               <li>If your plan is clearly broken, incomplete, or doesn't match the schema it should (for example, missing entire weeks or sections).</li>
               <li>If you were charged more than once for the same purchase due to an error.</li>
             </ul>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">Coach subscriptions</h2>
+            <p>
+              Coach subscriptions are billed on a recurring basis and can be cancelled at any
+              time from your dashboard, or by contacting us — cancellation takes effect at the
+              end of your current billing period, and you keep access until then. We don't
+              provide refunds for the current billing period once it's begun, but you won't be
+              charged again after cancelling. If you're charged in error (for example, a
+              duplicate charge or a charge after you'd already cancelled), contact us and we'll
+              refund it.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">Client-pays plans (via a coach)</h2>
+            <p>
+              If your coach doesn't have an active subscription, you may be asked to pay a
+              one-off fee to unlock the plan they've built for you. The same right-to-cancel
+              position as our one-off plan purchases applies — once the plan is unlocked and
+              delivered, the 14-day cancellation right ends, since it's an instantly-delivered
+              digital product.
+            </p>
           </section>
 
           <section>

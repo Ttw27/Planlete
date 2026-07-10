@@ -18,8 +18,10 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-display text-xl mb-3">Who we are</h2>
             <p>
               Planlete ("we", "us", "our") is operated by TEZL GROUP LTD, a company registered
-              in the United Kingdom. This policy explains what personal information we collect
-              through planlete.co.uk, why we collect it, and what rights you have over it.
+              in the United Kingdom (company number: <strong className="text-yellow-400">[ADD COMPANY NUMBER]</strong>),
+              registered office: <strong className="text-yellow-400">[ADD REGISTERED ADDRESS]</strong>.
+              This policy explains what personal information we collect through planlete.co.uk,
+              why we collect it, and what rights you have over it.
             </p>
           </section>
 
@@ -46,6 +48,18 @@ export default function PrivacyPolicy() {
               information in this field, you are giving us your explicit consent to process
               it for this specific purpose. You do not have to provide this information, and
               the field can be left blank.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">If you're a coach or physio</h2>
+            <p>
+              If you sign up for a coach account, we additionally collect your business name,
+              logo, and brand colours (used to present your clients' plans under your own
+              branding), your login details, and subscription billing information (handled by
+              Stripe — we don't store your card details). Any client details and plan content
+              you enter is stored so it can be delivered to your client, and remains visible to
+              you and to the client it was created for.
             </p>
           </section>
 
@@ -91,10 +105,14 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">Cookies</h2>
+            <h2 className="text-white font-display text-xl mb-3">Cookies and local storage</h2>
             <p>
-              Planlete does not currently use tracking or advertising cookies. If this changes,
-              this policy will be updated and, where required, we'll ask for your consent first.
+              Planlete does not currently use tracking or advertising cookies. Your app does save
+              a small amount of data directly on your device — such as which exercises you've
+              ticked off — purely so the app remembers your progress between visits. This is
+              strictly functional storage, not tracking, and isn't shared with us or anyone else.
+              If our use of cookies changes in future, this policy will be updated and, where
+              required, we'll ask for your consent first.
             </p>
           </section>
 

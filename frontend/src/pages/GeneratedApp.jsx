@@ -110,6 +110,7 @@ export default function GeneratedApp() {
     brand: plan.brand || `${name}'s App`,
     tagline: `${goal}${weekLabel}`,
     hero: heroForGoal(goal),
+    structureType: plan.structureType || "days",
     days: currentWeek?.days || [],
     nutrition: plan.nutrition,
     recovery: plan.recovery,

@@ -17,8 +17,14 @@ export default function TermsConditions() {
           <section>
             <h2 className="text-white font-display text-xl mb-3">1. Who we are</h2>
             <p>
-              Planlete (planlete.co.uk) is operated by TEZL GROUP LTD. By using this site or
-              purchasing a plan, you agree to these terms.
+              Planlete (planlete.co.uk) is operated by TEZL GROUP LTD, a company registered in
+              the United Kingdom (company number: <strong className="text-yellow-400">[ADD COMPANY NUMBER]</strong>),
+              registered office: <strong className="text-yellow-400">[ADD REGISTERED ADDRESS]</strong>.
+              By using this site or purchasing a plan, you agree to these terms.
+            </p>
+            <p className="mt-3">
+              You must be 18 or over to purchase a plan or create a coach account. Planlete
+              is not intended for use by children.
             </p>
           </section>
 
@@ -61,7 +67,27 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">5. Refunds</h2>
+            <h2 className="text-white font-display text-xl mb-3">5. Coaches, subscriptions, and client plans</h2>
+            <p>
+              Coaches and physios may create an account to build branded plans for their own
+              clients. Subscribing gives a coach unlimited client plans for as long as the
+              subscription is active; subscriptions are billed on a recurring basis via Stripe
+              and can be cancelled at any time, taking effect at the end of the current billing
+              period. Without an active subscription, each client is instead charged a one-off
+              fee to unlock their individual plan.
+            </p>
+            <p className="mt-3">
+              Any exercise, nutrition, or recovery content a coach enters is entirely their own
+              professional input — Planlete does not write, review, check, or endorse this
+              content, and the coach is solely responsible for its accuracy and suitability for
+              their client. Coaches confirm this explicitly before any client plan is saved.
+              Content must be lawful, must be the coach's own original work (or content they
+              have the right to use), and must not infringe anyone else's intellectual property.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">6. Refunds</h2>
             <p>
               See our separate <Link to="/refunds" className="text-[#D4FF00] underline">Refund Policy</Link> for
               full details.
@@ -69,7 +95,7 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">6. Accuracy of generated content</h2>
+            <h2 className="text-white font-display text-xl mb-3">7. Accuracy of generated content</h2>
             <p>
               While we design our system to produce safe, sensible, and personalised
               programmes, AI-generated content can occasionally be imperfect or contain
@@ -79,7 +105,7 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">7. Your account and data</h2>
+            <h2 className="text-white font-display text-xl mb-3">8. Your account and data</h2>
             <p>
               See our <Link to="/privacy" className="text-[#D4FF00] underline">Privacy Policy</Link> for
               details on what information we collect and how it's used.
@@ -87,7 +113,7 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">8. Acceptable use</h2>
+            <h2 className="text-white font-display text-xl mb-3">9. Acceptable use</h2>
             <p>
               You agree not to misuse Planlete — including attempting to access other
               customers' plans, reverse-engineer the service, or use it in any way that could
@@ -96,7 +122,7 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">9. Limitation of liability</h2>
+            <h2 className="text-white font-display text-xl mb-3">10. Limitation of liability</h2>
             <p>
               To the fullest extent permitted by law, Planlete and TEZL GROUP LTD are not
               liable for any injury, loss, or damage arising from your use of a generated
@@ -107,7 +133,7 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">10. Changes to these terms</h2>
+            <h2 className="text-white font-display text-xl mb-3">11. Changes to these terms</h2>
             <p>
               We may update these terms from time to time. Continued use of Planlete after
               changes are posted means you accept the updated terms.
@@ -115,7 +141,7 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">11. Contact</h2>
+            <h2 className="text-white font-display text-xl mb-3">12. Contact</h2>
             <p>
               Questions about these terms:{" "}
               <a href="mailto:hello@planlete.co.uk" className="text-[#D4FF00] underline">
