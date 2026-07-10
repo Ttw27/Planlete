@@ -97,6 +97,7 @@ export default function CoachPlanBuilder() {
           onSubmit={handleSubmit}
           submitting={submitting}
           submitLabel={clientId ? "Save changes" : "Create plan"}
+          brandLogo={coach.logo_url}
         />
       </div>
     </div>
