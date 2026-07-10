@@ -478,7 +478,16 @@ export default function PlanBuilderForm({
       <div className={`w-full lg:w-[380px] shrink-0 ${showPreview ? "block" : "hidden lg:block"}`}>
         <p className="text-overline mb-3 hidden lg:block">Preview — what the client sees</p>
         <div className="border border-white/10 bg-black rounded-[28px] overflow-hidden" style={{ height: 680 }}>
-          <AppShell data={previewData} />
+          <AppShell
+            data={previewData}
+            initialView={
+              section === "train" ? "training"
+              : section === "fuel" ? "nutrition"
+              : section === "recover" ? "recovery"
+              : "home"
+            }
+            initialTrainingDay={section === "train" ? selectedDay : null}
+          />
         </div>
       </div>
     </div>

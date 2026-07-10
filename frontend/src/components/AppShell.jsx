@@ -89,8 +89,8 @@ function getSuggestedValue(exerciseHistory) {
  * AppShell — phone-style container for the sample/generated training apps.
  * Includes a top bar, content area, and bottom nav with view switching.
  */
-export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null }) {
-  const [view, setView] = useState("home");
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, initialView = "home", initialTrainingDay = null }) {
+  const [view, setView] = useState(initialView);
   const navigate = useNavigate();
 
   const days = data.days || (mode && data.modes?.[mode]?.days) || [];
@@ -260,6 +260,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               history={history}
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
+              initialSelectedDay={initialTrainingDay}
             />
           )}
           {view === "nutrition" && nutrition && (
@@ -495,9 +496,19 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
   );
 }
 
-function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog }) {
+function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null }) {
   const todayIndex = Math.min(new Date().getDay(), days.length - 1);
-  const [selected, setSelected] = useState(todayIndex);
+  const [selected, setSelected] = useState(initialSelectedDay ?? todayIndex);
+
+  // Keep following the builder's active day tab as it changes, so the live
+  // preview always shows exactly what's being edited right now.
+  useEffect(() => {
+    if (initialSelectedDay !== null && initialSelectedDay !== undefined) {
+      setSelected(initialSelectedDay);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSelectedDay]);
+
   const d = days[selected] || days[0];
 
   const dayKeys = d.workouts.map((_, j) => `${weekNumber || 0}-${d.day}-${j}`);
