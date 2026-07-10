@@ -211,6 +211,13 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
         className={`relative mx-auto w-full ${compact ? "h-full" : "max-w-[440px] min-h-[80vh]"} bg-[#0a0a0a] border border-white/10 overflow-hidden flex flex-col`}
         style={compact ? {} : { boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
       >
+        {/* Planlete strip — shown on every plan, personal or business */}
+        <div className="w-full bg-black py-1.5 text-center border-b border-white/5 shrink-0">
+          <p className="text-[9px] tracking-[0.25em] uppercase text-zinc-600">
+            Planlete <span className="text-[var(--accent)]">•</span> Built for you
+          </p>
+        </div>
+
         {/* Top bar */}
         <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/10 px-5 py-4 flex items-center justify-between">
           <button
