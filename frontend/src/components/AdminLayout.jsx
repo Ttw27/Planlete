@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Image as ImageIcon, Type, ExternalLink, Users, LifeBuoy, FlaskConical, ShoppingBag, PenTool } from "lucide-react";
+import { LogOut, Image as ImageIcon, Type, ExternalLink, Users, LifeBuoy, FlaskConical, ShoppingBag, PenTool, ShieldAlert } from "lucide-react";
 
 export default function AdminLayout({ children, title }) {
   const location = useLocation();
@@ -18,6 +18,7 @@ export default function AdminLayout({ children, title }) {
     { to: "/admin/support", label: "Support requests", icon: <LifeBuoy size={16} /> },
     { to: "/admin/test-plan", label: "Test plan generator", icon: <FlaskConical size={16} /> },
     { to: "/admin/plan-builder", label: "Manual plan builder", icon: <PenTool size={16} /> },
+    { to: "/admin/security", label: "Security", icon: <ShieldAlert size={16} /> },
   ];
 
   return (
