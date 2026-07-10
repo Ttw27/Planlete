@@ -547,13 +547,25 @@ class PhysioWorkoutEntry(BaseModel):
     rest: str
     reason: Optional[str] = None
     timerEnabled: bool = True
+    # Optional progressive-overload config, set by whoever authors the plan.
+    # progressionType: what's actually progressing — "load" | "reps" |
+    #   "hold" | "distance" | None (off)
+    # progressionMode: "fixed" (add a flat amount each week) or "percent"
+    # progressionRate: the number to apply, per progressionMode
+    progressionType: Optional[str] = None
+    progressionMode: Optional[str] = "fixed"
+    progressionRate: Optional[float] = None
 
 
 class PhysioDayEntry(BaseModel):
-    day: str  # "Sun".."Sat"
+    # "day" holds either a weekday ("Sun".."Sat") in day-based plans, or a
+    # phase name (e.g. "Phase 1") in phase-based plans — same field, the
+    # meaning just depends on the plan's structureType.
+    day: str
     label: str
     focus: str
     workouts: List[PhysioWorkoutEntry] = []
+    dateRange: Optional[str] = None  # phases only, e.g. "Weeks 1-2" — informational only, no auto-detection
 
 
 class PhysioMealEntry(BaseModel):
@@ -592,6 +604,10 @@ class ClientPlanCreate(BaseModel):
     client_name: str
     client_email: Optional[EmailStr] = None
     notes: Optional[str] = None
+    # "days" (Mon-Sun) or "phases" (Phase 1, Phase 2... — for things like
+    # rehab that don't map to a weekly cycle) — tells the frontend how to
+    # label and select between the entries in `days` below.
+    structureType: str = "days"
     # Structured, manually-authored content (preferred path):
     days: List[PhysioDayEntry] = []
     nutrition: Optional[PhysioNutrition] = None
@@ -610,6 +626,7 @@ class ManualPlanCreate(BaseModel):
     client_name: str
     client_email: Optional[EmailStr] = None
     notes: Optional[str] = None
+    structureType: str = "days"
     days: List[PhysioDayEntry] = []
     nutrition: Optional[PhysioNutrition] = None
     recovery: Optional[PhysioRecovery] = None
@@ -640,6 +657,7 @@ class ClientPlanPublic(BaseModel):
     template: Optional[str] = None
     notes: Optional[str] = None
     slug: str
+    structureType: str = "days"
     days: List[Dict[str, Any]] = []
     nutrition: Optional[Dict[str, Any]] = None
     recovery: Optional[Dict[str, Any]] = None
@@ -763,6 +781,7 @@ async def create_manual_plan(payload: ManualPlanCreate, _: bool = Depends(requir
         "brand": f"{payload.client_name}'s App" if payload.client_name else "Your App",
         "tagline": "Your plan",
         "answers": {"name": payload.client_name, "email": payload.client_email, "notes": payload.notes},
+        "structureType": payload.structureType,
         "weeks": [{
             "weekNumber": 1,
             "theme": "Your plan",
@@ -862,6 +881,7 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                 "brand": f"{name}'s App" if name != "there" else "Your App",
                 "tagline": "Your plan",
                 "answers": {"name": name, "email": email, "notes": manual_plan.get("notes")},
+                "structureType": manual_plan.get("structureType", "days"),
                 "weeks": [{
                     "weekNumber": 1,
                     "theme": "Your plan",
@@ -1114,17 +1134,87 @@ async def admin_resolve_support_request(request_id: str, _: bool = Depends(requi
     return {"ok": True}
 
 
+def get_client_ip(request: Request) -> str:
+    """Railway sits behind a proxy, so the real visitor IP is in
+    X-Forwarded-For (first entry), not request.client.host directly."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def lookup_ip_location(ip: str) -> str:
+    """Best-effort, non-blocking location lookup via a free public API.
+    Never raises — a failed lookup just means no location shown, login
+    itself is never affected by this."""
+    if ip in ("unknown", "127.0.0.1", "localhost") or ip.startswith("10.") or ip.startswith("192.168."):
+        return "Local/internal"
+    try:
+        resp = requests.get(f"http://ip-api.com/json/{ip}?fields=city,country", timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            city = data.get("city", "")
+            country = data.get("country", "")
+            if city or country:
+                return f"{city}, {country}".strip(", ")
+    except Exception:
+        pass
+    return "Unknown"
+
+
+async def log_admin_login_attempt(request: Request, success: bool) -> None:
+    ip = get_client_ip(request)
+    await db.admin_login_attempts.insert_one({
+        "id": str(uuid.uuid4()),
+        "ip": ip,
+        "location": lookup_ip_location(ip),
+        "success": success,
+        "user_agent": request.headers.get("user-agent", "")[:200],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+async def check_login_rate_limit(request: Request) -> None:
+    """Blocks further attempts from an IP after 5 failed logins within 15
+    minutes — stored in Mongo (not memory) so it survives a Railway
+    restart, unlike a simple in-process counter."""
+    ip = get_client_ip(request)
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+    recent_failures = await db.admin_login_attempts.count_documents({
+        "ip": ip,
+        "success": False,
+        "created_at": {"$gte": cutoff},
+    })
+    if recent_failures >= 5:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed login attempts. Please try again in 15 minutes."
+        )
+
+
 # ===== Admin =====
 @api_router.post("/admin/login", response_model=AdminLoginResponse)
-async def admin_login(payload: AdminLoginRequest):
-    if not ADMIN_PASSWORD or not secrets.compare_digest(payload.password, ADMIN_PASSWORD):
+async def admin_login(payload: AdminLoginRequest, request: Request):
+    await check_login_rate_limit(request)
+
+    valid = bool(ADMIN_PASSWORD) and secrets.compare_digest(payload.password, ADMIN_PASSWORD)
+    await log_admin_login_attempt(request, success=valid)
+
+    if not valid:
         raise HTTPException(status_code=401, detail="Invalid password")
     return AdminLoginResponse(token=ADMIN_TOKEN)
+
+
+@api_router.get("/admin/login-attempts")
+async def admin_list_login_attempts(_: bool = Depends(require_admin)):
+    docs = await db.admin_login_attempts.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return docs
 
 
 @api_router.get("/admin/verify")
 async def admin_verify(_: bool = Depends(require_admin)):
     return {"ok": True}
+
 
 
 # ===== Sample plan leads (email capture for sample downloads) =====
@@ -1356,6 +1446,7 @@ async def coach_create_client(payload: ClientPlanCreate, coach: dict = Depends(g
         "template": payload.template,
         "notes": payload.notes,
         "slug": slug,
+        "structureType": payload.structureType,
         "days": [d.model_dump() for d in payload.days],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
@@ -1387,6 +1478,7 @@ async def coach_update_client(client_id: str, payload: ClientPlanCreate, coach: 
         "client_name": payload.client_name.strip(),
         "client_email": payload.client_email,
         "notes": payload.notes,
+        "structureType": payload.structureType,
         "days": [d.model_dump() for d in payload.days],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
@@ -1555,6 +1647,7 @@ async def public_branded_plan(coach_slug: str, client_slug: str):
     }
 
     if unlocked:
+        response["client"]["structureType"] = client_plan.get("structureType", "days")
         response["client"]["days"] = client_plan.get("days", [])
         response["client"]["nutrition"] = client_plan.get("nutrition")
         response["client"]["recovery"] = client_plan.get("recovery")
