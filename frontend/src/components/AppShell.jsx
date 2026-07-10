@@ -106,6 +106,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;
   const recovery = data.recovery;
   const morningRoutine = data.morningRoutine;
+  const structureType = data.structureType || "days";
 
   // ── Checklist completion (localStorage — losing a tick is no big deal) ──
   const checklistStorageKey = `planlete_checklist_${planId || "sample"}`;
@@ -264,6 +265,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               canLog={Boolean(planId)}
               setView={setView}
               brandLogo={brandLogo}
+              structureType={structureType}
             />
           )}
           {view === "training" && (
@@ -278,6 +280,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
               initialSelectedDay={initialTrainingDay}
+              structureType={structureType}
             />
           )}
           {view === "nutrition" && nutrition && (
@@ -372,12 +375,17 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo }) {
-  const todayIndex = Math.min(new Date().getDay(), days.length - 1);
+function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" }) {
+  // Phases have no auto-detection (nobody knows "which phase" from a date
+  // alone) — just default to the first one; day-based plans still pick
+  // today's real weekday as before.
+  const todayIndex = structureType === "phases" ? 0 : Math.min(new Date().getDay(), days.length - 1);
   const today = days[todayIndex] || days[0];
 
   const todayKeys = today.workouts.map((_, i) => `${weekNumber || 0}-${today.day}-${i}`);
   const todayDone = todayKeys.filter((k) => completed.has(k)).length;
+
+  const heroLabel = structureType === "phases" ? `Current phase · ${today.day}` : `Today · ${today.day}`;
 
   return (
     <div className="flex flex-col">
@@ -390,7 +398,7 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
             <img src={brandLogo} alt="" className="max-h-full max-w-[60%] object-contain" />
           </div>
           <div className="px-5 py-4 border-b border-white/10">
-            <p className="text-overline">Today · {today.day}</p>
+            <p className="text-overline">{heroLabel}</p>
             <h2 className="font-display text-2xl mt-1">{today.label}</h2>
             <p className="text-sm text-zinc-400 mt-1">{today.focus}</p>
           </div>
@@ -404,7 +412,7 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
           <div className="absolute bottom-4 left-5 right-5">
-            <p className="text-overline">Today · {today.day}</p>
+            <p className="text-overline">{heroLabel}</p>
             <h2 className="font-display text-3xl mt-2">{today.label}</h2>
             <p className="text-sm text-zinc-300 mt-1">{today.focus}</p>
           </div>
@@ -414,7 +422,7 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
       {/* Today workouts */}
       <div className="px-5 py-5">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-overline">Today&apos;s session</p>
+          <p className="text-overline">{structureType === "phases" ? "This phase" : "Today's session"}</p>
           <p className="text-[10px] font-mono-display text-zinc-500">
             {todayDone}/{today.workouts.length} done
           </p>
@@ -528,9 +536,10 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
   );
 }
 
-function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null }) {
-  const todayIndex = Math.min(new Date().getDay(), days.length - 1);
-  const [selected, setSelected] = useState(initialSelectedDay ?? todayIndex);
+function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" }) {
+  const isPhases = structureType === "phases";
+  const todayIndex = isPhases ? -1 : Math.min(new Date().getDay(), days.length - 1); // -1 = no "today" concept for phases
+  const [selected, setSelected] = useState(initialSelectedDay ?? (isPhases ? 0 : todayIndex));
 
   // Keep following the builder's active day tab as it changes, so the live
   // preview always shows exactly what's being edited right now.
@@ -548,7 +557,7 @@ function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDon
 
   return (
     <div className="flex flex-col">
-      {/* Clickable day selector */}
+      {/* Clickable day/phase selector */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0a0a0a] z-10">
         {days.map((day, i) => (
           <button
@@ -565,6 +574,9 @@ function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDon
               {i === todayIndex && <span className="w-1 h-1 rounded-full bg-[var(--accent)]" />}
             </p>
             <p className="text-xs mt-1">{day.label}</p>
+            {isPhases && day.dateRange && (
+              <p className="text-[9px] mt-0.5 text-zinc-600">{day.dateRange}</p>
+            )}
           </button>
         ))}
       </div>
@@ -572,8 +584,12 @@ function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDon
       <div className="px-5 py-5">
         <div className="flex items-baseline justify-between mb-4">
           <div>
-            <p className="text-overline">{d.day}{selected === todayIndex ? " · Today" : ""}</p>
+            <p className="text-overline">
+              {d.day}
+              {!isPhases && selected === todayIndex ? " · Today" : ""}
+            </p>
             <h3 className="font-display text-xl mt-1">{d.label}</h3>
+            {isPhases && d.dateRange && <p className="text-xs text-zinc-500 mt-0.5">{d.dateRange}</p>}
           </div>
           <div className="text-right">
             <p className="text-xs text-zinc-500">{d.focus}</p>

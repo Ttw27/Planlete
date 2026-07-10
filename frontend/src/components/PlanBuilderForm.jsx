@@ -8,6 +8,10 @@ function emptyDay(day) {
   return { day, label: "", focus: "", workouts: [] };
 }
 
+function emptyPhase(n) {
+  return { day: `Phase ${n}`, label: "", focus: "", dateRange: "", workouts: [] };
+}
+
 function emptyWorkout() {
   return {
     name: "", sets: "", load: "", rest: "", reason: "", timerEnabled: true,
@@ -56,10 +60,38 @@ export default function PlanBuilderForm({
   const [clientEmail, setClientEmail] = useState(initialData?.client_email || "");
   const [notes, setNotes] = useState(initialData?.notes || "");
 
+  // "days" (Mon-Sun, standard) or "phases" (Phase 1, Phase 2... — for things
+  // like rehab that progress by recovery stage, not day of week).
+  const [structureType, setStructureType] = useState(initialData?.structureType || "days");
+
   const [days, setDays] = useState(() => {
-    if (initialData?.days?.length === 7) return initialData.days;
+    if (initialData?.days?.length) return initialData.days;
     return DAY_NAMES.map((d) => emptyDay(d));
   });
+
+  const switchStructureType = (next) => {
+    if (next === structureType) return;
+    setStructureType(next);
+    // Reset to a sensible default for whichever structure they're switching
+    // to — carrying over the old day/phase data across the switch would be
+    // confusing since the two shapes mean different things.
+    if (next === "phases") {
+      setDays([emptyPhase(1), emptyPhase(2), emptyPhase(3)]);
+    } else {
+      setDays(DAY_NAMES.map((d) => emptyDay(d)));
+    }
+    setSelectedDay(0);
+  };
+
+  const addPhase = () => {
+    setDays((prev) => [...prev, emptyPhase(prev.length + 1)]);
+  };
+
+  const removePhase = (index) => {
+    if (days.length <= 1) return;
+    setDays((prev) => prev.filter((_, i) => i !== index));
+    setSelectedDay((s) => Math.max(0, Math.min(s, days.length - 2)));
+  };
 
   const [nutrition, setNutrition] = useState(
     initialData?.nutrition || {
@@ -139,6 +171,7 @@ export default function PlanBuilderForm({
     client_name: clientName || "Your plan",
     client_email: clientEmail || null,
     notes: notes || null,
+    structureType,
     days: days.map((d) => ({
       ...d,
       workouts: d.workouts.map((w) => ({
@@ -172,6 +205,7 @@ export default function PlanBuilderForm({
     brand: clientName ? `${clientName}'s App` : "Your App",
     tagline: "Your plan",
     hero: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80",
+    structureType,
     days,
     nutrition: {
       ...nutrition,
@@ -290,34 +324,112 @@ export default function PlanBuilderForm({
         {/* ── Train ── */}
         {section === "train" && (
           <div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4 border-b border-white/10">
-              {days.map((d, i) => (
+            {/* Structure type toggle */}
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
+              <div className="flex border border-white/10">
                 <button
-                  key={d.day}
-                  onClick={() => setSelectedDay(i)}
-                  className={`shrink-0 px-3 py-2 border text-left transition-colors ${
-                    selectedDay === i
-                      ? "border-[#D4FF00] text-[#D4FF00]"
-                      : "border-white/10 text-zinc-400 hover:border-white/30"
+                  onClick={() => switchStructureType("days")}
+                  className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                    structureType === "days" ? "bg-[#D4FF00] text-black" : "text-zinc-400 hover:text-white"
                   }`}
                 >
-                  <p className="text-[10px] uppercase tracking-widest">{d.day}</p>
-                  <p className="text-xs mt-1 text-white truncate max-w-[80px]">{d.label || "—"}</p>
+                  Day of week
                 </button>
-              ))}
+                <button
+                  onClick={() => switchStructureType("phases")}
+                  className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                    structureType === "phases" ? "bg-[#D4FF00] text-black" : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  Recovery phase
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-600">
+                {structureType === "days"
+                  ? "Standard Mon–Sun weekly structure."
+                  : "For things like rehab, organised by stage instead of weekday."}
+              </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-3 mb-5 max-w-xl">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4 border-b border-white/10">
+              {days.map((d, i) => (
+                <div key={i} className="relative shrink-0 group">
+                  <button
+                    onClick={() => setSelectedDay(i)}
+                    className={`px-3 py-2 border text-left transition-colors ${
+                      selectedDay === i
+                        ? "border-[#D4FF00] text-[#D4FF00]"
+                        : "border-white/10 text-zinc-400 hover:border-white/30"
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase tracking-widest">{d.day}</p>
+                    <p className="text-xs mt-1 text-white truncate max-w-[80px]">{d.label || "—"}</p>
+                    {structureType === "phases" && d.dateRange && (
+                      <p className="text-[9px] mt-0.5 text-zinc-500">{d.dateRange}</p>
+                    )}
+                  </button>
+                  {structureType === "phases" && days.length > 1 && (
+                    <button
+                      onClick={() => removePhase(i)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500/80 text-white text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove phase"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              {structureType === "phases" && (
+                <button
+                  onClick={addPhase}
+                  className="shrink-0 px-3 py-2 border border-dashed border-white/20 hover:border-[#D4FF00] text-zinc-400 hover:text-[#D4FF00] transition-colors flex items-center gap-1.5"
+                >
+                  <Plus size={12} />
+                  <span className="text-[10px] uppercase tracking-widest">Add phase</span>
+                </button>
+              )}
+            </div>
+
+            <div className={`grid sm:grid-cols-2 ${structureType === "phases" ? "lg:grid-cols-3" : ""} gap-3 mb-5 max-w-xl`}>
               <div>
-                <label className={labelClass}>Day label</label>
+                <label className={labelClass}>{structureType === "phases" ? "Phase name" : "Day label"}</label>
+                <input
+                  className={inputClass}
+                  value={days[selectedDay].day}
+                  onChange={(e) => updateDay(selectedDay, { day: e.target.value })}
+                  placeholder={structureType === "phases" ? "e.g. Phase 1 — Protect" : "Mon"}
+                  disabled={structureType === "days"}
+                />
+                {structureType === "phases" && (
+                  <p className={captionClass}>The tab name shown, e.g. "Phase 1" or "Early Mobility".</p>
+                )}
+              </div>
+              <div>
+                <label className={labelClass}>Session label</label>
                 <input
                   className={inputClass}
                   value={days[selectedDay].label}
                   onChange={(e) => updateDay(selectedDay, { label: e.target.value })}
                   placeholder="e.g. Lower Body"
                 />
-                <p className={captionClass}>What this day's session is called — or "Rest" if it's a rest day.</p>
+                <p className={captionClass}>
+                  {structureType === "phases"
+                    ? "What this phase focuses on, e.g. \"Range of Motion\"."
+                    : "What this day's session is called — or \"Rest\" if it's a rest day."}
+                </p>
               </div>
+              {structureType === "phases" && (
+                <div>
+                  <label className={labelClass}>Date range (optional)</label>
+                  <input
+                    className={inputClass}
+                    value={days[selectedDay].dateRange || ""}
+                    onChange={(e) => updateDay(selectedDay, { dateRange: e.target.value })}
+                    placeholder="e.g. Weeks 1-2, or 1-14 Jul"
+                  />
+                  <p className={captionClass}>Just shown as a guide — you'll still pick the phase manually, nothing switches automatically.</p>
+                </div>
+              )}
               <div>
                 <label className={labelClass}>Focus</label>
                 <input
@@ -326,7 +438,7 @@ export default function PlanBuilderForm({
                   onChange={(e) => updateDay(selectedDay, { focus: e.target.value })}
                   placeholder="e.g. Strength"
                 />
-                <p className={captionClass}>One or two words summing up the day, e.g. "Recovery" for a rest day.</p>
+                <p className={captionClass}>One or two words summing up the {structureType === "phases" ? "phase" : "day"}.</p>
               </div>
             </div>
 
