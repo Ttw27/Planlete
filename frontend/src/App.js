@@ -7,6 +7,7 @@ import LongevityApp from "@/pages/LongevityApp";
 import FootballApp from "@/pages/FootballApp";
 import SprinterApp from "@/pages/SprinterApp";
 import BuildApp from "@/pages/BuildApp";
+import SelfServeBuilder from "@/pages/SelfServeBuilder";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
@@ -33,6 +34,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/build" element={<BuildApp />} />
+          <Route path="/build/manual" element={<SelfServeBuilder />} />
           <Route path="/build/success" element={<PaymentSuccess />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsConditions />} />
