@@ -26,6 +26,7 @@ function emptySupplement() {
 const inputClass =
   "w-full bg-black/40 border border-white/15 focus:border-[#D4FF00] outline-none text-sm text-white px-3 py-2 placeholder:text-white/20";
 const labelClass = "text-[10px] uppercase tracking-widest text-zinc-500 block mb-1.5";
+const captionClass = "text-[11px] text-zinc-600 mt-1.5 leading-relaxed";
 
 /**
  * The shared plan-building form — used identically by the coach/physio
@@ -229,15 +230,29 @@ export default function PlanBuilderForm({
         {/* ── Details ── */}
         {section === "details" && (
           <div className="flex flex-col gap-4 max-w-xl">
+            {mode === "self" && (
+              <div className="border border-[#D4FF00]/20 bg-[#D4FF00]/5 p-4 mb-2">
+                <p className="text-sm text-white font-bold mb-1.5">New to building your own plan?</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Don't worry about getting every field perfect — just fill in what you know.
+                  Each field has a quick example underneath it. Use the <strong className="text-zinc-300">Train</strong>,{" "}
+                  <strong className="text-zinc-300">Fuel</strong>, and <strong className="text-zinc-300">Recover</strong> tabs
+                  above to add your workouts, nutrition, and recovery — you can always come back and edit later.
+                </p>
+              </div>
+            )}
             {mode !== "admin" && (
               <>
                 <div>
-                  <label className={labelClass}>Client name</label>
+                  <label className={labelClass}>{mode === "self" ? "Your name" : "Client name"}</label>
                   <input className={inputClass} value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Sarah Jones" />
                 </div>
                 <div>
-                  <label className={labelClass}>Client email (optional)</label>
-                  <input className={inputClass} value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="client@email.com" />
+                  <label className={labelClass}>{mode === "self" ? "Your email" : "Client email (optional)"}</label>
+                  <input className={inputClass} value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="you@email.com" />
+                  {mode === "self" && (
+                    <p className={captionClass}>We'll send your app link here once you've paid.</p>
+                  )}
                 </div>
               </>
             )}
@@ -301,6 +316,7 @@ export default function PlanBuilderForm({
                   onChange={(e) => updateDay(selectedDay, { label: e.target.value })}
                   placeholder="e.g. Lower Body"
                 />
+                <p className={captionClass}>What this day's session is called — or "Rest" if it's a rest day.</p>
               </div>
               <div>
                 <label className={labelClass}>Focus</label>
@@ -310,6 +326,7 @@ export default function PlanBuilderForm({
                   onChange={(e) => updateDay(selectedDay, { focus: e.target.value })}
                   placeholder="e.g. Strength"
                 />
+                <p className={captionClass}>One or two words summing up the day, e.g. "Recovery" for a rest day.</p>
               </div>
             </div>
 
@@ -330,16 +347,19 @@ export default function PlanBuilderForm({
                     <div>
                       <label className={labelClass}>Sets</label>
                       <input className={inputClass} value={w.sets} onChange={(e) => updateWorkout(selectedDay, wi, { sets: e.target.value })} placeholder="e.g. 4x8" />
+                      <p className={captionClass}>"4x8" = 4 sets of 8 reps. For a timed hold (like a Plank), use "3x45s".</p>
                     </div>
                     <div>
                       <label className={labelClass}>Load</label>
                       <input className={inputClass} value={w.load} onChange={(e) => updateWorkout(selectedDay, wi, { load: e.target.value })} placeholder="e.g. Moderate" />
+                      <p className={captionClass}>How heavy — a word like "Light"/"Heavy"/"Bodyweight", or an actual weight.</p>
                     </div>
                     <div>
                       <label className={labelClass}><Clock size={10} className="inline mr-1" />Rest</label>
                       <input className={inputClass} value={w.rest} onChange={(e) => updateWorkout(selectedDay, wi, { rest: e.target.value })} placeholder="e.g. 90s" />
+                      <p className={captionClass}>How long to rest before the next set, e.g. "90s" or "2min".</p>
                     </div>
-                    <div className="flex items-end pb-2">
+                    <div className="flex items-start pt-6">
                       <label className="flex items-center gap-2 text-xs text-zinc-400">
                         <input type="checkbox" checked={w.timerEnabled} onChange={(e) => updateWorkout(selectedDay, wi, { timerEnabled: e.target.checked })} className="w-4 h-4" />
                         Show rest timer
@@ -348,6 +368,9 @@ export default function PlanBuilderForm({
                     <div className="sm:col-span-2">
                       <label className={labelClass}><Info size={10} className="inline mr-1" />Why this exercise (shown to client)</label>
                       <input className={inputClass} value={w.reason} onChange={(e) => updateWorkout(selectedDay, wi, { reason: e.target.value })} placeholder="Optional but recommended" />
+                      {mode === "self" && (
+                        <p className={captionClass}>A note to your future self — e.g. "helps my knee stability".</p>
+                      )}
                     </div>
 
                     <div className="sm:col-span-2 border-t border-white/10 pt-3 mt-1">
@@ -383,6 +406,11 @@ export default function PlanBuilderForm({
                           placeholder={w.progressionMode === "percent" ? "e.g. 2.5%" : "e.g. 2.5"}
                         />
                       </div>
+                      <p className={captionClass}>
+                        {w.progressionType
+                          ? `Each time you log this, the app will suggest ${w.progressionRate || "…"}${w.progressionMode === "percent" ? "%" : ""} more than last time.`
+                          : "Leave off if you'd rather decide the increase yourself each week."}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -408,15 +436,20 @@ export default function PlanBuilderForm({
                 <input className={inputClass} type="number" value={nutrition.carbs} onChange={(e) => setNutrition((n) => ({ ...n, carbs: e.target.value }))} placeholder="Carbs g" />
                 <input className={inputClass} type="number" value={nutrition.fats} onChange={(e) => setNutrition((n) => ({ ...n, fats: e.target.value }))} placeholder="Fats g" />
               </div>
+              <p className={captionClass}>
+                Roughly how much to eat per day — total calories, then protein/carbs/fats in grams.
+                {mode === "self" && " Not sure? Skip it and just fill in the meals below instead."}
+              </p>
             </div>
 
             <div>
               <label className={labelClass}>Nutrition note</label>
-              <textarea className={inputClass} rows={2} value={nutrition.note} onChange={(e) => setNutrition((n) => ({ ...n, note: e.target.value }))} />
+              <textarea className={inputClass} rows={2} value={nutrition.note} onChange={(e) => setNutrition((n) => ({ ...n, note: e.target.value }))} placeholder="e.g. Focus on whole foods, drink plenty of water" />
             </div>
 
             <div>
               <p className={labelClass}>Meals</p>
+              <p className={`${captionClass} mb-2`}>What to eat and roughly when — the macro fields (Cal/P/C/F) per meal are optional.</p>
               <div className="flex flex-col gap-3">
                 {nutrition.meals.map((m, i) => (
                   <div key={i} className="border border-white/10 p-4 relative">
@@ -427,7 +460,7 @@ export default function PlanBuilderForm({
                       <input className={inputClass} value={m.time} onChange={(e) => updateMeal(i, { time: e.target.value })} placeholder="Time e.g. 08:00" />
                       <input className={inputClass} value={m.name} onChange={(e) => updateMeal(i, { name: e.target.value })} placeholder="Meal name" />
                     </div>
-                    <input className={`${inputClass} mb-2`} value={m.items} onChange={(e) => updateMeal(i, { items: e.target.value })} placeholder="What's in it" />
+                    <input className={`${inputClass} mb-2`} value={m.items} onChange={(e) => updateMeal(i, { items: e.target.value })} placeholder="What's in it, e.g. Oats, banana, protein shake" />
                     <div className="grid grid-cols-4 gap-2">
                       <input className={inputClass} type="number" value={m.calories} onChange={(e) => updateMeal(i, { calories: e.target.value })} placeholder="Cal" />
                       <input className={inputClass} type="number" value={m.protein} onChange={(e) => updateMeal(i, { protein: e.target.value })} placeholder="P" />
@@ -444,6 +477,9 @@ export default function PlanBuilderForm({
 
             <div>
               <p className={labelClass}>Supplements</p>
+              <p className={`${captionClass} mb-2`}>
+                Optional. A disclaimer to consult a doctor first is always shown automatically — no need to add your own.
+              </p>
               <div className="flex flex-col gap-3">
                 {nutrition.supplements.map((s, i) => (
                   <div key={i} className="border border-white/10 p-4 relative">
@@ -451,7 +487,7 @@ export default function PlanBuilderForm({
                       <Trash2 size={14} />
                     </button>
                     <input className={`${inputClass} mb-2`} value={s.name} onChange={(e) => updateSupplement(i, { name: e.target.value })} placeholder="Supplement name" />
-                    <input className={inputClass} value={s.reason} onChange={(e) => updateSupplement(i, { reason: e.target.value })} placeholder="Why (shown to client)" />
+                    <input className={inputClass} value={s.reason} onChange={(e) => updateSupplement(i, { reason: e.target.value })} placeholder="Why you take it" />
                   </div>
                 ))}
                 <button onClick={addSupplement} className="inline-flex items-center gap-2 border border-white/15 hover:border-[#D4FF00] text-xs font-bold uppercase tracking-wide px-4 py-3 text-zinc-300 hover:text-white transition-colors self-start">
@@ -478,6 +514,7 @@ export default function PlanBuilderForm({
 
             <div>
               <p className={labelClass}>Recovery protocols</p>
+              <p className={`${captionClass} mb-2`}>Things to do to recover well — cold showers, stretching, sauna, whatever you actually do.</p>
               <div className="flex flex-col gap-2">
                 {recovery.protocols.map((p, i) => (
                   <div key={i} className="flex gap-2">
@@ -495,6 +532,7 @@ export default function PlanBuilderForm({
 
             <div>
               <p className={labelClass}>Morning routine</p>
+              <p className={`${captionClass} mb-2`}>Shows on the Home tab every day — whatever you want to start each morning with.</p>
               <div className="flex flex-col gap-2">
                 {morningRoutine.map((m, i) => (
                   <div key={i} className="flex gap-2">
