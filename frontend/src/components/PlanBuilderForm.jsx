@@ -49,6 +49,7 @@ export default function PlanBuilderForm({
   onSubmit,
   submitting = false,
   submitLabel = "Save plan",
+  brandLogo = null,
 }) {
   const [clientName, setClientName] = useState(initialData?.client_name || "");
   const [clientEmail, setClientEmail] = useState(initialData?.client_email || "");
@@ -526,6 +527,8 @@ export default function PlanBuilderForm({
         <div className="border border-white/10 bg-black rounded-[28px] overflow-hidden" style={{ height: 680 }}>
           <AppShell
             data={previewData}
+            compact
+            brandLogo={mode === "coach" ? brandLogo : null}
             initialView={
               section === "train" ? "training"
               : section === "fuel" ? "nutrition"

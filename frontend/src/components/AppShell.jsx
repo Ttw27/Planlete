@@ -98,7 +98,7 @@ function getSuggestedValue(exerciseHistory, workout) {
  * AppShell — phone-style container for the sample/generated training apps.
  * Includes a top bar, content area, and bottom nav with view switching.
  */
-export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, initialView = "home", initialTrainingDay = null }) {
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
   const [view, setView] = useState(initialView);
   const navigate = useNavigate();
 
@@ -204,12 +204,12 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   };
 
   return (
-    <div className="min-h-screen bg-[var(--brand-bg)] text-white pt-6 pb-6 md:py-12 px-3 md:px-6">
+    <div className={`${compact ? "h-full" : "min-h-screen"} bg-[var(--brand-bg)] text-white ${compact ? "" : "pt-6 pb-6 md:py-12 px-3 md:px-6"}`}>
       {/* Phone frame */}
       <div
         data-testid="app-shell"
-        className="relative mx-auto w-full max-w-[440px] min-h-[80vh] bg-[#0a0a0a] border border-white/10 overflow-hidden flex flex-col"
-        style={{ boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
+        className={`relative mx-auto w-full ${compact ? "h-full" : "max-w-[440px] min-h-[80vh]"} bg-[#0a0a0a] border border-white/10 overflow-hidden flex flex-col`}
+        style={compact ? {} : { boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
       >
         {/* Top bar */}
         <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/10 px-5 py-4 flex items-center justify-between">
@@ -256,6 +256,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
               setView={setView}
+              brandLogo={brandLogo}
             />
           )}
           {view === "training" && (
@@ -364,7 +365,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView }) {
+function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo }) {
   const todayIndex = Math.min(new Date().getDay(), days.length - 1);
   const today = days[todayIndex] || days[0];
 
@@ -373,20 +374,35 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
 
   return (
     <div className="flex flex-col">
-      {/* Hero */}
-      <div className="relative h-56 overflow-hidden">
-        <img
-          src={data.hero}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-        <div className="absolute bottom-4 left-5 right-5">
-          <p className="text-overline">Today · {today.day}</p>
-          <h2 className="font-display text-3xl mt-2">{today.label}</h2>
-          <p className="text-sm text-zinc-300 mt-1">{today.focus}</p>
+      {/* Hero — business/branded plans get a short, replaceable logo strip
+          with the day info below it; personal AI/self-serve apps keep the
+          full photo hero with text overlaid on top. */}
+      {brandLogo ? (
+        <>
+          <div className="w-full h-20 bg-black border-b border-white/10 flex items-center justify-center overflow-hidden">
+            <img src={brandLogo} alt="" className="max-h-full max-w-[60%] object-contain" />
+          </div>
+          <div className="px-5 py-4 border-b border-white/10">
+            <p className="text-overline">Today · {today.day}</p>
+            <h2 className="font-display text-2xl mt-1">{today.label}</h2>
+            <p className="text-sm text-zinc-400 mt-1">{today.focus}</p>
+          </div>
+        </>
+      ) : (
+        <div className="relative h-56 overflow-hidden">
+          <img
+            src={data.hero}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute bottom-4 left-5 right-5">
+            <p className="text-overline">Today · {today.day}</p>
+            <h2 className="font-display text-3xl mt-2">{today.label}</h2>
+            <p className="text-sm text-zinc-300 mt-1">{today.focus}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Today workouts */}
       <div className="px-5 py-5">
