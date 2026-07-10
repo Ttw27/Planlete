@@ -214,9 +214,14 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
       >
         {/* Planlete strip — shown on every plan, personal or business */}
         <div className="w-full bg-black py-1.5 text-center border-b border-white/5 shrink-0">
-          <p className="text-[9px] tracking-[0.25em] uppercase text-zinc-600">
-            Planlete <span className="text-[var(--accent)]">•</span> Built for you
-          </p>
+          <a
+            href="https://www.planlete.co.uk/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[9px] tracking-[0.25em] uppercase text-[var(--accent)] hover:underline"
+          >
+            Planlete
+          </a>
         </div>
 
         {/* Top bar */}
