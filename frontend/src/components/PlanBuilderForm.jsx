@@ -9,7 +9,10 @@ function emptyDay(day) {
 }
 
 function emptyWorkout() {
-  return { name: "", sets: "", load: "", rest: "", reason: "", timerEnabled: true };
+  return {
+    name: "", sets: "", load: "", rest: "", reason: "", timerEnabled: true,
+    progressionType: "", progressionMode: "fixed", progressionRate: "",
+  };
 }
 
 function emptyMeal() {
@@ -134,7 +137,15 @@ export default function PlanBuilderForm({
     client_name: clientName || "Your plan",
     client_email: clientEmail || null,
     notes: notes || null,
-    days,
+    days: days.map((d) => ({
+      ...d,
+      workouts: d.workouts.map((w) => ({
+        ...w,
+        progressionType: w.progressionType || null,
+        progressionMode: w.progressionMode || "fixed",
+        progressionRate: w.progressionType ? numOrUndef(w.progressionRate) : undefined,
+      })),
+    })),
     nutrition: {
       ...nutrition,
       calories: numOrUndef(nutrition.calories),
@@ -336,6 +347,41 @@ export default function PlanBuilderForm({
                     <div className="sm:col-span-2">
                       <label className={labelClass}><Info size={10} className="inline mr-1" />Why this exercise (shown to client)</label>
                       <input className={inputClass} value={w.reason} onChange={(e) => updateWorkout(selectedDay, wi, { reason: e.target.value })} placeholder="Optional but recommended" />
+                    </div>
+
+                    <div className="sm:col-span-2 border-t border-white/10 pt-3 mt-1">
+                      <label className={labelClass}>Progressive overload — suggest an increase each time they log</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <select
+                          className={inputClass}
+                          value={w.progressionType || ""}
+                          onChange={(e) => updateWorkout(selectedDay, wi, { progressionType: e.target.value })}
+                        >
+                          <option value="">Off</option>
+                          <option value="load">Load (weight)</option>
+                          <option value="reps">Reps</option>
+                          <option value="hold">Hold time</option>
+                          <option value="distance">Distance</option>
+                        </select>
+                        <select
+                          className={inputClass}
+                          value={w.progressionMode || "fixed"}
+                          onChange={(e) => updateWorkout(selectedDay, wi, { progressionMode: e.target.value })}
+                          disabled={!w.progressionType}
+                        >
+                          <option value="fixed">+ fixed amount</option>
+                          <option value="percent">+ percentage</option>
+                        </select>
+                        <input
+                          className={inputClass}
+                          type="number"
+                          step="0.1"
+                          value={w.progressionRate}
+                          onChange={(e) => updateWorkout(selectedDay, wi, { progressionRate: e.target.value })}
+                          disabled={!w.progressionType}
+                          placeholder={w.progressionMode === "percent" ? "e.g. 2.5%" : "e.g. 2.5"}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

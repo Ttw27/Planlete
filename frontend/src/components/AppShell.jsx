@@ -7,9 +7,9 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-function parseRestSeconds(rest) {
-  if (!rest) return null;
-  const str = String(rest).trim().toLowerCase();
+function parseDurationSeconds(value) {
+  if (!value) return null;
+  const str = String(value).trim().toLowerCase();
   const minMatch = str.match(/(\d+)\s*min/);
   if (minMatch) return parseInt(minMatch[1], 10) * 60;
   const secMatch = str.match(/(\d+)\s*s/);
@@ -66,10 +66,12 @@ function getProgressNudge(exerciseHistory, currentWeek) {
 }
 
 // Proactively suggests a next value BEFORE they log this week, based on
-// their most recent entry — a small, sensible bump in the same units they
-// were already using. Returns null if there's no prior entry to build from,
-// or nothing numeric to suggest a bump on.
-function getSuggestedValue(exerciseHistory) {
+// their most recent entry. If the exercise has a configured progression rate
+// (set in the builder), uses that exactly — otherwise falls back to a
+// sensible generic bump in the same units they were already using. Returns
+// null if there's no prior entry to build from, or nothing numeric to work
+// with.
+function getSuggestedValue(exerciseHistory, workout) {
   if (!exerciseHistory || exerciseHistory.length === 0) return null;
   const last = exerciseHistory[exerciseHistory.length - 1];
   const num = parseLoggedNumber(last.value);
@@ -77,11 +79,18 @@ function getSuggestedValue(exerciseHistory) {
   const unit = parseLoggedUnit(last.value);
 
   let bump;
-  if (/kg|lb/i.test(unit)) bump = 2.5;
-  else if (/rep/i.test(unit)) bump = 1;
-  else bump = Math.max(1, Math.round(num * 0.025)); // ~2.5% generic fallback
+  if (workout?.progressionType && workout?.progressionRate) {
+    const rate = Number(workout.progressionRate);
+    bump = workout.progressionMode === "percent" ? num * (rate / 100) : rate;
+  } else if (/kg|lb/i.test(unit)) {
+    bump = 2.5;
+  } else if (/rep/i.test(unit)) {
+    bump = 1;
+  } else {
+    bump = Math.max(1, Math.round(num * 0.025)); // ~2.5% generic fallback
+  }
 
-  const suggested = num + bump;
+  const suggested = Math.round((num + bump) * 100) / 100; // avoid float noise
   return `${suggested}${unit ? unit : ""}`;
 }
 
@@ -658,8 +667,14 @@ function RestTimer({ seconds }) {
 function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exerciseHistory, currentWeek, onSaveLog, canLog = false }) {
   const [panel, setPanel] = useState(null); // null | "reason" | "lookup" | "timer" | "log"
   const [logInput, setLogInput] = useState("");
+  const [timerChoice, setTimerChoice] = useState(null); // "hold" | "rest" — set on open
   const hasReason = Boolean(w.reason);
-  const restSeconds = parseRestSeconds(w.rest);
+  const restSeconds = parseDurationSeconds(w.rest);
+  // Isometric/hold exercises (Plank, wall sits, dead hangs) put the actual
+  // work duration in "sets" (e.g. "3x45s") rather than reps — detect that so
+  // the timer can time the hold itself, not just the rest between sets.
+  const holdSeconds = parseDurationSeconds(w.sets);
+  const hasAnyTimer = restSeconds !== null || holdSeconds !== null;
   const nudge = getProgressNudge(exerciseHistory, currentWeek);
 
   const query = encodeURIComponent(`${w.name} exercise`);
@@ -669,6 +684,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
   const toggle = (key) => {
     setPanel((p) => (p === key ? null : key));
     if (key === "log") setLogInput(loggedValue || "");
+    if (key === "timer") setTimerChoice(holdSeconds !== null ? "hold" : "rest");
   };
 
   const submitLog = () => {
@@ -726,10 +742,10 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
           >
             <HelpCircle size={13} />
           </button>
-          {restSeconds !== null && (
+          {hasAnyTimer && (
             <button
               onClick={() => toggle("timer")}
-              aria-label="Rest timer"
+              aria-label="Timer"
               className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
                 panel === "timer"
                   ? "bg-[var(--accent)] text-black"
@@ -807,9 +823,36 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
       )}
 
       {/* Timer panel */}
-      {panel === "timer" && restSeconds !== null && (
+      {panel === "timer" && hasAnyTimer && (
         <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-3">
-          <RestTimer seconds={restSeconds} />
+          {holdSeconds !== null && restSeconds !== null && (
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setTimerChoice("hold")}
+                className={`flex-1 text-[10px] font-bold uppercase tracking-wide px-2 py-1.5 border transition-colors ${
+                  timerChoice === "hold"
+                    ? "border-[var(--accent)] text-[var(--accent)]"
+                    : "border-white/15 text-zinc-500"
+                }`}
+              >
+                Hold ({w.sets})
+              </button>
+              <button
+                onClick={() => setTimerChoice("rest")}
+                className={`flex-1 text-[10px] font-bold uppercase tracking-wide px-2 py-1.5 border transition-colors ${
+                  timerChoice === "rest"
+                    ? "border-[var(--accent)] text-[var(--accent)]"
+                    : "border-white/15 text-zinc-500"
+                }`}
+              >
+                Rest ({w.rest})
+              </button>
+            </div>
+          )}
+          <RestTimer
+            key={timerChoice}
+            seconds={timerChoice === "hold" ? holdSeconds : restSeconds}
+          />
         </div>
       )}
 
@@ -818,7 +861,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
         <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-2">
           <p className="text-[11px] text-zinc-500 mb-2">Log what you did — weight, reps, whatever's useful</p>
           {(() => {
-            const suggested = getSuggestedValue(exerciseHistory);
+            const suggested = getSuggestedValue(exerciseHistory, w);
             return suggested ? (
               <button
                 onClick={() => setLogInput(suggested)}
