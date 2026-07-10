@@ -544,6 +544,14 @@ class PhysioWorkoutEntry(BaseModel):
     rest: str
     reason: Optional[str] = None
     timerEnabled: bool = True
+    # Optional progressive-overload config, set by whoever authors the plan.
+    # progressionType: what's actually progressing — "load" | "reps" |
+    #   "hold" | "distance" | None (off)
+    # progressionMode: "fixed" (add a flat amount each week) or "percent"
+    # progressionRate: the number to apply, per progressionMode
+    progressionType: Optional[str] = None
+    progressionMode: Optional[str] = "fixed"
+    progressionRate: Optional[float] = None
 
 
 class PhysioDayEntry(BaseModel):
