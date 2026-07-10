@@ -103,6 +103,7 @@ const QUESTIONS = [
 export default function BuildApp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [path, setPath] = useState(null); // null (choosing) | "ai"
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -137,7 +138,7 @@ export default function BuildApp() {
 
   const back = () => {
     if (step > 0) setStep(step - 1);
-    else navigate("/");
+    else setPath(null);
   };
 
   const submit = async () => {
@@ -153,6 +154,56 @@ export default function BuildApp() {
       setSubmitting(false);
     }
   };
+
+  if (path === null) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white">
+        <OfferBar />
+        <SiteHeader />
+        <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-20">
+          <p className="text-overline mb-5">— Let's build your app</p>
+          <h2 className="font-display text-3xl sm:text-5xl lg:text-6xl mb-4">
+            How do you want<br />to build your plan?
+          </h2>
+          <p className="text-zinc-400 mb-12 max-w-xl">
+            Same price either way — £4.99, one-off, either app is yours to keep.
+          </p>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => setPath("ai")}
+              className="text-left border border-white/15 hover:border-[#D4FF00] p-6 transition-colors group"
+            >
+              <p className="text-overline text-[#D4FF00] mb-3">Not sure what you need?</p>
+              <h3 className="font-display text-2xl mb-3">Answer a few questions.</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+                We'll build a personalised 4-week programme for you — training, nutrition,
+                recovery, all worked out based on what you tell us.
+              </p>
+              <span className="inline-flex items-center gap-2 text-[#D4FF00] text-xs font-bold uppercase tracking-wide group-hover:gap-3 transition-all">
+                Start the questionnaire <ArrowRight size={14} />
+              </span>
+            </button>
+
+            <Link
+              to="/build/manual"
+              className="text-left border border-white/15 hover:border-[#D4FF00] p-6 transition-colors group block"
+            >
+              <p className="text-overline text-[#D4FF00] mb-3">Know exactly what you want?</p>
+              <h3 className="font-display text-2xl mb-3">Build it yourself.</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+                Already have a plan from your PT, a program you follow, or just know exactly
+                what you want? Type it straight in — same app, same features, your content.
+              </p>
+              <span className="inline-flex items-center gap-2 text-[#D4FF00] text-xs font-bold uppercase tracking-wide group-hover:gap-3 transition-all">
+                Open the builder <ArrowRight size={14} />
+              </span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
