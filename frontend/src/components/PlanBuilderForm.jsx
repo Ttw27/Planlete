@@ -160,9 +160,9 @@ export default function PlanBuilderForm({
   const removeProtocol = (i) =>
     setRecovery((r) => ({ ...r, protocols: r.protocols.filter((_, j) => j !== i) }));
 
-  const addMorningItem = () => setMorningRoutine((m) => [...m, ""]);
-  const updateMorningItem = (i, value) =>
-    setMorningRoutine((m) => m.map((item, j) => (j === i ? value : item)));
+  const addMorningItem = () => setMorningRoutine((m) => [...m, emptyWorkout()]);
+  const updateMorningItem = (i, patch) =>
+    setMorningRoutine((m) => m.map((item, j) => (j === i ? { ...item, ...patch } : item)));
   const removeMorningItem = (i) => setMorningRoutine((m) => m.filter((_, j) => j !== i));
 
   const numOrUndef = (v) => (v === "" || v === null || v === undefined ? undefined : Number(v));
@@ -196,7 +196,12 @@ export default function PlanBuilderForm({
       })),
     },
     recovery,
-    morningRoutine,
+    morningRoutine: morningRoutine.map((w) => ({
+      ...w,
+      progressionType: w.progressionType || null,
+      progressionMode: w.progressionMode || "fixed",
+      progressionRate: w.progressionType ? numOrUndef(w.progressionRate) : undefined,
+    })),
     allow_logging: allowLogging,
     disclaimer_accepted: disclaimerAccepted,
   });
@@ -228,6 +233,7 @@ export default function PlanBuilderForm({
   const SECTIONS = [
     { id: "details", label: "Details" },
     { id: "train", label: "Train" },
+    { id: "morning", label: "Morning" },
     { id: "fuel", label: "Fuel" },
     { id: "recover", label: "Recover" },
   ];
@@ -610,6 +616,67 @@ export default function PlanBuilderForm({
           </div>
         )}
 
+        {/* ── Morning ── */}
+        {section === "morning" && (
+          <div>
+            <div className="mb-5 max-w-xl">
+              <p className={labelClass}>Morning routine</p>
+              <p className={captionClass}>
+                Shows in its own tab in the app, every day — quick stretches, mobility work,
+                activation. Same exercise cards as Train, so these get a timer and Google/YouTube
+                lookup too.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {morningRoutine.map((w, i) => (
+                <div key={i} className="border border-white/10 p-4 relative">
+                  <button
+                    onClick={() => removeMorningItem(i)}
+                    className="absolute top-3 right-3 text-zinc-600 hover:text-red-400"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>Item name</label>
+                      <input className={inputClass} value={w.name} onChange={(e) => updateMorningItem(i, { name: e.target.value })} placeholder="e.g. Hip flexor stretch" />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Sets / duration</label>
+                      <input className={inputClass} value={w.sets} onChange={(e) => updateMorningItem(i, { sets: e.target.value })} placeholder="e.g. 2x30s each side" />
+                      <p className={captionClass}>A hold or rep count — "2x30s" or "1x10 reps".</p>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Load</label>
+                      <input className={inputClass} value={w.load} onChange={(e) => updateMorningItem(i, { load: e.target.value })} placeholder="e.g. Bodyweight" />
+                    </div>
+                    <div>
+                      <label className={labelClass}><Clock size={10} className="inline mr-1" />Rest</label>
+                      <input className={inputClass} value={w.rest} onChange={(e) => updateMorningItem(i, { rest: e.target.value })} placeholder="e.g. — or 30s" />
+                    </div>
+                    <div className="flex items-start pt-6">
+                      <label className="flex items-center gap-2 text-xs text-zinc-400">
+                        <input type="checkbox" checked={w.timerEnabled} onChange={(e) => updateMorningItem(i, { timerEnabled: e.target.checked })} className="w-4 h-4" />
+                        Show timer
+                      </label>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}><Info size={10} className="inline mr-1" />Why this item (shown to client)</label>
+                      <input className={inputClass} value={w.reason} onChange={(e) => updateMorningItem(i, { reason: e.target.value })} placeholder="Optional but recommended" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={addMorningItem}
+                className="inline-flex items-center gap-2 border border-white/15 hover:border-[#D4FF00] text-xs font-bold uppercase tracking-wide px-4 py-3 text-zinc-300 hover:text-white transition-colors self-start"
+              >
+                <Plus size={14} /> Add item
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Recover ── */}
         {section === "recover" && (
           <div className="max-w-xl flex flex-col gap-6">
@@ -641,24 +708,6 @@ export default function PlanBuilderForm({
                 </button>
               </div>
             </div>
-
-            <div>
-              <p className={labelClass}>Morning routine</p>
-              <p className={`${captionClass} mb-2`}>Shows on the Home tab every day — whatever you want to start each morning with.</p>
-              <div className="flex flex-col gap-2">
-                {morningRoutine.map((m, i) => (
-                  <div key={i} className="flex gap-2">
-                    <input className={inputClass} value={m} onChange={(e) => updateMorningItem(i, e.target.value)} placeholder="e.g. 10min sunlight exposure" />
-                    <button onClick={() => removeMorningItem(i)} className="text-zinc-600 hover:text-red-400 px-2">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-                <button onClick={addMorningItem} className="inline-flex items-center gap-2 border border-white/15 hover:border-[#D4FF00] text-xs font-bold uppercase tracking-wide px-4 py-2.5 text-zinc-300 hover:text-white transition-colors self-start">
-                  <Plus size={14} /> Add item
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
@@ -681,6 +730,7 @@ export default function PlanBuilderForm({
             brandLogo={mode === "coach" ? brandLogo : null}
             initialView={
               section === "train" ? "training"
+              : section === "morning" ? "morning"
               : section === "fuel" ? "nutrition"
               : section === "recover" ? "recovery"
               : "home"

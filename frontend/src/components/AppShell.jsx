@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink, Clock, PenLine, Check } from "lucide-react";
+import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink, Clock, PenLine, Check, Sunrise } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -276,7 +276,6 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           {view === "training" && (
             <TrainingView
               days={days}
-              morningRoutine={morningRoutine}
               weekNumber={weekNumber}
               completed={completed}
               onToggleDone={toggleDone}
@@ -288,16 +287,28 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               structureType={structureType}
             />
           )}
+          {view === "morning" && (
+            <MorningView
+              morningRoutine={morningRoutine}
+              completed={completed}
+              onToggleDone={toggleDone}
+              logs={logs}
+              history={history}
+              onSaveLog={saveLog}
+              canLog={Boolean(planId)}
+              weekNumber={weekNumber}
+            />
+          )}
           {view === "nutrition" && nutrition && (
             <NutritionView nutrition={nutrition} />
           )}
           {view === "recovery" && (
-            <RecoveryView recovery={recovery} morningRoutine={morningRoutine} />
+            <RecoveryView recovery={recovery} />
           )}
         </div>
 
         {/* Bottom nav */}
-        <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-md border-t border-white/10 grid grid-cols-4">
+        <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-md border-t border-white/10 grid grid-cols-5">
           <BottomTab
             id="home"
             label="Today"
@@ -309,6 +320,13 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
             id="training"
             label="Train"
             icon={<Dumbbell size={18} />}
+            view={view}
+            setView={setView}
+          />
+          <BottomTab
+            id="morning"
+            label="Morning"
+            icon={<Sunrise size={18} />}
             view={view}
             setView={setView}
           />
@@ -467,57 +485,42 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
         </div>
       )}
 
-      {/* Morning routine */}
-      {morningRoutine && (
-        <div className="px-5 py-5 border-t border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-overline">Morning movement</p>
-            <p className="text-[10px] font-mono-display text-zinc-500">
-              {morningRoutine.filter((_, i) => completed.has(`morning-${i}`)).length}/{morningRoutine.length} done
-            </p>
+      {/* Morning routine — compact summary, full experience lives in its own tab */}
+      {morningRoutine && morningRoutine.length > 0 && (
+        <button
+          onClick={() => setView?.("morning")}
+          className="px-5 py-5 border-t border-white/10 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Sunrise size={18} className="text-[var(--accent)]" />
+            <div>
+              <p className="text-overline">Morning routine</p>
+              <p className="text-xs text-zinc-500 mt-0.5">{morningRoutine.length} items · timer & tips inside</p>
+            </div>
           </div>
-          <ul className="flex flex-col gap-2 text-sm text-zinc-300">
-            {morningRoutine.map((m, i) => {
-              const key = `morning-${i}`;
-              const done = completed.has(key);
-              return (
-                <li
-                  key={i}
-                  className="flex items-center justify-between border-b border-white/5 py-2"
-                >
-                  <button
-                    onClick={() => onToggleDone(key)}
-                    className="flex items-center gap-3 text-left flex-1 min-w-0"
-                  >
-                    <span
-                      className={`shrink-0 w-4 h-4 border flex items-center justify-center ${
-                        done ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30"
-                      }`}
-                    >
-                      {done && <Check size={11} className="text-black" />}
-                    </span>
-                    <span className={done ? "line-through text-zinc-600" : ""}>{m}</span>
-                  </button>
-                  <span className="text-zinc-500 font-mono-display text-xs shrink-0">
-                    0{i + 1}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+          <p className="text-[10px] font-mono-display text-zinc-500">
+            {morningRoutine.filter((_, i) => completed.has(`morning-${i}`)).length}/{morningRoutine.length} done
+          </p>
+        </button>
       )}
 
       {/* Quick links to fill remaining space */}
       <div className="px-5 py-5 border-t border-white/10">
         <p className="text-overline mb-3">Jump to</p>
-        <div className={`grid gap-2 ${nutrition ? "grid-cols-3" : "grid-cols-2"}`}>
+        <div className={`grid gap-2 ${nutrition ? "grid-cols-4" : "grid-cols-3"}`}>
           <button
             onClick={() => setView?.("training")}
             className="border border-white/10 hover:border-[var(--accent)] px-3 py-4 flex flex-col items-center gap-2 text-zinc-300 hover:text-white transition-colors"
           >
             <Dumbbell size={18} />
             <span className="text-[10px] uppercase tracking-widest">Train</span>
+          </button>
+          <button
+            onClick={() => setView?.("morning")}
+            className="border border-white/10 hover:border-[var(--accent)] px-3 py-4 flex flex-col items-center gap-2 text-zinc-300 hover:text-white transition-colors"
+          >
+            <Sunrise size={18} />
+            <span className="text-[10px] uppercase tracking-widest">Morning</span>
           </button>
           {nutrition && (
             <button
@@ -541,7 +544,50 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
   );
 }
 
-function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" }) {
+function MorningView({ morningRoutine, completed, onToggleDone, logs, history, onSaveLog, canLog, weekNumber }) {
+  const items = morningRoutine || [];
+  const doneCount = items.filter((_, i) => completed.has(`morning-${i}`)).length;
+
+  return (
+    <div className="flex flex-col">
+      <div className="px-5 py-5 border-b border-white/10">
+        <p className="text-overline text-[var(--accent)] mb-2">Morning routine</p>
+        <h2 className="font-display text-2xl">Start the day right.</h2>
+      </div>
+      <div className="px-5 py-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-overline">Today&apos;s items</p>
+          <p className="text-[10px] font-mono-display text-zinc-500">{doneCount}/{items.length} done</p>
+        </div>
+        {items.length === 0 ? (
+          <p className="text-sm text-zinc-500">No morning routine added for this plan.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {items.map((item, i) => {
+              // Older test plans stored plain strings — handle gracefully.
+              const w = typeof item === "string" ? { name: item, sets: "", load: "", rest: "" } : item;
+              const key = `morning-${i}`;
+              return (
+                <WorkoutRow
+                  key={i}
+                  w={w}
+                  checked={completed.has(key)}
+                  onToggleChecked={() => onToggleDone(key)}
+                  loggedValue={logs[`${weekNumber || 0}-Morning-${w.name}`]}
+                  exerciseHistory={history?.[w.name]}
+                  onSaveLog={(value) => onSaveLog("Morning", w.name, value)}
+                  canLog={canLog}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" }) {
   const isPhases = structureType === "phases";
   const todayIndex = isPhases ? -1 : Math.min(new Date().getDay(), days.length - 1); // -1 = no "today" concept for phases
   const [selected, setSelected] = useState(initialSelectedDay ?? (isPhases ? 0 : todayIndex));
@@ -603,36 +649,6 @@ function TrainingView({ days, morningRoutine, weekNumber, completed, onToggleDon
             </p>
           </div>
         </div>
-
-        {/* Morning routine for this day */}
-        {morningRoutine && morningRoutine.length > 0 && (
-          <div className="mb-6 pb-6 border-b border-white/10">
-            <p className="text-overline mb-3">Morning movement</p>
-            <ul className="flex flex-col gap-2 text-sm text-zinc-300">
-              {morningRoutine.map((m, i) => {
-                const key = `morning-${i}`;
-                const done = completed.has(key);
-                return (
-                  <li key={i} className="flex items-center justify-between border-b border-white/5 py-2">
-                    <button
-                      onClick={() => onToggleDone(key)}
-                      className="flex items-center gap-3 text-left flex-1 min-w-0"
-                    >
-                      <span
-                        className={`shrink-0 w-4 h-4 border flex items-center justify-center ${
-                          done ? "bg-[var(--accent)] border-[var(--accent)]" : "border-white/30"
-                        }`}
-                      >
-                        {done && <Check size={11} className="text-black" />}
-                      </span>
-                      <span className={done ? "line-through text-zinc-600" : ""}>{m}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
 
         {/* Workout for selected day */}
         <p className="text-overline mb-3">Workout</p>
@@ -1056,7 +1072,7 @@ function NutritionView({ nutrition }) {
   );
 }
 
-function RecoveryView({ recovery, morningRoutine }) {
+function RecoveryView({ recovery }) {
   if (!recovery) {
     return (
       <div className="flex flex-col">
@@ -1106,18 +1122,6 @@ function RecoveryView({ recovery, morningRoutine }) {
           ))}
         </ul>
       </div>
-      {morningRoutine && (
-        <div className="px-5 py-5 border-t border-white/10">
-          <p className="text-overline mb-3">Morning movement</p>
-          <ul className="flex flex-col gap-2 text-sm text-zinc-300">
-            {morningRoutine.map((m, i) => (
-              <li key={i} className="border-b border-white/5 py-2">
-                {m}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       <div className="px-5 py-5 border-t border-white/10">
         <div className="border border-yellow-500/20 bg-yellow-500/5 px-3 py-3">
           <p className="text-[11px] text-yellow-200/80 leading-relaxed">
