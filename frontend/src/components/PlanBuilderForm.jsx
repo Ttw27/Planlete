@@ -493,7 +493,7 @@ export default function PlanBuilderForm({
 
                     <div className="sm:col-span-2 border-t border-white/10 pt-3 mt-1">
                       <label className={labelClass}>Progressive overload — suggest an increase each time they log</label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <select
                           className={inputClass}
                           value={w.progressionType || ""}
@@ -548,7 +548,7 @@ export default function PlanBuilderForm({
           <div className="max-w-xl flex flex-col gap-6">
             <div>
               <p className={labelClass}>Daily targets</p>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <input className={inputClass} type="number" value={nutrition.calories} onChange={(e) => setNutrition((n) => ({ ...n, calories: e.target.value }))} placeholder="Cal" />
                 <input className={inputClass} type="number" value={nutrition.protein} onChange={(e) => setNutrition((n) => ({ ...n, protein: e.target.value }))} placeholder="Protein g" />
                 <input className={inputClass} type="number" value={nutrition.carbs} onChange={(e) => setNutrition((n) => ({ ...n, carbs: e.target.value }))} placeholder="Carbs g" />
@@ -579,7 +579,7 @@ export default function PlanBuilderForm({
                       <input className={inputClass} value={m.name} onChange={(e) => updateMeal(i, { name: e.target.value })} placeholder="Meal name" />
                     </div>
                     <input className={`${inputClass} mb-2`} value={m.items} onChange={(e) => updateMeal(i, { items: e.target.value })} placeholder="What's in it, e.g. Oats, banana, protein shake" />
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <input className={inputClass} type="number" value={m.calories} onChange={(e) => updateMeal(i, { calories: e.target.value })} placeholder="Cal" />
                       <input className={inputClass} type="number" value={m.protein} onChange={(e) => updateMeal(i, { protein: e.target.value })} placeholder="P" />
                       <input className={inputClass} type="number" value={m.carbs} onChange={(e) => updateMeal(i, { carbs: e.target.value })} placeholder="C" />
