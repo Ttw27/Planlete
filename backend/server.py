@@ -279,7 +279,11 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
     "hrvTrend": "↑ Optimal",
     "protocols": ["...", "...", "...", "..."]
   }},
-  "morningRoutine": ["...", "...", "...", "..."]
+  "morningRoutine": [
+    {{"name": "Hip flexor stretch", "sets": "2x30s each side", "load": "Bodyweight", "rest": "—", "reason": "Loosens hip flexors that tighten overnight, before any training session."}},
+    {{"name": "Cat-cow stretch", "sets": "1x10 reps", "load": "Bodyweight", "rest": "—", "reason": "..."}},
+    {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}}
+  ]
 }}
 
 Important:
@@ -291,6 +295,7 @@ Important:
 - Every workout entry MUST include a "reason" field: one short sentence (max ~20 words) explaining why THIS exercise was chosen for THIS person's goal, experience level, or any injury noted — not a generic description. Rest/recovery day entries can use "reason" to explain why rest is programmed there too.
 - If any injury, condition or limitation was noted, prioritise safety and note substitutions directly in the exercise name or via a safer alternative exercise choice
 - If nutrition was declined ("No — training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
+- "morningRoutine" must be 3-6 real, quick mobility/stretching/activation items (same fields as a workout: name, sets, load, rest, reason) — genuinely appropriate as a short morning routine, not a repeat of the day's main training
 - Return valid JSON only — no markdown, no commentary, no trailing commas
 - Double-check before responding: every one of the 28 day-entries (4 weeks x 7 days) must be present, in Sun-Mon-Tue-Wed-Thu-Fri-Sat order, and every workout entry must have all five fields (name, sets, load, rest, reason) filled in — an incomplete plan is a failed response
 """
@@ -429,7 +434,7 @@ class Plan(BaseModel):
     weeks: Optional[List[Dict[str, Any]]] = None
     nutrition: Optional[Dict[str, Any]] = None
     recovery: Optional[Dict[str, Any]] = None
-    morningRoutine: Optional[List[str]] = None
+    morningRoutine: Optional[List[Dict[str, Any]]] = None
 
 
 class CheckoutSessionRequest(BaseModel):
@@ -612,7 +617,7 @@ class ClientPlanCreate(BaseModel):
     days: List[PhysioDayEntry] = []
     nutrition: Optional[PhysioNutrition] = None
     recovery: Optional[PhysioRecovery] = None
-    morningRoutine: List[str] = []
+    morningRoutine: List[PhysioWorkoutEntry] = []
     allow_logging: bool = True
     # Mandatory professional disclaimer — see /coach/clients endpoint for
     # what this actually gates.
@@ -630,7 +635,7 @@ class ManualPlanCreate(BaseModel):
     days: List[PhysioDayEntry] = []
     nutrition: Optional[PhysioNutrition] = None
     recovery: Optional[PhysioRecovery] = None
-    morningRoutine: List[str] = []
+    morningRoutine: List[PhysioWorkoutEntry] = []
     allow_logging: bool = True
     # Legacy path, kept so existing static-template clients don't break:
     template: Optional[str] = None
@@ -661,7 +666,7 @@ class ClientPlanPublic(BaseModel):
     days: List[Dict[str, Any]] = []
     nutrition: Optional[Dict[str, Any]] = None
     recovery: Optional[Dict[str, Any]] = None
-    morningRoutine: List[str] = []
+    morningRoutine: List[PhysioWorkoutEntry] = []
     allow_logging: bool = True
     payment_status: str = "included"  # included | pending_payment | paid
     disclaimer_accepted: bool = False
