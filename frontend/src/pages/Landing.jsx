@@ -187,7 +187,7 @@ export default function Landing() {
             <span className="block">{c("progressive_headline_a", "Not a one-week PDF.")}</span>
             <span className="block text-[#D4FF00]">{c("progressive_headline_b", "A programme that builds.")}</span>
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             <div>
               <p className="text-overline text-[#D4FF00] mb-3">01</p>
               <h3 className="font-display text-xl mb-3">{c("progressive_point1_title", "4 weeks, not 1")}</h3>
@@ -204,9 +204,23 @@ export default function Landing() {
             </div>
             <div>
               <p className="text-overline text-[#D4FF00] mb-3">03</p>
-              <h3 className="font-display text-xl mb-3">{c("progressive_point3_title", "Built for your sport")}</h3>
+              <h3 className="font-display text-xl mb-3">{c("progressive_point3_title", "Progressive overload, worked out for you")}</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                {c("progressive_point3_body", "Rehab, longevity, football, HYROX, boxing, bodybuilding or something else entirely — the structure and exercise selection is designed around your specific goal, not a generic template.")}
+                {c("progressive_point3_body", "Log your weights each week and your app tells you when to push harder, when you've stalled, and roughly how much more to aim for next time — not just a static number you re-read every week.")}
+              </p>
+            </div>
+            <div>
+              <p className="text-overline text-[#D4FF00] mb-3">04</p>
+              <h3 className="font-display text-xl mb-3">{c("progressive_point4_title", "Built-in timers, for everything")}</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {c("progressive_point4_body", "Rest timers between sets, hold timers for planks and isometric work — no separate stopwatch app, it's already in your plan.")}
+              </p>
+            </div>
+            <div>
+              <p className="text-overline text-[#D4FF00] mb-3">05</p>
+              <h3 className="font-display text-xl mb-3">{c("progressive_point5_title", "Stuck on a move? One tap away")}</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {c("progressive_point5_body", "Every exercise has a quick Google or YouTube lookup built right in — nobody's left guessing what an unfamiliar name actually means.")}
               </p>
             </div>
           </div>
