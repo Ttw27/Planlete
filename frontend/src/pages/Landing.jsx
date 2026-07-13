@@ -4,6 +4,7 @@ import { useContent } from "../hooks/useContent";
 import { useImages } from "../hooks/useImages";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
+import OfferBar from "../components/OfferBar";
 
 // ─── Marquee ────────────────────────────────────────────────────────────────
 const MARQUEE_ITEMS = [
@@ -112,6 +113,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-black text-white font-body">
+      <OfferBar />
       <SiteHeader />
 
       {/* ── HERO ── */}
