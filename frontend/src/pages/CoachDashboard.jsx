@@ -11,8 +11,6 @@ import {
   Copy,
   Building2,
   Pencil,
-  CreditCard,
-  Check,
 } from "lucide-react";
 import {
   coachApi,
@@ -26,7 +24,6 @@ export default function CoachDashboard() {
   const [coach, setCoach] = useState(null);
   const [clients, setClients] = useState([]);
   const [tab, setTab] = useState("clients");
-  const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
     coachApi
@@ -61,17 +58,6 @@ export default function CoachDashboard() {
     }
   };
 
-  const subscribe = async () => {
-    setSubscribing(true);
-    try {
-      const res = await coachApi.post("/coach/subscribe/create-session");
-      window.location.href = res.data.checkout_url;
-    } catch (err) {
-      toast.error(formatApiError(err, "Couldn't start checkout"));
-      setSubscribing(false);
-    }
-  };
-
   if (!coach) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center text-zinc-400">
@@ -79,8 +65,6 @@ export default function CoachDashboard() {
       </div>
     );
   }
-
-  const subscribed = coach.subscription_status === "active";
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -94,20 +78,6 @@ export default function CoachDashboard() {
             <span className="text-overline">{coach.brand_name}</span>
           </div>
           <div className="flex items-center gap-4">
-            {subscribed ? (
-              <span className="text-overline text-[#D4FF00] inline-flex items-center gap-2">
-                <Check size={14} /> Subscribed
-              </span>
-            ) : (
-              <button
-                onClick={subscribe}
-                disabled={subscribing}
-                className="text-overline text-black bg-[#D4FF00] hover:bg-white px-4 py-2 inline-flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <CreditCard size={14} />
-                {subscribing ? "Redirecting…" : "Subscribe"}
-              </button>
-            )}
             <Link
               to="/"
               target="_blank"
@@ -138,9 +108,9 @@ export default function CoachDashboard() {
               <span className="text-[#D4FF00]">for your clients.</span>
             </h1>
             <p className="text-sm text-zinc-400 mt-4 max-w-xl">
-              {subscribed
-                ? "You're subscribed — every client plan you create is included, no extra charge."
-                : "No subscription? Each client pays a one-off fee to unlock their plan. Subscribe above for unlimited clients included."}
+              No subscription, no lock-in — each client plan is a one-off £4.99 payment, paid
+              by your client when they open their link. Add your logo and colours in the Brand
+              tab so every plan looks like yours.
             </p>
           </div>
         </div>
