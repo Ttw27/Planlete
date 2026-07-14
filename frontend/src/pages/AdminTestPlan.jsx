@@ -24,6 +24,7 @@ const GOAL_OPTIONS = [
 const DEFAULTS = {
   name: "Tim",
   goal: "Boxing",
+  stage: "Yes — final 4 weeks (fight camp peak)",
   age: "35–44",
   sex: "Male",
   experience: "5+ years",
@@ -141,6 +142,15 @@ export default function AdminTestPlan() {
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="text-overline block mb-2">Stage (only applies to some goals)</label>
+          <input
+            className={inputClass}
+            value={answers.stage}
+            onChange={(e) => set("stage", e.target.value)}
+            placeholder="e.g. Pre-season — ramping up"
+          />
         </div>
         <div>
           <label className="text-overline block mb-2">Age range</label>

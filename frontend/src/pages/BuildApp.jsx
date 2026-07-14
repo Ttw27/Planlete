@@ -9,7 +9,7 @@ import OfferBar from "@/components/OfferBar";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const QUESTIONS = [
+const BASE_QUESTIONS = [
   {
     id: "name",
     label: "What's your first name?",
@@ -100,6 +100,87 @@ const QUESTIONS = [
   },
 ];
 
+// Goals with a real "stage" — the same discipline can look very different
+// depending on where someone is in their season, camp, or event build-up.
+// A "no specific stage" option is always included so nobody's forced to
+// pick something that doesn't fit their situation.
+const STAGE_CONFIG = {
+  "Football specific": {
+    id: "stage",
+    label: "What part of your season are you in?",
+    options: [
+      "Off-season — building a base",
+      "Pre-season — ramping up",
+      "In-season — competing/playing regularly",
+      "No specific season — just build me a well-rounded plan",
+    ],
+  },
+  "Athlete performance": {
+    id: "stage",
+    label: "What part of your season are you in?",
+    options: [
+      "Off-season — building a base",
+      "Pre-season — ramping up",
+      "In-season — competing/playing regularly",
+      "No specific season — just build me a well-rounded plan",
+    ],
+  },
+  "Sprint / athletics": {
+    id: "stage",
+    label: "What part of your season are you in?",
+    options: [
+      "Off-season — building a base",
+      "Pre-season — ramping up",
+      "In-season — competing regularly",
+      "No specific season — just build me a well-rounded plan",
+    ],
+  },
+  Boxing: {
+    id: "stage",
+    label: "Are you training for a specific fight?",
+    options: [
+      "No — general training",
+      "Yes — 8+ weeks out",
+      "Yes — final 4 weeks (fight camp peak)",
+    ],
+  },
+  "Kickboxing / martial arts": {
+    id: "stage",
+    label: "Are you training for a specific fight?",
+    options: [
+      "No — general training",
+      "Yes — 8+ weeks out",
+      "Yes — final 4 weeks (fight camp peak)",
+    ],
+  },
+  "Hybrid athlete / HYROX": {
+    id: "stage",
+    label: "Do you have a race or event coming up?",
+    options: [
+      "No — general training",
+      "Yes — several weeks out (building)",
+      "Yes — final weeks (peaking/tapering)",
+    ],
+  },
+};
+
+function buildQuestions(goal) {
+  const stageConfig = STAGE_CONFIG[goal];
+  if (!stageConfig) return BASE_QUESTIONS;
+
+  const goalIndex = BASE_QUESTIONS.findIndex((q) => q.id === "goal");
+  const stageQuestion = {
+    ...stageConfig,
+    type: "choice",
+    hint: "This shapes how your plan is built — pick whatever's actually true right now.",
+  };
+  return [
+    ...BASE_QUESTIONS.slice(0, goalIndex + 1),
+    stageQuestion,
+    ...BASE_QUESTIONS.slice(goalIndex + 1),
+  ];
+}
+
 export default function BuildApp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -115,8 +196,9 @@ export default function BuildApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const q = QUESTIONS[step];
-  const progress = ((step + 1) / (QUESTIONS.length + 1)) * 100;
+  const questions = buildQuestions(answers.goal);
+  const q = questions[step];
+  const progress = ((step + 1) / (questions.length + 1)) * 100;
 
   const setAnswer = (val) => setAnswers((a) => ({ ...a, [q.id]: val }));
 
@@ -129,7 +211,7 @@ export default function BuildApp() {
       toast.error("Enter a valid email");
       return;
     }
-    if (step < QUESTIONS.length - 1) {
+    if (step < questions.length - 1) {
       setStep(step + 1);
     } else {
       submit();
@@ -216,7 +298,7 @@ export default function BuildApp() {
           <div className="flex items-center justify-between mb-3">
             <p className="text-overline">
               Question {String(step + 1).padStart(2, "0")} /{" "}
-              {String(QUESTIONS.length).padStart(2, "0")}
+              {String(questions.length).padStart(2, "0")}
             </p>
             <p className="text-overline text-[#D4FF00]">
               Launch offer · £4.99{" "}
@@ -307,7 +389,7 @@ export default function BuildApp() {
           >
             {submitting
               ? "Taking you to checkout…"
-              : step === QUESTIONS.length - 1
+              : step === questions.length - 1
               ? "Continue to payment — £4.99"
               : q.optional && !answers[q.id]
               ? "Skip"
