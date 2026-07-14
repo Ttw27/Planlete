@@ -181,6 +181,7 @@ async def _call_claude_for_plan(answers: dict) -> dict:
 
     name = answers.get("name", "User")
     goal = answers.get("goal", "General fitness")
+    stage = answers.get("stage", "").strip()
     age = answers.get("age", "Not specified")
     sex = answers.get("sex", "Not specified")
     experience = answers.get("experience", "Brand new")
@@ -190,11 +191,33 @@ async def _call_claude_for_plan(answers: dict) -> dict:
     nutrition_pref = answers.get("nutrition", "No — training only")
     notes = answers.get("notes", "").strip() or "None provided"
 
+    stage_line = f"- Training stage: {stage}" if stage else ""
+    stage_guidance = ""
+    if stage:
+        lowered = stage.lower()
+        if "off-season" in lowered:
+            stage_guidance = "This is an OFF-SEASON block — prioritise building a strength/conditioning base with higher volume; sport-specific intensity can be lower right now."
+        elif "pre-season" in lowered:
+            stage_guidance = "This is a PRE-SEASON block — ramp up intensity and sport-specific conditioning, bridging general fitness toward match/competition readiness."
+        elif "in-season" in lowered:
+            stage_guidance = "This is IN-SEASON — prioritise load management and maintaining fitness around matches/competition, not fresh volume that risks fatigue or injury."
+        elif "final 4 weeks" in lowered or "fight camp peak" in lowered:
+            stage_guidance = "This is FIGHT CAMP PEAK (final weeks before a fight) — prioritise sharpening, technical work, and tapering volume; avoid introducing fresh heavy strength work or high-fatigue conditioning this close to competition."
+        elif "8+ weeks out" in lowered:
+            stage_guidance = "This is early fight camp (8+ weeks out) — build conditioning and strength genuinely hard now, since there's time to recover before the fight."
+        elif "peaking" in lowered or "final weeks" in lowered:
+            stage_guidance = "This is the final peaking/taper phase before a race or event — reduce volume, maintain sharpness, prioritise recovery over fresh gains."
+        elif "several weeks out" in lowered or "building" in lowered:
+            stage_guidance = "This is a build phase well ahead of a race/event — train hard, build the engine, there's time to recover before it matters."
+        elif "no specific" in lowered or "general training" in lowered or "well-rounded" in lowered:
+            stage_guidance = "No specific stage was given — build a genuinely well-rounded programme for this goal without assuming a particular point in a season or camp."
+
     prompt = f"""You are an expert strength coach and training program designer.
 Create a personalised, 4-WEEK PERIODISED training plan for {name}, session length {session}.
 
 User Profile:
 - Main Goal: {goal}
+{stage_line}
 - Age range: {age}
 - Sex: {sex}
 - Training Experience: {experience}
@@ -203,6 +226,8 @@ User Profile:
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition_pref}
 - Injuries, allergies or other notes from the user: {notes}
+
+{stage_guidance}
 
 If the notes mention any injury, condition, or limitation, you MUST adapt exercise
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
@@ -337,7 +362,8 @@ Important:
     plan_data["answers"] = answers
     plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
     plan_data.setdefault("brand", f"{name}'s App")
-    plan_data.setdefault("tagline", goal)
+    tagline_default = f"{goal} — {stage}" if stage and "no specific" not in stage.lower() and "general training" not in stage.lower() else goal
+    plan_data.setdefault("tagline", tagline_default)
 
     validate_plan(plan_data)
 
