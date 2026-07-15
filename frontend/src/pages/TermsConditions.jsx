@@ -18,8 +18,8 @@ export default function TermsConditions() {
             <h2 className="text-white font-display text-xl mb-3">1. Who we are</h2>
             <p>
               Planlete (planlete.co.uk) is operated by TEZL GROUP LTD, a company registered in
-              the United Kingdom (company number: <strong className="text-yellow-400">[ADD COMPANY NUMBER]</strong>),
-              registered office: <strong className="text-yellow-400">[ADD REGISTERED ADDRESS]</strong>.
+              the United Kingdom (company number: 13372142),
+              registered office: Unit 1 Thurmaston Village Court, 651 Melton Road, Leicester, England, LE4 8EB.
               By using this site or purchasing a plan, you agree to these terms.
             </p>
             <p className="mt-3">

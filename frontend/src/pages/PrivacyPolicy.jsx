@@ -18,8 +18,8 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-display text-xl mb-3">Who we are</h2>
             <p>
               Planlete ("we", "us", "our") is operated by TEZL GROUP LTD, a company registered
-              in the United Kingdom (company number: <strong className="text-yellow-400">[ADD COMPANY NUMBER]</strong>),
-              registered office: <strong className="text-yellow-400">[ADD REGISTERED ADDRESS]</strong>.
+              in the United Kingdom (company number: 13372142),
+              registered office: Unit 1 Thurmaston Village Court, 651 Melton Road, Leicester, England, LE4 8EB.
               This policy explains what personal information we collect through planlete.co.uk,
               why we collect it, and what rights you have over it.
             </p>
