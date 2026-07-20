@@ -19,6 +19,8 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone, timedelta
+import boto3
+from botocore.exceptions import ClientError
 
 
 ROOT_DIR = Path(__file__).parent
@@ -69,7 +71,51 @@ def send_email(to: str, subject: str, html: str) -> None:
 stripe.api_key = STRIPE_SECRET_KEY
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
-STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+
+# ===== R2 Storage Configuration =====
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "planlete-images")
+R2_ENDPOINT_URL = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+def get_r2_client():
+    """Create boto3 S3 client configured for R2"""
+    return boto3.client(
+        "s3",
+        endpoint_url=R2_ENDPOINT_URL,
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+    )
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    """Upload file to R2"""
+    try:
+        s3 = get_r2_client()
+        s3.put_object(
+            Bucket=R2_BUCKET_NAME,
+            Key=path,
+            Body=data,
+            ContentType=content_type,
+        )
+        public_url = f"https://{R2_BUCKET_NAME}.{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{path}"
+        return {"path": path, "url": public_url}
+    except ClientError as e:
+        logger.error(f"R2 upload error: {e}")
+        raise Exception(f"R2 upload failed: {e}")
+
+def get_object(path: str):
+    """Fetch file from R2"""
+    try:
+        s3 = get_r2_client()
+        response = s3.get_object(Bucket=R2_BUCKET_NAME, Key=path)
+        content = response['Body'].read()
+        content_type = response.get('ContentType', 'application/octet-stream')
+        return content, content_type
+    except ClientError as e:
+        logger.error(f"R2 fetch error: {e}")
+        raise Exception(f"R2 fetch failed: {e}")
 
 # Initialize Claude client (will be created on first use)
 anthropic_client = None
@@ -85,42 +131,6 @@ api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# ===== Object Storage =====
-_storage_key: Optional[str] = None
-
-
-def init_storage() -> str:
-    global _storage_key
-    if _storage_key:
-        return _storage_key
-    if not EMERGENT_KEY:
-        raise RuntimeError("EMERGENT_LLM_KEY missing")
-    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    _storage_key = resp.json()["storage_key"]
-    return _storage_key
-
-
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data, timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()
-
-
-def get_object(path: str):
-    key = init_storage()
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key}, timeout=60,
-    )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 
 # ===== Claude AI Plan Generation =====
@@ -1629,6 +1639,21 @@ class AnalyticsEvent(BaseModel):
     timestamp: str
     metadata: dict = {}
 
+class SamplePlanSlide(BaseModel):
+    image_key: str
+    image_url: Optional[str] = None
+    caption: str
+
+class SamplePlan(BaseModel):
+    plan_type: str
+    title: str
+    description: str
+    disclaimer: str = "This is a scaled back version only to be used as a sample"
+    bullets: List[str] = []
+    slides: List[SamplePlanSlide] = []
+    sample_link: Optional[str] = None
+    updated_at: Optional[str] = None
+
 @api_router.post("/analytics/track")
 async def track_analytics(payload: AnalyticsEvent):
     """Track user events for analytics (page views, build flow, checkout, etc)"""
@@ -1649,6 +1674,44 @@ async def track_analytics(payload: AnalyticsEvent):
         return {"status": "error"}
 
 
+# ───────────────────────────────────────────────────────────────────────────────
+# Sample Plans
+# ───────────────────────────────────────────────────────────────────────────────
+
+@api_router.get("/admin/sample-plans/{plan_type}")
+async def admin_get_sample_plan(plan_type: str, _: bool = Depends(require_admin)):
+    """Get sample plan configuration"""
+    doc = await db.sample_plans.find_one({"plan_type": plan_type})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Sample plan not found")
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/admin/sample-plans/{plan_type}")
+async def admin_update_sample_plan(
+    plan_type: str,
+    payload: SamplePlan,
+    _: bool = Depends(require_admin)
+):
+    """Update sample plan configuration"""
+    payload.updated_at = datetime.now(timezone.utc).isoformat()
+    await db.sample_plans.update_one(
+        {"plan_type": plan_type},
+        {"$set": payload.model_dump()},
+        upsert=True
+    )
+    return {"ok": True, "plan_type": plan_type}
+
+@api_router.get("/sample-plans/{plan_type}")
+async def get_sample_plan(plan_type: str):
+    """Public endpoint to fetch sample plan"""
+    doc = await db.sample_plans.find_one({"plan_type": plan_type})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Sample plan not found")
+    doc.pop("_id", None)
+    return doc
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1662,11 +1725,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    try:
-        init_storage()
-        logger.info("Storage initialised")
-    except Exception as e:
-        logger.warning(f"Storage init deferred: {e}")
     try:
         await db.coaches.create_index("email", unique=True)
         await db.coaches.create_index("slug", unique=True)
