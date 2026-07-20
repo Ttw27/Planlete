@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import PlanCarousel from "../components/PlanCarousel";
-import { useImages } from "../hooks/useImages";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+function resolveUrl(url) {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("/api/")) return `${BACKEND_URL}${url}`;
+  return url;
+}
+
 export default function RehabApp() {
-  const { images } = useImages();
   const [samplePlan, setSamplePlan] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,9 +32,9 @@ export default function RehabApp() {
 
   if (loading) return <div className="min-h-screen bg-black" />;
 
-  const SLIDES = samplePlan?.slides.map(slide => ({
+  const SLIDES = samplePlan?.slides.map((slide) => ({
     imageKey: slide.image_key,
-    fallback: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
+    fallback: resolveUrl(slide.image_url) || "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
     caption: slide.caption,
   })) || [];
 
@@ -55,10 +60,9 @@ export default function RehabApp() {
         </div>
       )}
       <PlanCarousel
-        images={images}
+        images={{}}
         slides={SLIDES}
         planLabel="Rehab & Recovery Plan"
-        linkKey="sample_link_rehab"
         defaultLink={samplePlan?.sample_link || "https://planlete.vercel.app/app/rehab"}
       />
     </div>

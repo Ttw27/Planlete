@@ -7,6 +7,13 @@ import axios from "axios";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+function resolveUrl(url) {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("/api/")) return `${BACKEND_URL}${url}`;
+  return url;
+}
+
 export default function AdminSampleFootball() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -194,7 +201,7 @@ export default function AdminSampleFootball() {
                     <label className="block text-overline text-sm mb-3">Image</label>
                     {slide.image_url && (
                       <img
-                        src={slide.image_url}
+                        src={resolveUrl(slide.image_url)}
                         alt={`Slide ${i + 1}`}
                         className="w-full max-w-md h-64 object-cover rounded mb-4"
                       />
