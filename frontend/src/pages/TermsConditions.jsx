@@ -67,14 +67,11 @@ export default function TermsConditions() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">5. Coaches, subscriptions, and client plans</h2>
+            <h2 className="text-white font-display text-xl mb-3">5. Coaches and client plans</h2>
             <p>
               Coaches and physios may create an account to build branded plans for their own
-              clients. Subscribing gives a coach unlimited client plans for as long as the
-              subscription is active; subscriptions are billed on a recurring basis via Stripe
-              and can be cancelled at any time, taking effect at the end of the current billing
-              period. Without an active subscription, each client is instead charged a one-off
-              fee to unlock their individual plan.
+              clients. Each client plan is charged as a one-off fee, processed securely via Stripe.
+              No subscription or recurring billing — you simply pay for each plan you create.
             </p>
             <p className="mt-3">
               Any exercise, nutrition, or recovery content a coach enters is entirely their own

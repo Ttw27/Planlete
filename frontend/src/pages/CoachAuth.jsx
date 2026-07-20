@@ -183,6 +183,14 @@ export default function CoachAuth() {
             <p className="text-xs text-zinc-500 mt-12">
               No subscription. No card needed to sign up.
             </p>
+            {mode === "signup" && (
+              <p className="text-xs text-zinc-500 mt-4">
+                By creating an account, you agree to our{" "}
+                <Link to="/terms" className="text-[#D4FF00] hover:underline">
+                  Terms & Conditions
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       </div>

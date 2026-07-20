@@ -43,6 +43,12 @@ function PayToUnlock({ coach, client, onPaid }) {
         >
           {loading ? "Redirecting…" : "Unlock my plan"}
         </button>
+        <p className="text-xs text-zinc-500 mt-6">
+          By unlocking this plan, you agree to our{" "}
+          <Link to="/terms" className="text-[#D4FF00] hover:underline">
+            Terms & Conditions
+          </Link>
+        </p>
       </div>
     </div>
   );
