@@ -1618,6 +1618,37 @@ async def public_branded_plan(coach_slug: str, client_slug: str):
     return response
 
 
+# ───────────────────────────────────────────────────────────────────────────────
+# Analytics
+# ───────────────────────────────────────────────────────────────────────────────
+
+class AnalyticsEvent(BaseModel):
+    event: str
+    session_id: str
+    path: str
+    timestamp: str
+    metadata: dict = {}
+
+@api_router.post("/analytics/track")
+async def track_analytics(payload: AnalyticsEvent):
+    """Track user events for analytics (page views, build flow, checkout, etc)"""
+    try:
+        event_doc = {
+            "event": payload.event,
+            "session_id": payload.session_id,
+            "path": payload.path,
+            "timestamp": payload.timestamp,
+            "metadata": payload.metadata,
+            "created_at": datetime.utcnow(),
+        }
+        await db.analytics_events.insert_one(event_doc)
+        return {"status": "tracked"}
+    except Exception as e:
+        logger.error(f"Analytics track error: {e}")
+        # Don't fail the request — analytics errors should never break the app
+        return {"status": "error"}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
