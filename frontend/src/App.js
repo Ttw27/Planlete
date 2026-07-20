@@ -1,7 +1,10 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Landing from "@/pages/Landing";
+import NotFound from "@/pages/NotFound";
 import RehabApp from "@/pages/RehabApp";
 import LongevityApp from "@/pages/LongevityApp";
 import FootballApp from "@/pages/FootballApp";
@@ -27,55 +30,69 @@ import CoachPlanBuilder from "@/pages/CoachPlanBuilder";
 import AdminPlanBuilder from "@/pages/AdminPlanBuilder";
 import AdminSecurity from "@/pages/AdminSecurity";
 import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
+import { trackPageView } from "@/lib/analytics";
 
 function App() {
   return (
-    <div className="App min-h-screen bg-[#050505] text-white">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/build" element={<BuildApp />} />
-          <Route path="/build/manual" element={<SelfServeBuilder />} />
-          <Route path="/build/success" element={<PaymentSuccess />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsConditions />} />
-          <Route path="/refunds" element={<RefundPolicy />} />
-          <Route path="/app/rehab" element={<RehabApp />} />
-          <Route path="/app/longevity" element={<LongevityApp />} />
-          <Route path="/app/football" element={<FootballApp />} />
-          <Route path="/app/sprinter" element={<SprinterApp />} />
-          <Route path="/app/u/:id/save-instructions" element={<SaveToPhoneInstructions />} />
-          <Route path="/app/u/:id" element={<GeneratedApp />} />
-          <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/content" element={<AdminContent />} />
-          <Route path="/admin/images" element={<AdminImages />} />
-          <Route path="/admin/leads" element={<AdminLeads />} />
-          <Route path="/admin/support" element={<AdminSupport />} />
-          <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/test-plan" element={<AdminTestPlan />} />
-          <Route path="/coach" element={<CoachAuth />} />
-          <Route path="/coach/dashboard" element={<CoachDashboard />} />
-          <Route path="/coach/builder" element={<CoachPlanBuilder />} />
-          <Route path="/coach/builder/:clientId" element={<CoachPlanBuilder />} />
-          <Route path="/admin/plan-builder" element={<AdminPlanBuilder />} />
-          <Route path="/admin/security" element={<AdminSecurity />} />
-          <Route path="/c/:coachSlug/:clientSlug" element={<PublicBrandedPlan />} />
-        </Routes>
-      </BrowserRouter>
-      <Toaster
-        theme="dark"
-        position="bottom-center"
-        toastOptions={{
-          style: {
-            background: "#0a0a0a",
-            border: "1px solid rgba(212,255,0,0.3)",
-            color: "#fafafa",
-            borderRadius: 0,
-          },
-        }}
-      />
-    </div>
+    <ErrorBoundary>
+      <div className="App min-h-screen bg-[#050505] text-white">
+        <BrowserRouter>
+          <PageTracker />
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/build" element={<BuildApp />} />
+            <Route path="/build/manual" element={<SelfServeBuilder />} />
+            <Route path="/build/success" element={<PaymentSuccess />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/refunds" element={<RefundPolicy />} />
+            <Route path="/app/rehab" element={<RehabApp />} />
+            <Route path="/app/longevity" element={<LongevityApp />} />
+            <Route path="/app/football" element={<FootballApp />} />
+            <Route path="/app/sprinter" element={<SprinterApp />} />
+            <Route path="/app/u/:id/save-instructions" element={<SaveToPhoneInstructions />} />
+            <Route path="/app/u/:id" element={<GeneratedApp />} />
+            <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/content" element={<AdminContent />} />
+            <Route path="/admin/images" element={<AdminImages />} />
+            <Route path="/admin/leads" element={<AdminLeads />} />
+            <Route path="/admin/support" element={<AdminSupport />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
+            <Route path="/admin/test-plan" element={<AdminTestPlan />} />
+            <Route path="/coach" element={<CoachAuth />} />
+            <Route path="/coach/dashboard" element={<CoachDashboard />} />
+            <Route path="/coach/builder" element={<CoachPlanBuilder />} />
+            <Route path="/coach/builder/:clientId" element={<CoachPlanBuilder />} />
+            <Route path="/admin/plan-builder" element={<AdminPlanBuilder />} />
+            <Route path="/admin/security" element={<AdminSecurity />} />
+            <Route path="/c/:coachSlug/:clientSlug" element={<PublicBrandedPlan />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+        <Toaster
+          theme="dark"
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: "#0a0a0a",
+              border: "1px solid rgba(212,255,0,0.3)",
+              color: "#fafafa",
+              borderRadius: 0,
+            },
+          }}
+        />
+      </div>
+    </ErrorBoundary>
   );
+}
+
+// Track page views on route changes
+function PageTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView();
+  }, [location.pathname]);
+  return null;
 }
 
 export default App;
