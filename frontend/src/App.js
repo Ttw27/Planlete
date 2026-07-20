@@ -30,6 +30,10 @@ import CoachPlanBuilder from "@/pages/CoachPlanBuilder";
 import AdminPlanBuilder from "@/pages/AdminPlanBuilder";
 import AdminSecurity from "@/pages/AdminSecurity";
 import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
+import AdminSampleFootball from "@/pages/AdminSampleFootball";
+import AdminSampleRehab from "@/pages/AdminSampleRehab";
+import AdminSampleLongevity from "@/pages/AdminSampleLongevity";
+import AdminSampleSprinter from "@/pages/AdminSampleSprinter";
 import { trackPageView } from "@/lib/analytics";
 
 function App() {
@@ -65,6 +69,10 @@ function App() {
             <Route path="/coach/builder/:clientId" element={<CoachPlanBuilder />} />
             <Route path="/admin/plan-builder" element={<AdminPlanBuilder />} />
             <Route path="/admin/security" element={<AdminSecurity />} />
+            <Route path="/admin/sample-football" element={<AdminSampleFootball />} />
+            <Route path="/admin/sample-rehab" element={<AdminSampleRehab />} />
+            <Route path="/admin/sample-longevity" element={<AdminSampleLongevity />} />
+            <Route path="/admin/sample-sprinter" element={<AdminSampleSprinter />} />
             <Route path="/c/:coachSlug/:clientSlug" element={<PublicBrandedPlan />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
