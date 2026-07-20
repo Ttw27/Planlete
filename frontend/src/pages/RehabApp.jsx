@@ -1,39 +1,65 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import PlanCarousel from "../components/PlanCarousel";
 import { useImages } from "../hooks/useImages";
 
-const SLIDES = [
-  {
-    imageKey: "rehab_carousel_1",
-    fallback: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
-    caption: "A structured, staged return to full training after injury",
-  },
-  {
-    imageKey: "rehab_carousel_2",
-    fallback: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200&q=80",
-    caption: "Load managed week by week — nothing rushed",
-  },
-  {
-    imageKey: "rehab_carousel_3",
-    fallback: "https://images.unsplash.com/photo-1544216717-3bbf52512659?w=1200&q=80",
-    caption: "Mobility, strength and stability work built around the injury",
-  },
-  {
-    imageKey: "rehab_carousel_4",
-    fallback: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&q=80",
-    caption: "Clear markers for when to progress to the next stage",
-  },
-];
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 export default function RehabApp() {
   const { images } = useImages();
+  const [samplePlan, setSamplePlan] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPlan = async () => {
+      try {
+        const res = await axios.get(`${API}/sample-plans/rehab`);
+        setSamplePlan(res.data);
+      } catch (err) {
+        console.error("Failed to load sample plan");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPlan();
+  }, []);
+
+  if (loading) return <div className="min-h-screen bg-black" />;
+
+  const SLIDES = samplePlan?.slides.map(slide => ({
+    imageKey: slide.image_key,
+    fallback: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
+    caption: slide.caption,
+  })) || [];
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black text-white">
+      {samplePlan && (
+        <div className="max-w-4xl mx-auto px-5 md:px-8 pt-24 pb-12">
+          <p className="text-overline text-[#D4FF00] mb-4">— Sample plan</p>
+          <h1 className="font-display text-4xl md:text-5xl uppercase leading-tight mb-4">
+            {samplePlan.title}
+          </h1>
+          <p className="text-zinc-400 text-lg mb-8 max-w-2xl">
+            {samplePlan.description} <span className="text-[#D4FF00]">{samplePlan.disclaimer}</span>.
+          </p>
+          <ul className="grid md:grid-cols-2 gap-4 max-w-2xl">
+            {samplePlan.bullets.map((bullet, i) => (
+              <li key={i} className="flex gap-3 items-start">
+                <span className="w-1.5 h-1.5 bg-[#D4FF00] rounded-full mt-2 shrink-0" />
+                <span className="text-zinc-300">{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <PlanCarousel
         images={images}
         slides={SLIDES}
         planLabel="Rehab & Recovery Plan"
         linkKey="sample_link_rehab"
-        defaultLink="https://planlete.vercel.app/app/rehab"
+        defaultLink={samplePlan?.sample_link || "https://planlete.vercel.app/app/rehab"}
       />
     </div>
   );

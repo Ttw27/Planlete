@@ -1,39 +1,65 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import PlanCarousel from "../components/PlanCarousel";
 import { useImages } from "../hooks/useImages";
 
-const SLIDES = [
-  {
-    imageKey: "sprinter_carousel_1",
-    fallback: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&q=80",
-    caption: "Acceleration, max velocity and speed endurance — all phases covered",
-  },
-  {
-    imageKey: "sprinter_carousel_2",
-    fallback: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=1200&q=80",
-    caption: "Plyometrics and power development built around sprint mechanics",
-  },
-  {
-    imageKey: "sprinter_carousel_3",
-    fallback: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80",
-    caption: "Gym sessions designed to transfer power to the track",
-  },
-  {
-    imageKey: "sprinter_carousel_4",
-    fallback: "https://images.unsplash.com/photo-1594882645126-14ac19a0c6e7?w=1200&q=80",
-    caption: "Recovery protocols to protect hamstrings and maintain output",
-  },
-];
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 export default function SprinterApp() {
   const { images } = useImages();
+  const [samplePlan, setSamplePlan] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPlan = async () => {
+      try {
+        const res = await axios.get(`${API}/sample-plans/sprinter`);
+        setSamplePlan(res.data);
+      } catch (err) {
+        console.error("Failed to load sample plan");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPlan();
+  }, []);
+
+  if (loading) return <div className="min-h-screen bg-black" />;
+
+  const SLIDES = samplePlan?.slides.map(slide => ({
+    imageKey: slide.image_key,
+    fallback: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&q=80",
+    caption: slide.caption,
+  })) || [];
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black text-white">
+      {samplePlan && (
+        <div className="max-w-4xl mx-auto px-5 md:px-8 pt-24 pb-12">
+          <p className="text-overline text-[#D4FF00] mb-4">— Sample plan</p>
+          <h1 className="font-display text-4xl md:text-5xl uppercase leading-tight mb-4">
+            {samplePlan.title}
+          </h1>
+          <p className="text-zinc-400 text-lg mb-8 max-w-2xl">
+            {samplePlan.description} <span className="text-[#D4FF00]">{samplePlan.disclaimer}</span>.
+          </p>
+          <ul className="grid md:grid-cols-2 gap-4 max-w-2xl">
+            {samplePlan.bullets.map((bullet, i) => (
+              <li key={i} className="flex gap-3 items-start">
+                <span className="w-1.5 h-1.5 bg-[#D4FF00] rounded-full mt-2 shrink-0" />
+                <span className="text-zinc-300">{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <PlanCarousel
         images={images}
         slides={SLIDES}
         planLabel="Sprint Training Plan"
         linkKey="sample_link_sprinter"
-        defaultLink="https://planlete.vercel.app/app/sprinter"
+        defaultLink={samplePlan?.sample_link || "https://planlete.vercel.app/app/sprinter"}
       />
     </div>
   );
