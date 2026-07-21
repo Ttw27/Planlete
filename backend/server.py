@@ -137,6 +137,242 @@ logger = logging.getLogger(__name__)
 
 EXPECTED_DAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
+# Bumped whenever the prompt or plan schema meaningfully changes, and stamped
+# onto every generated plan. Without this, a complaint three months from now is
+# impossible to trace back to which version of the prompt produced it.
+PLAN_PROMPT_VERSION = "2026-07-v2"
+
+
+# Which activity family a goal belongs to. Drives the hard guardrails below —
+# the rules the model must obey regardless of what it would otherwise write.
+ACTIVITY_FAMILIES = {
+    "endurance": [
+        "marathon", "half marathon", "10k", "5k", "ultra", "ironman",
+        "triathlon", "sportive", "cycling", "running", "swim",
+    ],
+    "hybrid": ["hyrox", "crossfit", "obstacle", "spartan", "hybrid"],
+    "combat": ["boxing", "kickboxing", "mma", "muay thai", "bjj", "wrestling", "fight"],
+    "team": ["football", "rugby", "basketball", "netball", "hockey", "cricket", "soccer"],
+    "strength": ["powerlifting", "strongman", "hypertrophy", "bodybuilding", "muscle"],
+    "speed": ["sprint", "athletics", "track"],
+}
+
+
+def family_for_goal(goal: str) -> str:
+    """Best-effort mapping of a free-text goal onto an activity family."""
+    lowered = (goal or "").lower()
+    for family, keywords in ACTIVITY_FAMILIES.items():
+        if any(k in lowered for k in keywords):
+            return family
+    return "general"
+
+
+# Hard rules per family. These exist because there is no expert reviewing
+# output — they constrain the model up front rather than relying on anyone
+# spotting a bad plan after it has already gone to a paying customer.
+FAMILY_GUARDRAILS = {
+    "endurance": """ENDURANCE GUARDRAILS (mandatory):
+- Never increase total weekly training volume by more than 10% from one week to the next.
+- The long session must never exceed 40% of that week's total volume.
+- At least 75-80% of weekly volume must be easy/conversational pace; hard sessions are the minority.
+- Week 4 must be a genuine recovery week with clearly reduced volume.
+- Never programme more than two hard/intense sessions in any week.""",
+    "hybrid": """HYBRID/HYROX GUARDRAILS (mandatory):
+- Balance strength and engine work; never let either disappear for a whole week.
+- Include station-specific work (sled push/pull, farmer's carry, burpee broad jumps, wall balls, ski/row).
+- Never programme heavy maximal strength and a long conditioning piece in the same session.
+- Week 4 must reduce volume meaningfully.""",
+    "combat": """COMBAT SPORT GUARDRAILS (mandatory):
+- Never programme heavy maximal strength work within the final two weeks before a fight.
+- Never prescribe sparring, partner drills or pad work if the person is training alone — substitute
+  shadow work, bag work (only if they have a bag), footwork ladders and conditioning.
+- Weight management advice must never involve dehydration, extreme restriction or rapid cutting.
+- Prioritise sharpening and recovery close to competition, not fresh volume.""",
+    "team": """TEAM SPORT GUARDRAILS (mandatory):
+- In-season, prioritise maintenance and recovery around fixtures rather than adding fatiguing volume.
+- Include change-of-direction and deceleration work, which is where most non-contact injuries happen.
+- Never prescribe small-sided games, opposed drills or anything requiring team-mates unless the
+  person has stated they train with a team or squad.""",
+    "strength": """STRENGTH GUARDRAILS (mandatory):
+- Never programme true maximal (1RM) attempts more than once in the block.
+- Keep weekly sets per muscle group within a sane hypertrophy range (roughly 10-20 working sets).
+- Week 4 must reduce both volume and intensity.
+- Percentages must be expressed against an estimated 1RM, never assumed absolute loads.""",
+    "speed": """SPEED GUARDRAILS (mandatory):
+- Maximal sprint work must always come early in a session, on fresh legs, never after fatiguing work.
+- Full recovery between maximal sprint efforts — never programme sprints as conditioning circuits.
+- Include dedicated hamstring resilience work; this is the primary injury risk.
+- Never programme maximal speed work on consecutive days.""",
+    "general": """GENERAL TRAINING GUARDRAILS (mandatory):
+- Start conservatively. Under-prescribing is far better than over-prescribing for this person.
+- Progress gradually week to week; never make large jumps in volume or intensity.
+- Week 4 must be a lighter recovery week.""",
+}
+
+
+# Equipment keyword policing. If someone says they train at home with dumbbells,
+# a plan full of barbell and sled work is the most visible possible failure —
+# it tells them immediately the plan was not built for them.
+EQUIPMENT_FORBIDDEN = {
+    "bodyweight": [
+        "barbell", "dumbbell", "kettlebell", "cable", "machine", "sled",
+        "leg press", "lat pulldown", "smith", "trap bar", "landmine",
+    ],
+    "dumbbells": [
+        "barbell", "cable", "machine", "sled", "leg press", "lat pulldown",
+        "smith", "trap bar", "landmine", "hack squat",
+    ],
+    "home": ["sled", "leg press", "hack squat", "lat pulldown", "smith machine", "cable crossover"],
+}
+
+
+def _forbidden_equipment_terms(equipment: str) -> List[str]:
+    lowered = (equipment or "").lower()
+    if "full gym" in lowered or "commercial" in lowered:
+        return []
+    if "bodyweight" in lowered or "no equipment" in lowered or "nothing" in lowered:
+        return EQUIPMENT_FORBIDDEN["bodyweight"]
+    if "dumbbell" in lowered and "barbell" not in lowered:
+        return EQUIPMENT_FORBIDDEN["dumbbells"]
+    if "home" in lowered:
+        return EQUIPMENT_FORBIDDEN["home"]
+    return []
+
+
+# Exercises that cannot be done alone. Checked when the person has said they
+# train solo, which is the default.
+PARTNER_TERMS = [
+    "partner", "opponent", "sparring", "spar ", "small-sided", "small sided",
+    "4v4", "3v3", "5v5", "2v2", "1v1", "teammate", "team-mate", "pad work",
+    "pads with", "opposed", "with a coach holding",
+]
+
+
+def _parse_minutes(text: str) -> Optional[int]:
+    """Pull a minute figure out of strings like '45 min', '60-75 minutes', '1 hour'."""
+    if not text:
+        return None
+    lowered = str(text).lower()
+    if "hour" in lowered:
+        m = re.search(r"(\d+(?:\.\d+)?)\s*hour", lowered)
+        if m:
+            return int(float(m.group(1)) * 60)
+    m = re.search(r"(\d+)", lowered)
+    return int(m.group(1)) if m else None
+
+
+def _estimate_session_minutes(workouts: list) -> int:
+    """
+    Rough duration estimate for a session, from sets x rest. Deliberately
+    approximate — it exists to catch a 30-minute request answered with a
+    75-minute session, not to be exact to the minute.
+    """
+    total_seconds = 0
+    for ex in workouts:
+        sets_text = str(ex.get("sets", ""))
+        m = re.match(r"\s*(\d+)\s*[xX]", sets_text)
+        set_count = int(m.group(1)) if m else 1
+
+        rest_text = str(ex.get("rest", ""))
+        rest_seconds = 60
+        rm = re.search(r"(\d+(?:\.\d+)?)\s*(min|m\b)", rest_text.lower())
+        rs = re.search(r"(\d+)\s*s", rest_text.lower())
+        if rm:
+            rest_seconds = int(float(rm.group(1)) * 60)
+        elif rs:
+            rest_seconds = int(rs.group(1))
+
+        # ~45s of actual work per set, plus the prescribed rest between them
+        total_seconds += set_count * 45 + max(0, set_count - 1) * rest_seconds
+
+    return round(total_seconds / 60)
+
+
+def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
+    """
+    The coaching-sense checks, as opposed to validate_plan's structural ones.
+    A plan can be perfectly formed and still be wrong for the person who paid
+    for it — this catches the obvious versions of that, on every plan, without
+    anyone having to read it.
+    """
+    equipment = answers.get("equipment", "")
+    forbidden = _forbidden_equipment_terms(equipment)
+    requested_minutes = _parse_minutes(answers.get("session", ""))
+    # Defaults to solo when unset — the safer failure, and the common case.
+    training_with = (answers.get("training_with") or "on my own").lower()
+    is_solo = any(t in training_with for t in ("own", "alone", "solo", "myself"))
+
+    requested_days = _parse_minutes(str(answers.get("days", "")))
+
+    weeks = plan_data.get("weeks", [])
+    weekly_training_days = []
+
+    for w in weeks:
+        week_num = w.get("weekNumber", "?")
+        training_days_this_week = 0
+
+        for d in w.get("days", []):
+            workouts = d.get("workouts", [])
+            names = " ".join(str(ex.get("name", "")).lower() for ex in workouts)
+
+            # Equipment they do not have
+            for term in forbidden:
+                if term in names:
+                    raise ValueError(
+                        f"Week {week_num}, {d.get('day')}: prescribes '{term}' but the user's "
+                        f"equipment is '{equipment}'. Use only equipment they actually have."
+                    )
+
+            # Anything needing another person, when they train alone
+            if is_solo:
+                for term in PARTNER_TERMS:
+                    if term in names:
+                        raise ValueError(
+                            f"Week {week_num}, {d.get('day')}: prescribes '{term.strip()}' but this "
+                            f"person trains alone. Substitute a solo alternative."
+                        )
+
+            label = str(d.get("label", "")).lower()
+            focus = str(d.get("focus", "")).lower()
+            is_rest = "rest" in label or "recovery" in label or "rest" in focus
+            if not is_rest:
+                training_days_this_week += 1
+
+                # Session length, only checked on real training days
+                if requested_minutes:
+                    estimated = _estimate_session_minutes(workouts)
+                    if estimated > requested_minutes * 1.5:
+                        raise ValueError(
+                            f"Week {week_num}, {d.get('day')}: session is roughly {estimated} min but "
+                            f"the user asked for {requested_minutes} min. Reduce the volume."
+                        )
+
+        weekly_training_days.append(training_days_this_week)
+
+    # Training days should broadly match what they asked for
+    if requested_days:
+        for i, count in enumerate(weekly_training_days, start=1):
+            if abs(count - requested_days) > 1:
+                raise ValueError(
+                    f"Week {i}: has {count} training days but the user asked for {requested_days}."
+                )
+
+    # Week 4 must actually be a deload
+    if len(weeks) == 4:
+        def week_volume(w):
+            return sum(
+                len(d.get("workouts", []))
+                for d in w.get("days", [])
+                if "rest" not in str(d.get("label", "")).lower()
+            )
+
+        w3, w4 = week_volume(weeks[2]), week_volume(weeks[3])
+        if w3 and w4 >= w3:
+            raise ValueError(
+                f"Week 4 must be a deload but has {w4} exercises vs week 3's {w3}. "
+                f"Reduce week 4 volume meaningfully."
+            )
+
 
 def validate_plan(plan_data: dict) -> None:
     """
@@ -184,10 +420,16 @@ def validate_plan(plan_data: dict) -> None:
         raise ValueError("Missing morningRoutine section")
 
 
-async def _call_claude_for_plan(answers: dict) -> dict:
+async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = None) -> dict:
     """One attempt at generating a plan via Claude. May raise on API error,
     invalid JSON, or failed validation — the caller (generate_plan_with_claude)
-    is responsible for retrying."""
+    is responsible for retrying.
+
+    If the previous attempt failed, previous_error is fed back in so the retry
+    knows what to fix. Retrying with an identical prompt tends to reproduce the
+    identical mistake, which is wasted time the customer spends waiting after
+    they have already paid.
+    """
 
     name = answers.get("name", "User")
     goal = answers.get("goal", "General fitness")
@@ -200,6 +442,43 @@ async def _call_claude_for_plan(answers: dict) -> dict:
     session = answers.get("session", "60 min")
     nutrition_pref = answers.get("nutrition", "No — training only")
     notes = answers.get("notes", "").strip() or "None provided"
+    training_with = answers.get("training_with", "On my own").strip()
+    injury = answers.get("injury", "").strip()
+
+    family = family_for_goal(goal)
+    guardrails = FAMILY_GUARDRAILS.get(family, FAMILY_GUARDRAILS["general"])
+
+    is_solo = "own" in training_with.lower() or "alone" in training_with.lower()
+    if is_solo:
+        solo_guidance = (
+            "CRITICAL: this person trains ON THEIR OWN. Never prescribe anything requiring "
+            "another person — no partner drills, no sparring, no pad work, no small-sided games "
+            "(4v4, 5v5 etc.), no opposed practice. For team sports use solo equivalents: cone "
+            "work, wall passes, shadow drills, mannequins, individual finishing and conditioning."
+        )
+    else:
+        solo_guidance = (
+            f"This person trains {training_with.lower()}. Programme around any fixed team or "
+            "partner sessions rather than duplicating that load, and it is fine to include "
+            "drills involving other people."
+        )
+
+    injury_guidance = ""
+    if injury and injury.lower() not in ("none", "no", "n/a"):
+        injury_guidance = (
+            f"\nINJURY / LIMITATION: {injury}\n"
+            "You must programme AROUND this. Do not attempt to treat or rehabilitate it — that is "
+            "a physiotherapist's job, not this plan's. Avoid loading the affected area, substitute "
+            "safe alternatives, and train everything else normally so they keep making progress."
+        )
+
+    retry_guidance = ""
+    if previous_error:
+        retry_guidance = (
+            f"\nIMPORTANT — your previous attempt was REJECTED by automated quality checks for "
+            f"this reason:\n\"{previous_error}\"\n"
+            f"Fix that specific problem in this attempt while still satisfying every other rule.\n"
+        )
 
     stage_line = f"- Training stage: {stage}" if stage else ""
     stage_guidance = ""
@@ -235,9 +514,16 @@ User Profile:
 - Equipment: {equipment}
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition_pref}
+- Training context: {training_with}
 - Injuries, allergies or other notes from the user: {notes}
 
 {stage_guidance}
+
+{solo_guidance}
+{injury_guidance}
+{retry_guidance}
+
+{guardrails}
 
 If the notes mention any injury, condition, or limitation, you MUST adapt exercise
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
@@ -266,6 +552,13 @@ training days to "{days} days per week" — remaining days are rest/recovery day
 Every single day, including rest days, MUST have at least one entry in "workouts" —
 never return an empty workouts array.
 
+Every exercise MUST include a "demo" field: the best short search phrase for finding a
+demonstration video of that movement. For standard gym lifts this is just the plain
+exercise name ("back squat", "romanian deadlift"). For sport-specific or unusually named
+drills, use the phrase someone would actually search to find it, including the sport where
+that helps disambiguate (e.g. "football wall pass drill", "boxing slip rope drill"). Never
+include set/rep detail in "demo".
+
 Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
 
 {{
@@ -280,14 +573,14 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
           {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—", "reason": "Active recovery keeps blood flow up without adding fatigue before the training week starts."}}
         ]}},
         {{"day": "Mon", "label": "Lower Body", "focus": "Strength", "workouts": [
-          {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min", "reason": "Builds the foundational lower-body strength this goal depends on most, loaded conservatively in week 1 to groove technique."}},
-          {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s", "reason": "Targets the posterior chain and hamstrings, which support the squat and protect the lower back."}}
+          {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min", "demo": "back squat", "reason": "Builds the foundational lower-body strength this goal depends on most, loaded conservatively in week 1 to groove technique."}},
+          {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s", "demo": "romanian deadlift", "reason": "Targets the posterior chain and hamstrings, which support the squat and protect the lower back."}}
         ]}},
-        {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
-        {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
-        {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
-        {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}},
-        {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}} ]}}
+        {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
+        {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
+        {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
+        {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
+        {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}}
       ]
     }},
     {{ "weekNumber": 2, "theme": "Build", "days": [ ...same 7-day shape, slightly progressed... ] }},
@@ -317,7 +610,7 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
   "morningRoutine": [
     {{"name": "Hip flexor stretch", "sets": "2x30s each side", "load": "Bodyweight", "rest": "—", "reason": "Loosens hip flexors that tighten overnight, before any training session."}},
     {{"name": "Cat-cow stretch", "sets": "1x10 reps", "load": "Bodyweight", "rest": "—", "reason": "..."}},
-    {{"name": "...", "sets": "...", "load": "...", "rest": "...", "reason": "..."}}
+    {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}}
   ]
 }}
 
@@ -376,11 +669,15 @@ Important:
     plan_data.setdefault("tagline", tagline_default)
 
     validate_plan(plan_data)
+    validate_plan_semantics(plan_data, answers)
+
+    plan_data["plan_version"] = PLAN_PROMPT_VERSION
+    plan_data["activity_family"] = family
 
     return plan_data
 
 
-async def generate_plan_with_claude(answers: dict) -> dict:
+async def generate_plan_with_claude(answers: dict, on_stage=None) -> dict:
     """
     Generate a personalised, 4-week periodised training plan using Claude AI,
     matching the exact JSON schema the AppShell component expects. Runs a
@@ -389,22 +686,35 @@ async def generate_plan_with_claude(answers: dict) -> dict:
     field) rather than saving a broken plan.
     """
     last_error = None
-    max_attempts = 2
+    feedback = None
+    max_attempts = 3
 
     for attempt in range(1, max_attempts + 1):
         try:
-            plan_data = await _call_claude_for_plan(answers)
+            if on_stage:
+                await on_stage("writing" if attempt == 1 else "refining")
+
+            plan_data = await _call_claude_for_plan(answers, previous_error=feedback)
+
+            if on_stage:
+                await on_stage("checking")
+
             if attempt > 1:
                 logger.info(f"Plan generation succeeded on retry attempt {attempt}")
             return plan_data
         except json.JSONDecodeError as e:
             last_error = f"Invalid JSON from Claude: {e}"
+            feedback = "Your previous response was not valid JSON. Return raw JSON only."
             logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
         except ValueError as e:
             last_error = f"Failed QA validation: {e}"
+            # The specific failure is fed back so the retry fixes that exact
+            # problem rather than rolling the dice on the same prompt again.
+            feedback = str(e)
             logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
         except Exception as e:
             last_error = f"Claude API error: {e}"
+            feedback = None
             logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
 
     logger.error(f"Plan generation failed after {max_attempts} attempts: {last_error}")
@@ -935,10 +1245,28 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                 "order_id": order_id,
             }
         else:
-            plan_data = await generate_plan_with_claude(answers)
+            async def set_stage(stage: str) -> None:
+                """
+                Writes the live generation stage onto the order so the success
+                page can show real progress. The customer has already paid at
+                this point — a screen that visibly moves through stages is the
+                difference between waiting and assuming it has crashed.
+                """
+                await db.pending_orders.update_one(
+                    {"id": order_id},
+                    {"$set": {"stage": stage, "stage_at": datetime.now(timezone.utc).isoformat()}},
+                )
+
+            await set_stage("reading")
+            plan_data = await generate_plan_with_claude(answers, on_stage=set_stage)
+            await set_stage("saving")
+
             plan_id = str(uuid.uuid4())
             plan_data["id"] = plan_id
             plan_data["order_id"] = order_id
+            # Stored so a future block can be built from what they originally
+            # told us, rather than making them fill the questionnaire in again.
+            plan_data["answers"] = answers
 
         await db.plans.insert_one(plan_data)
 
@@ -1021,7 +1349,11 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
             started_at = datetime.fromisoformat(started_at_str)
             elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
             if elapsed < 180:
-                return {"status": "processing"}
+                return {
+                    "status": "processing",
+                    "stage": order.get("stage", "reading"),
+                    "elapsed": int(elapsed),
+                }
         # else: no timestamp recorded (shouldn't happen) or stale — fall through and retry
 
     try:
@@ -1042,7 +1374,7 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
     )
     background_tasks.add_task(process_paid_order, order_id, order)
 
-    return {"status": "processing"}
+    return {"status": "processing", "stage": "reading", "elapsed": 0}
 
 
 @api_router.post("/webhooks/stripe")
