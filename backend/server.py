@@ -191,8 +191,13 @@ FAMILY_GUARDRAILS = {
     "team": """TEAM SPORT GUARDRAILS (mandatory):
 - In-season, prioritise maintenance and recovery around fixtures rather than adding fatiguing volume.
 - Include change-of-direction and deceleration work, which is where most non-contact injuries happen.
+- Include dedicated eccentric hamstring work (Nordic curls or equivalent) at least twice per week.
+  Hamstring strain is the most common injury in these sports and this is the best-evidenced
+  prevention — Romanian deadlifts alone do not cover it.
 - Never prescribe small-sided games, opposed drills or anything requiring team-mates unless the
-  person has stated they train with a team or squad.""",
+  person has stated they train with a team or squad.
+- If a match day is given, that day must be the match itself — never a hard training session.
+  The day before must be light and sharp, and the day after must be recovery.""",
     "strength": """STRENGTH GUARDRAILS (mandatory):
 - Never programme true maximal (1RM) attempts more than once in the block.
 - Keep weekly sets per muscle group within a sane hypertrophy range (roughly 10-20 working sets).
@@ -208,6 +213,151 @@ FAMILY_GUARDRAILS = {
 - Progress gradually week to week; never make large jumps in volume or intensity.
 - Week 4 must be a lighter recovery week.""",
 }
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Activity standards
+#
+# The guardrails above are hand-written safety rules. These are different: they
+# are the SPORT-SPECIFIC QUALITY standards a specialist coach would insist on,
+# and they are written by Claude rather than by us.
+#
+# The reason is a limitation worth being explicit about. The model knows
+# perfectly well that Nordic curls are the best-evidenced hamstring prevention
+# for footballers — ask it directly and it says so. But when a single call has
+# to produce 28 days plus nutrition plus recovery, attention goes on coherence
+# and completeness, and it writes the median competent plan rather than the
+# specialist one. Asking the narrow question on its own gets the specialist
+# answer, which we then hand to the generation call as requirements.
+#
+# It is cached per activity so it runs once, is reviewable in ten lines rather
+# than by reading a 28-day plan, and is editable in admin without a deploy.
+# ───────────────────────────────────────────────────────────────────────────────
+
+ACTIVITY_STANDARDS_VERSION = "2026-07-v1"
+
+
+def standards_key(goal: str) -> str:
+    """Stable cache key for an activity."""
+    return re.sub(r"[^a-z0-9]+", "_", (goal or "general").lower()).strip("_")
+
+
+async def generate_activity_standards(goal: str) -> dict:
+    """Ask Claude what a specialist in this activity would insist on."""
+    client = get_anthropic_client()
+
+    prompt = f"""You are an elite strength and conditioning coach who specialises in: {goal}
+
+Answer as the specialist you are — the specifics a generalist would miss.
+
+Return ONLY raw JSON (no markdown, no code fences) in this exact shape:
+
+{{
+  "must_include": ["4-6 specific things a professional plan for this activity ALWAYS contains, that a generic gym plan would miss. Name actual exercises or protocols, not vague principles."],
+  "common_injuries": ["The 3-4 most common injuries in this activity"],
+  "prevention": ["For each of those injuries, the best-evidenced preventative work. Name the specific exercise or protocol."],
+  "never_include": ["3-4 things that should NEVER appear in a plan for this activity, and are common mistakes"],
+  "hallmarks": ["3-4 things that separate a professional plan for this activity from an amateur one"]
+}}
+
+Be concrete and specific. "Core work" is useless; "Pallof press for anti-rotation" is useful.
+Every entry should be one short line."""
+
+    def _call():
+        return client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+    message = _call()
+
+    # Sonnet 5 can emit a thinking block ahead of the answer, so find the text
+    # block rather than assuming content[0] — same reason as the plan call.
+    raw = None
+    for block in message.content:
+        if getattr(block, "type", None) == "text":
+            raw = block.text
+            break
+    if raw is None:
+        raise ValueError("Standards response contained no text block")
+
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw).strip()
+
+    data = json.loads(raw)
+
+    # Shape check — a malformed response should be caught here, not silently
+    # injected as an empty requirements block into every plan for this sport.
+    for field in ("must_include", "common_injuries", "prevention", "never_include", "hallmarks"):
+        if not isinstance(data.get(field), list) or not data[field]:
+            raise ValueError(f"Activity standards missing or empty field: {field}")
+
+    return data
+
+
+async def get_activity_standards(goal: str) -> Optional[dict]:
+    """
+    Cached standards for an activity, generating them on first use.
+
+    Never raises. If this fails the plan is still generated, just without the
+    specialist layer — a slightly more generic plan is a far better outcome
+    than a failed generation for someone who has already paid.
+    """
+    key = standards_key(goal)
+    try:
+        doc = await db.activity_standards.find_one({"key": key})
+        if doc and doc.get("standards"):
+            return doc["standards"]
+
+        standards = await generate_activity_standards(goal)
+        await db.activity_standards.update_one(
+            {"key": key},
+            {"$set": {
+                "key": key,
+                "goal": goal,
+                "family": family_for_goal(goal),
+                "standards": standards,
+                "version": ACTIVITY_STANDARDS_VERSION,
+                "edited": False,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+        logger.info(f"Generated activity standards for '{goal}'")
+        return standards
+    except Exception as e:
+        logger.warning(f"Activity standards unavailable for '{goal}': {e}")
+        return None
+
+
+def format_activity_standards(standards: Optional[dict]) -> str:
+    """Render standards into the requirements block used by the plan prompt."""
+    if not standards:
+        return ""
+
+    def bullets(items):
+        return "\n".join(f"- {i}" for i in (items or []))
+
+    return f"""
+SPORT-SPECIFIC STANDARDS (written by a specialist in this activity — treat as mandatory):
+
+A professional plan for this activity always includes:
+{bullets(standards.get("must_include"))}
+
+Most common injuries in this activity:
+{bullets(standards.get("common_injuries"))}
+
+Preventative work that MUST appear in the plan:
+{bullets(standards.get("prevention"))}
+
+Never include:
+{bullets(standards.get("never_include"))}
+
+What separates a professional plan from an amateur one:
+{bullets(standards.get("hallmarks"))}
+"""
 
 
 # Equipment keyword policing. If someone says they train at home with dumbbells,
@@ -443,10 +593,15 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     nutrition_pref = answers.get("nutrition", "No — training only")
     notes = answers.get("notes", "").strip() or "None provided"
     training_with = answers.get("training_with", "On my own").strip()
+    match_day = answers.get("match_day", "").strip()
     injury = answers.get("injury", "").strip()
 
     family = family_for_goal(goal)
     guardrails = FAMILY_GUARDRAILS.get(family, FAMILY_GUARDRAILS["general"])
+
+    # The specialist layer. Cached per activity, so this is usually a Mongo
+    # read; only the first plan for a brand-new activity pays for generation.
+    activity_standards = format_activity_standards(await get_activity_standards(goal))
 
     is_solo = "own" in training_with.lower() or "alone" in training_with.lower()
     if is_solo:
@@ -479,6 +634,13 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
             f"this reason:\n\"{previous_error}\"\n"
             f"Fix that specific problem in this attempt while still satisfying every other rule.\n"
         )
+
+    match_day_line = (
+        f"- Match/competition day: {match_day} — this day must be the match itself, never a hard "
+        f"training session. Keep the day before light and the day after recovery."
+        if match_day and "not currently" not in match_day.lower()
+        else ""
+    )
 
     stage_line = f"- Training stage: {stage}" if stage else ""
     stage_guidance = ""
@@ -515,6 +677,7 @@ User Profile:
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition_pref}
 - Training context: {training_with}
+{match_day_line}
 - Injuries, allergies or other notes from the user: {notes}
 
 {stage_guidance}
@@ -524,6 +687,7 @@ User Profile:
 {retry_guidance}
 
 {guardrails}
+{activity_standards}
 
 If the notes mention any injury, condition, or limitation, you MUST adapt exercise
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
@@ -2042,6 +2206,91 @@ async def get_sample_plan(plan_type: str):
         raise HTTPException(status_code=404, detail="Sample plan not found")
     doc.pop("_id", None)
     return doc
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Activity standards admin
+# ───────────────────────────────────────────────────────────────────────────────
+
+class ActivityStandardsUpdate(BaseModel):
+    must_include: List[str] = []
+    common_injuries: List[str] = []
+    prevention: List[str] = []
+    never_include: List[str] = []
+    hallmarks: List[str] = []
+
+
+@api_router.get("/admin/activity-standards")
+async def admin_list_activity_standards(_: bool = Depends(require_admin)):
+    """Every activity we hold standards for, newest first."""
+    docs = await db.activity_standards.find({}, {"_id": 0}).to_list(200)
+    docs.sort(key=lambda d: d.get("goal", ""))
+    return {"standards": docs}
+
+
+@api_router.post("/admin/activity-standards/generate")
+async def admin_generate_activity_standards(
+    payload: dict,
+    _: bool = Depends(require_admin),
+):
+    """
+    Generate (or regenerate) standards for one activity.
+
+    Regenerating overwrites any manual edits, so the admin UI warns before
+    calling this on an activity marked as edited.
+    """
+    goal = (payload or {}).get("goal", "").strip()
+    if not goal:
+        raise HTTPException(status_code=400, detail="goal is required")
+
+    try:
+        standards = await generate_activity_standards(goal)
+    except Exception as e:
+        logger.error(f"Standards generation failed for '{goal}': {e}")
+        raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
+
+    key = standards_key(goal)
+    await db.activity_standards.update_one(
+        {"key": key},
+        {"$set": {
+            "key": key,
+            "goal": goal,
+            "family": family_for_goal(goal),
+            "standards": standards,
+            "version": ACTIVITY_STANDARDS_VERSION,
+            "edited": False,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"ok": True, "key": key, "goal": goal, "standards": standards}
+
+
+@api_router.put("/admin/activity-standards/{key}")
+async def admin_update_activity_standards(
+    key: str,
+    payload: ActivityStandardsUpdate,
+    _: bool = Depends(require_admin),
+):
+    """Save hand-edited standards. Marked as edited so regeneration warns."""
+    result = await db.activity_standards.update_one(
+        {"key": key},
+        {"$set": {
+            "standards": payload.model_dump(),
+            "edited": True,
+            "edited_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="No standards for that activity")
+    return {"ok": True, "key": key}
+
+
+@api_router.delete("/admin/activity-standards/{key}")
+async def admin_delete_activity_standards(key: str, _: bool = Depends(require_admin)):
+    """Drop standards so the next plan for that activity regenerates them."""
+    await db.activity_standards.delete_one({"key": key})
+    return {"ok": True}
 
 
 app.include_router(api_router)
