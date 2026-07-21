@@ -98,9 +98,85 @@ function getSuggestedValue(exerciseHistory, workout) {
  * AppShell — phone-style container for the sample/generated training apps.
  * Includes a top bar, content area, and bottom nav with view switching.
  */
-export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
+/**
+ * Shown once the person has been through the whole block at least once.
+ *
+ * Previously the plan simply looped back to week 1 with no acknowledgement,
+ * which meant the single clearest moment to offer them the next block passed
+ * completely unmarked — and anyone paying attention just saw their "new" week
+ * was the same as their first. This says plainly that the block repeats, keeps
+ * repeating it as a legitimate free option, and gets firmer the longer they
+ * stay on it, because by month three the same block genuinely is the wrong
+ * training.
+ */
+function BlockCompleteBanner({ cycleNumber = 1, totalWeeks = 4 }) {
+  const dismissKey = `planlete_block_notice_${cycleNumber}`;
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(dismissKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  if (cycleNumber < 2 || dismissed) return null;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      sessionStorage.setItem(dismissKey, "1");
+    } catch {
+      /* dismissal is not worth failing over */
+    }
+  };
+
+  const stale = cycleNumber >= 3;
+  const weeksDone = (cycleNumber - 1) * (totalWeeks || 4);
+
+  return (
+    <div className="mx-4 mb-4 border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-overline text-[var(--accent)] mb-2">
+            {stale ? `${weeksDone} weeks on this block` : "Block complete"}
+          </p>
+          <p className="text-sm leading-relaxed text-white/90">
+            {stale
+              ? `You've been running this block for ${weeksDone} weeks. It's done its job — a fresh
+                 one built around where you are now will get you further than repeating this again.`
+              : `Nice work — that's ${weeksDone} weeks done. This block now repeats: the same
+                 sessions, but you should be beating the numbers you logged last time.`}
+          </p>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <a
+              href="/build"
+              className="inline-block bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-[11px] px-5 py-2.5"
+            >
+              Build my next block
+            </a>
+            <button
+              onClick={dismiss}
+              className="text-[11px] uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+            >
+              Keep going with this one
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
   const [view, setView] = useState(initialView);
   const navigate = useNavigate();
+
+  // Logs and checklist ticks key off the ABSOLUTE week, which keeps climbing
+  // across cycles (5, 6, 7...). During cycle 1 this is identical to weekNumber,
+  // so nothing already stored is orphaned — but it stops cycle 2's "week 1"
+  // overwriting cycle 1's, which would have broken every progress comparison
+  // at exactly the point they start mattering.
+  const logWeek = absoluteWeek || weekNumber;
 
   const days = data.days || (mode && data.modes?.[mode]?.days) || [];
   const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;
@@ -179,13 +255,13 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   }, [planId]);
 
   const saveLog = async (day, exerciseName, value) => {
-    const key = `${weekNumber || 0}-${day}-${exerciseName}`;
+    const key = `${logWeek || 0}-${day}-${exerciseName}`;
     setLogs((prev) => ({ ...prev, [key]: value })); // optimistic
     if (!planId) return;
     try {
       await axios.post(`${API}/logs`, {
         plan_id: planId,
-        week_number: weekNumber || 0,
+        week_number: logWeek || 0,
         day,
         exercise_name: exerciseName,
         value,
@@ -253,6 +329,8 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
         {/* Mode toggle (football only) */}
         {modeToggle}
 
+        <BlockCompleteBanner cycleNumber={cycleNumber} totalWeeks={totalWeeks} />
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto pb-24">
           {view === "home" && (
@@ -261,7 +339,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               days={days}
               morningRoutine={morningRoutine}
               nutrition={nutrition}
-              weekNumber={weekNumber}
+              weekNumber={logWeek}
               completed={completed}
               onToggleDone={toggleDone}
               logs={logs}
@@ -276,7 +354,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           {view === "training" && (
             <TrainingView
               days={days}
-              weekNumber={weekNumber}
+              weekNumber={logWeek}
               completed={completed}
               onToggleDone={toggleDone}
               logs={logs}
@@ -296,7 +374,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               history={history}
               onSaveLog={saveLog}
               canLog={Boolean(planId)}
-              weekNumber={weekNumber}
+              weekNumber={logWeek}
             />
           )}
           {view === "nutrition" && nutrition && (
@@ -737,8 +815,13 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
   const hasAnyTimer = restSeconds !== null || holdSeconds !== null;
   const nudge = getProgressNudge(exerciseHistory, currentWeek);
 
-  const query = encodeURIComponent(`${w.name} exercise`);
-  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(`how to do ${w.name} exercise`)}`;
+  // The model returns a "demo" search phrase per exercise, because it knows
+  // that "Wall Pass Combination" is best searched as "football wall pass drill"
+  // while "Back Squat" needs nothing added. Falling back to the name keeps
+  // plans generated before this field existed working unchanged.
+  const demoTerm = (w.demo || `${w.name} exercise`).trim();
+  const query = encodeURIComponent(demoTerm);
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(`how to do ${demoTerm}`)}`;
   const youtubeUrl = `https://www.youtube.com/results?search_query=${query}+tutorial`;
 
   const toggle = (key) => {
