@@ -3,28 +3,16 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import AdminLayout from "@/components/AdminLayout";
 import { FlaskConical, ExternalLink, Copy, Check } from "lucide-react";
+import { buildQuestions } from "@/pages/BuildApp";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const GOAL_OPTIONS = [
-  "Athlete performance",
-  "Bodybuilding / muscle building",
-  "Hybrid athlete / HYROX",
-  "Boxing",
-  "Kickboxing / martial arts",
-  "Football specific",
-  "Sprint / athletics",
-  "Look good & stay healthy (longevity)",
-  "Rehab / return from injury",
-  "Lose fat",
-  "Something else (tell us below)",
-];
 
 const DEFAULTS = {
   name: "Tim",
-  goal: "Boxing",
-  stage: "Yes — final 4 weeks (fight camp peak)",
+  goal: "Football specific",
+  stage: "In-season — competing/playing regularly",
   age: "35–44",
   sex: "Male",
   experience: "5+ years",
@@ -32,7 +20,9 @@ const DEFAULTS = {
   equipment: "Full gym",
   session: "60 min",
   nutrition: "Yes — full plan",
-  notes: "Wrist tendon",
+  training_with: "On my own",
+  injury: "",
+  notes: "",
   email: "tim@hugehoods.co.uk",
 };
 
@@ -60,7 +50,20 @@ export default function AdminTestPlan() {
       });
   }, [navigate]);
 
-  const set = (key, value) => setAnswers((a) => ({ ...a, [key]: value }));
+  const questions = buildQuestions(answers.goal);
+
+  const set = (key, value) =>
+    setAnswers((a) => {
+      const next = { ...a, [key]: value };
+      // Changing goal changes which stage options are valid. Without this, a
+      // football goal could keep "final 4 weeks (fight camp peak)" from an
+      // earlier selection and quietly produce a nonsense brief.
+      if (key === "goal") {
+        const stageQ = buildQuestions(value).find((q) => q.id === "stage");
+        next.stage = stageQ ? stageQ.options[0] : "";
+      }
+      return next;
+    });
 
   const generate = async () => {
     setLoading(true);
@@ -122,107 +125,60 @@ export default function AdminTestPlan() {
         </p>
       </div>
 
+      {/* Rendered from the SAME question definitions the real questionnaire
+          uses, imported from BuildApp. Previously this form kept its own copy
+          of the options, which is exactly how it drifted out of sync — it was
+          still offering a fight-camp stage for a football goal, and had no way
+          to set the new training-context or injury fields at all. Now anything
+          added to the customer form appears here automatically. */}
       <div className="grid sm:grid-cols-2 gap-4 max-w-2xl">
-        <div>
-          <label className="text-overline block mb-2">Name</label>
-          <input
-            className={inputClass}
-            value={answers.name}
-            onChange={(e) => set("name", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Goal</label>
-          <select
-            className={inputClass}
-            value={answers.goal}
-            onChange={(e) => set("goal", e.target.value)}
-          >
-            {GOAL_OPTIONS.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Stage (only applies to some goals)</label>
-          <input
-            className={inputClass}
-            value={answers.stage}
-            onChange={(e) => set("stage", e.target.value)}
-            placeholder="e.g. Pre-season — ramping up"
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Age range</label>
-          <input
-            className={inputClass}
-            value={answers.age}
-            onChange={(e) => set("age", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Sex</label>
-          <input
-            className={inputClass}
-            value={answers.sex}
-            onChange={(e) => set("sex", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Experience</label>
-          <input
-            className={inputClass}
-            value={answers.experience}
-            onChange={(e) => set("experience", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Days per week</label>
-          <input
-            className={inputClass}
-            value={answers.days}
-            onChange={(e) => set("days", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Equipment</label>
-          <input
-            className={inputClass}
-            value={answers.equipment}
-            onChange={(e) => set("equipment", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Session length</label>
-          <input
-            className={inputClass}
-            value={answers.session}
-            onChange={(e) => set("session", e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-overline block mb-2">Nutrition</label>
-          <input
-            className={inputClass}
-            value={answers.nutrition}
-            onChange={(e) => set("nutrition", e.target.value)}
-          />
-        </div>
-        <div>
+        {questions
+          .filter((q) => q.id !== "email")
+          .map((q) => (
+            <div key={q.id} className={q.type === "text" ? "sm:col-span-2" : ""}>
+              <label className="text-overline block mb-2">
+                {q.label}
+                {q.optional && <span className="text-zinc-600 normal-case"> (optional)</span>}
+              </label>
+
+              {q.type === "choice" ? (
+                <select
+                  className={inputClass}
+                  value={answers[q.id] || ""}
+                  onChange={(e) => set(q.id, e.target.value)}
+                >
+                  <option value="">— not set —</option>
+                  {q.options.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : q.type === "text" ? (
+                <textarea
+                  className={inputClass}
+                  rows={2}
+                  placeholder={q.placeholder || ""}
+                  value={answers[q.id] || ""}
+                  onChange={(e) => set(q.id, e.target.value)}
+                />
+              ) : (
+                <input
+                  className={inputClass}
+                  placeholder={q.placeholder || ""}
+                  value={answers[q.id] || ""}
+                  onChange={(e) => set(q.id, e.target.value)}
+                />
+              )}
+            </div>
+          ))}
+
+        <div className="sm:col-span-2">
           <label className="text-overline block mb-2">Email (for record only)</label>
           <input
             className={inputClass}
-            value={answers.email}
+            value={answers.email || ""}
             onChange={(e) => set("email", e.target.value)}
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="text-overline block mb-2">Notes (injuries, allergies, etc.)</label>
-          <textarea
-            className={inputClass}
-            rows={2}
-            value={answers.notes}
-            onChange={(e) => set("notes", e.target.value)}
           />
         </div>
       </div>

@@ -9,7 +9,7 @@ import OfferBar from "@/components/OfferBar";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const BASE_QUESTIONS = [
+export const BASE_QUESTIONS = [
   {
     id: "name",
     label: "What's your first name?",
@@ -119,7 +119,7 @@ const BASE_QUESTIONS = [
 // depending on where someone is in their season, camp, or event build-up.
 // A "no specific stage" option is always included so nobody's forced to
 // pick something that doesn't fit their situation.
-const STAGE_CONFIG = {
+export const STAGE_CONFIG = {
   "Football specific": {
     id: "stage",
     label: "What part of your season are you in?",
@@ -196,7 +196,7 @@ function advisoryFor(goal) {
   return GP_ADVISORY.find((a) => a.match.some((m) => lowered.includes(m))) || null;
 }
 
-function buildQuestions(goal) {
+export function buildQuestions(goal) {
   const stageConfig = STAGE_CONFIG[goal];
   if (!stageConfig) return BASE_QUESTIONS;
 
