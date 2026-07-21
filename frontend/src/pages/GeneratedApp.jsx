@@ -93,17 +93,28 @@ export default function GeneratedApp() {
   let currentWeek = weeks[0];
   let weekLabel = "";
   let weekIndex = 0;
+  let cycleNumber = 1;
   if (weeks.length > 1) {
     const createdAt = plan.created_at ? new Date(plan.created_at) : new Date();
     const daysElapsed = Math.max(
       0,
       Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
     );
-    weekIndex = Math.floor(daysElapsed / 7) % weeks.length;
+    const weeksElapsed = Math.floor(daysElapsed / 7);
+    weekIndex = weeksElapsed % weeks.length;
+    // Which time through the block they are on. Past the first cycle the plan
+    // repeats — saying so plainly is better than relabelling the same sessions
+    // as though they were new programming, which they would notice anyway.
+    cycleNumber = Math.floor(weeksElapsed / weeks.length) + 1;
     currentWeek = weeks[weekIndex] || weeks[0];
-    weekLabel = ` · Week ${weekIndex + 1}/${weeks.length}${
-      currentWeek?.theme ? ` — ${currentWeek.theme}` : ""
-    }`;
+
+    if (cycleNumber === 1) {
+      weekLabel = ` · Week ${weekIndex + 1}/${weeks.length}${
+        currentWeek?.theme ? ` — ${currentWeek.theme}` : ""
+      }`;
+    } else {
+      weekLabel = ` · Cycle ${cycleNumber} · Week ${weekIndex + 1}/${weeks.length} — same sessions, aim heavier`;
+    }
   }
 
   const data = {
@@ -117,5 +128,18 @@ export default function GeneratedApp() {
     morningRoutine: plan.morningRoutine,
   };
 
-  return <AppShell data={data} planId={plan.id} weekNumber={weekIndex + 1} />;
+  // absoluteWeek keeps climbing across cycles (5, 6, 7...) so logged-weight
+  // comparisons don't collide when the week number resets to 1 on cycle 2.
+  const absoluteWeek = (cycleNumber - 1) * weeks.length + weekIndex + 1;
+
+  return (
+    <AppShell
+      data={data}
+      planId={plan.id}
+      weekNumber={weekIndex + 1}
+      absoluteWeek={absoluteWeek}
+      cycleNumber={cycleNumber}
+      totalWeeks={weeks.length}
+    />
+  );
 }

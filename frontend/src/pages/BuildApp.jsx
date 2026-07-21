@@ -84,11 +84,26 @@ const BASE_QUESTIONS = [
     options: ["Yes — full plan", "Yes — just targets", "No — training only"],
   },
   {
-    id: "notes",
-    label: "Any injuries, allergies, sport specifics or anything else we should know?",
+    id: "training_with",
+    label: "Who do you train with?",
+    type: "choice",
+    options: ["On my own", "With a training partner", "With my team or squad"],
+    hint: "This matters — if you train alone we'll never give you a drill that needs someone else.",
+  },
+  {
+    id: "injury",
+    label: "Any injuries or areas we should train around?",
     type: "text",
-    placeholder: "e.g. dodgy left knee, avoid dairy, training for a Muay Thai fight — or leave blank",
-    hint: "Optional — if you picked 'Something else', tell us your sport here. Otherwise, this is your only chance to add detail before we build your app.",
+    placeholder: "e.g. dodgy left knee, recovering shoulder — or leave blank",
+    hint: "We'll build around it and leave that area alone. This isn't rehab — for that you need a physio.",
+    optional: true,
+  },
+  {
+    id: "notes",
+    label: "Anything else we should know?",
+    type: "text",
+    placeholder: "e.g. avoid dairy, only free weekday mornings, training for a specific event",
+    hint: "Optional — allergies, schedule quirks, or your sport if you picked 'Something else'.",
     optional: true,
   },
   {
@@ -163,6 +178,23 @@ const STAGE_CONFIG = {
     ],
   },
 };
+
+// Activities where an advisory is warranted before someone starts training
+// hard. This is a notice, not a screen — it does not gate the purchase or
+// record a confirmation. It exists because combat and long-distance endurance
+// carry real cardiovascular and impact risk, and a £4.99 plan is no substitute
+// for a GP knowing what you are about to do.
+const GP_ADVISORY = [
+  { match: ["boxing", "kickboxing", "mma", "muay thai", "fight", "combat", "bjj", "wrestling"],
+    text: "Combat sports are physically demanding and carry a real injury risk. If you have any existing health condition, or you're new to training at this intensity, please speak to your GP before you start." },
+  { match: ["marathon", "ultra", "ironman", "triathlon", "half marathon"],
+    text: "Endurance events place sustained load on your heart and joints. If you have any existing health condition, or you're returning after time off, please speak to your GP before starting this plan." },
+];
+
+function advisoryFor(goal) {
+  const lowered = (goal || "").toLowerCase();
+  return GP_ADVISORY.find((a) => a.match.some((m) => lowered.includes(m))) || null;
+}
 
 function buildQuestions(goal) {
   const stageConfig = STAGE_CONFIG[goal];
@@ -363,6 +395,15 @@ export default function BuildApp() {
           )}
 
           {q.hint && <p className="text-sm text-zinc-500 mt-4">{q.hint}</p>}
+
+          {q.id === "goal" && advisoryFor(answers.goal) && (
+            <div className="mt-6 border border-[#D4FF00]/25 bg-[#D4FF00]/5 p-4">
+              <p className="text-overline text-[#D4FF00] mb-2">Before you start</p>
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                {advisoryFor(answers.goal).text}
+              </p>
+            </div>
+          )}
           {q.id === "notes" && (
             <p className="text-xs text-zinc-600 mt-3">
               Anything health-related you share here (like an injury) is only ever used to

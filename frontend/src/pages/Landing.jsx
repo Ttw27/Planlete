@@ -29,7 +29,8 @@ function Marquee() {
 
 const SPORTS = [
   "Bodybuilding", "Hybrid athlete / HYROX", "Boxing", "Kickboxing & martial arts",
-  "Football", "Rugby", "Sprinting & athletics", "Powerlifting", "Rehab & recovery",
+  "Football", "Rugby", "Sprinting & athletics", "Powerlifting", "Marathon & half marathon",
+  "Triathlon & Ironman", "Tennis & racket sports", "Getting into running",
   "Longevity & general fitness", "Fat loss", "Muscle building", "CrossFit-style training",
   "Endurance & running", "And more",
 ];
@@ -39,11 +40,11 @@ const PLANS = [
   {
     id: "rehab",
     label: "Rehab & Recovery",
-    body: "Structured return from injury. Mobility, load management and a safe path back to full training.",
+    body: "Written by a qualified physio, not AI. An example of what a practitioner can build for their client on Planlete.",
     href: "/app/rehab",
     imageKey: "card_rehab",
     fallback: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80",
-    tag: "Free sample",
+    tag: "Physio built",
   },
   {
     id: "longevity",
@@ -269,6 +270,18 @@ export default function Landing() {
               <PlanCard key={plan.id} plan={plan} images={images} c={c} />
             ))}
           </div>
+
+          {/* Four samples can't show everything the questionnaire covers, so
+              say so plainly rather than letting people assume we don't do
+              their sport. */}
+          <p className="text-sm text-zinc-500 mt-8 text-center leading-relaxed">
+            Also covering marathon, triathlon, HYROX, tennis, boxing, powerlifting, getting into
+            running and plenty more —{" "}
+            <Link to="/build" className="text-[var(--accent)] hover:underline">
+              build yours in a couple of minutes
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
