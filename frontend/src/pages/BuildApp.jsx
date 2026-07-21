@@ -84,6 +84,20 @@ export const BASE_QUESTIONS = [
     options: ["Yes — full plan", "Yes — just targets", "No — training only"],
   },
   {
+    id: "match_day",
+    label: "Which day do you usually play or compete?",
+    type: "choice",
+    options: ["Saturday", "Sunday", "Midweek", "Varies", "Not currently competing"],
+    hint: "So we never put a hard session on top of your match.",
+    goals: [
+      "Football specific",
+      "Athlete performance",
+      "Sprint / athletics",
+      "Boxing",
+      "Kickboxing / martial arts",
+    ],
+  },
+  {
     id: "training_with",
     label: "Who do you train with?",
     type: "choice",
@@ -197,19 +211,23 @@ function advisoryFor(goal) {
 }
 
 export function buildQuestions(goal) {
-  const stageConfig = STAGE_CONFIG[goal];
-  if (!stageConfig) return BASE_QUESTIONS;
+  // Some questions only make sense for certain goals — a marathon runner has
+  // no match day. A question with a `goals` list is shown only for those.
+  const relevant = BASE_QUESTIONS.filter((q) => !q.goals || q.goals.includes(goal));
 
-  const goalIndex = BASE_QUESTIONS.findIndex((q) => q.id === "goal");
+  const stageConfig = STAGE_CONFIG[goal];
+  if (!stageConfig) return relevant;
+
+  const goalIndex = relevant.findIndex((q) => q.id === "goal");
   const stageQuestion = {
     ...stageConfig,
     type: "choice",
     hint: "This shapes how your plan is built — pick whatever's actually true right now.",
   };
   return [
-    ...BASE_QUESTIONS.slice(0, goalIndex + 1),
+    ...relevant.slice(0, goalIndex + 1),
     stageQuestion,
-    ...BASE_QUESTIONS.slice(goalIndex + 1),
+    ...relevant.slice(goalIndex + 1),
   ];
 }
 
