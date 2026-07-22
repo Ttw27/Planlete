@@ -31,6 +31,7 @@ import AdminPlanBuilder from "@/pages/AdminPlanBuilder";
 import AdminSecurity from "@/pages/AdminSecurity";
 import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
 import AdminActivityStandards from "@/pages/AdminActivityStandards";
+import AdminPlanEditor from "@/pages/AdminPlanEditor";
 import AdminSampleFootball from "@/pages/AdminSampleFootball";
 import AdminSampleRehab from "@/pages/AdminSampleRehab";
 import AdminSampleLongevity from "@/pages/AdminSampleLongevity";
@@ -71,6 +72,7 @@ function App() {
             <Route path="/admin/plan-builder" element={<AdminPlanBuilder />} />
             <Route path="/admin/security" element={<AdminSecurity />} />
             <Route path="/admin/activity-standards" element={<AdminActivityStandards />} />
+            <Route path="/admin/edit-plan" element={<AdminPlanEditor />} />
             <Route path="/admin/sample-football" element={<AdminSampleFootball />} />
             <Route path="/admin/sample-rehab" element={<AdminSampleRehab />} />
             <Route path="/admin/sample-longevity" element={<AdminSampleLongevity />} />
