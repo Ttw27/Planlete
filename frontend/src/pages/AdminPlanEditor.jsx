@@ -207,6 +207,16 @@ export default function AdminPlanEditor() {
                 {plan.edited_by_admin ? " · previously edited" : ""}
               </p>
             )}
+            {plan.needs_review && (
+              <div className="flex items-start gap-2 text-xs text-yellow-200/90 mt-3 border-t border-white/10 pt-3">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  This plan was delivered after automated checks flagged something they couldn't
+                  auto-fix{plan.review_reason ? `: ${plan.review_reason.replace(/^Soft QA issue: /, "")}` : ""}.
+                  Worth a quick look.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Week picker */}
