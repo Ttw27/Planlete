@@ -529,7 +529,10 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
                     f"Move the extra sessions to rest/recovery or remove them."
                 )
 
-    # Week 4 must actually be a deload
+    # Week 4 must actually be a deload. The prompt asks for 30–40% fewer
+    # exercises; we validate a softer 15% so a genuine (if modest) deload
+    # passes, but a week 4 that matches week 3 is still caught. Anything the
+    # auto-trim in generate_plan_with_claude can't quietly fix lands here.
     if len(weeks) == 4:
         def week_volume(w):
             return sum(
@@ -539,11 +542,69 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
             )
 
         w3, w4 = week_volume(weeks[2]), week_volume(weeks[3])
-        if w3 and w4 >= w3:
+        if w3 and w4 > w3 * 0.85:
             raise ValueError(
                 f"Week 4 must be a deload but has {w4} exercises vs week 3's {w3}. "
-                f"Reduce week 4 volume meaningfully."
+                f"Week 4 should have roughly 30% fewer exercises than week 3."
             )
+
+
+def autofix_deload(plan_data: dict) -> None:
+    """
+    If week 4 came back too heavy to be a real deload, trim it in place so it
+    can never trigger a full regeneration.
+
+    The mechanical prompt instruction makes a heavy week 4 rare, but when it
+    slips through, regenerating the entire plan to fix one week costs the
+    customer another 2-3 minutes. Trimming the tail exercises off each week-4
+    training day is a blunt but honest deload — fewer sets of the same work —
+    and it's instant. Runs before validation, so a fixable week 4 never becomes
+    a retry.
+    """
+    weeks = plan_data.get("weeks", [])
+    if len(weeks) != 4:
+        return
+
+    def week_volume(w):
+        return sum(
+            len(d.get("workouts", []))
+            for d in w.get("days", [])
+            if "rest" not in str(d.get("label", "")).lower()
+        )
+
+    w3_vol = week_volume(weeks[2])
+    w4 = weeks[3]
+    w4_vol = week_volume(w4)
+    if not w3_vol or w4_vol <= w3_vol * 0.7:
+        return  # already a genuine deload
+
+    # Target ~65% of week 3's volume. Trim from the end of each training day's
+    # workout list (keeping at least one exercise per day) until we're there.
+    target = int(w3_vol * 0.65)
+    training_days = [
+        d for d in w4.get("days", [])
+        if "rest" not in str(d.get("label", "")).lower() and len(d.get("workouts", [])) > 1
+    ]
+
+    current = w4_vol
+    # Round-robin a single removal from each eligible day until at target.
+    changed = True
+    while current > target and changed:
+        changed = False
+        for d in training_days:
+            if current <= target:
+                break
+            if len(d["workouts"]) > 1:
+                d["workouts"].pop()
+                current -= 1
+                changed = True
+
+    for d in training_days:
+        d.setdefault("label", "")
+        if "deload" not in d["label"].lower():
+            d["label"] = (d["label"] + " (deload)").strip()
+
+    plan_data["_deload_autofixed"] = True
 
 
 def validate_plan(plan_data: dict) -> None:
@@ -750,8 +811,12 @@ in that specific discipline.
 
 This plan runs on a 4-week repeating cycle (a "mesocycle"). Weeks 1–3 should
 progressively increase load, volume or intensity based on the training goal.
-Week 4 must be a DELOAD week — meaningfully reduced volume/intensity so the
-person recovers before the cycle repeats from week 1 again.
+Week 4 MUST be a DELOAD week. Concretely: week 4 must contain roughly 30–40%
+FEWER total exercises than week 3, AND lighter loads/intensity. This is not
+optional and not a small trim — if week 3 has 20 exercises across the week,
+week 4 should have around 12–14. A week 4 that matches week 3's volume is wrong
+and will be rejected. The person needs genuine recovery before the cycle
+repeats from week 1.
 
 Return EVERY day of the week (Sun through Sat, in that exact order) for EVERY
 week — 7 day-entries x 4 weeks = 28 total. Days that are not a training day for
@@ -900,6 +965,10 @@ Important:
 
     plan_data["plan_version"] = PLAN_PROMPT_VERSION
     plan_data["activity_family"] = family
+
+    # Quietly lighten week 4 if it came back too heavy, so a fixable deload
+    # never costs a full regeneration.
+    autofix_deload(plan_data)
 
     # SOFT validation — coaching sense. Attach the outcome rather than raising,
     # so the caller can retry to improve the plan but still deliver THIS plan if
