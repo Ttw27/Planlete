@@ -164,7 +164,7 @@ export default function PaymentSuccess() {
     // Never shows 100% — the bar completing is the plan actually being ready,
     // not an animation reaching the end of itself.
     const pct = Math.min(92, ((activeIndex + 0.5) / STAGES.length) * 100);
-    const slow = elapsed > 75;
+    const slow = elapsed > 150;
 
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
@@ -172,8 +172,10 @@ export default function PaymentSuccess() {
           <div className="text-center mb-10">
             <p className="text-overline text-[#D4FF00] mb-3">Payment confirmed</p>
             <h2 className="font-display text-3xl mb-3">Building your app</h2>
-            <p className="text-zinc-500 text-sm">
-              This usually takes under a minute. Keep this page open.
+            <p className="text-zinc-500 text-sm leading-relaxed">
+              This usually takes 2–3 minutes — we're building a full four-week plan, not pulling a
+              template off a shelf. You can close this page if you like; your link is emailed to you
+              the moment it's ready.
             </p>
           </div>
 
@@ -219,13 +221,14 @@ export default function PaymentSuccess() {
 
           {slow && (
             <p className="text-zinc-500 text-xs text-center mt-10 leading-relaxed">
-              Taking a little longer than usual — we're double-checking the detail rather than
-              rushing it. Your app link is emailed either way, so you can safely close this page.
+              Still going — a good plan is worth the extra moment, and we're checking the detail
+              rather than rushing it. Feel free to close the page; the link is on its way to your
+              inbox regardless.
             </p>
           )}
 
           <p className="text-zinc-700 text-xs text-center mt-8">
-            {elapsed}s elapsed
+            {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} elapsed · typically 2–3 min
           </p>
         </div>
       </div>
