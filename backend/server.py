@@ -869,7 +869,24 @@ Important:
             break
     if response_text is None:
         raise Exception("Claude response contained no text block")
-    plan_data = json.loads(response_text)
+
+    # Be tolerant of how the model wraps its answer. On long generations it
+    # intermittently adds ```json fences or a line of preamble before the JSON,
+    # which made a raw json.loads fail with "line 1 column 1" — and every one of
+    # those failures triggered a full 2-3 minute retry. Stripping fences and
+    # slicing to the outermost braces removes that entire class of wasted retry.
+    cleaned = response_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned).strip()
+    # Slice to the outermost { … } to shed any preamble OR trailing text the
+    # model added around the object. This removes the whole "line 1 column 1"
+    # / "extra data" class of parse failure, each of which cost a full retry.
+    first = cleaned.find("{")
+    last = cleaned.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        cleaned = cleaned[first:last + 1]
+
+    plan_data = json.loads(cleaned)
 
     plan_data["answers"] = answers
     plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
