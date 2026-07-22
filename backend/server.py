@@ -2319,6 +2319,64 @@ async def admin_delete_activity_standards(key: str, _: bool = Depends(require_ad
     return {"ok": True}
 
 
+# ───────────────────────────────────────────────────────────────────────────────
+# Admin plan editing
+#
+# Plans are otherwise immutable. This exists for one specific job: when a
+# customer's generated plan isn't good enough, editing their Thursday and
+# handing back the same link is a far better outcome than a refund and a bad
+# review. It is deliberately a hand-editor, not a regenerator — the whole point
+# is that a human decides what's wrong and fixes exactly that.
+# ───────────────────────────────────────────────────────────────────────────────
+
+@api_router.get("/admin/plans/{plan_id}/edit")
+async def admin_load_plan_for_edit(plan_id: str, _: bool = Depends(require_admin)):
+    """Load a generated plan's full content so it can be edited."""
+    plan = await db.plans.find_one({"id": plan_id}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="No plan with that ID")
+    return plan
+
+
+@api_router.put("/admin/plans/{plan_id}/edit")
+async def admin_save_plan_edit(
+    plan_id: str,
+    payload: dict,
+    _: bool = Depends(require_admin),
+):
+    """
+    Save hand-edited weeks back onto a generated plan.
+
+    Only the plan CONTENT is editable — weeks, nutrition, recovery, morning
+    routine. Identity and lineage fields (id, order_id, answers, created_at)
+    are never overwritten from the client, so an edit can't detach a plan from
+    its owner or its history.
+    """
+    existing = await db.plans.find_one({"id": plan_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="No plan with that ID")
+
+    editable = {}
+    for field in ("weeks", "nutrition", "recovery", "morningRoutine", "structureType", "tagline"):
+        if field in payload:
+            editable[field] = payload[field]
+
+    if "weeks" in editable:
+        # Re-run the same validation a generated plan must pass, so a manual
+        # edit can't quietly produce a structurally broken plan (an empty day,
+        # a missing workouts array) that then errors in the customer's app.
+        try:
+            validate_plan({"weeks": editable["weeks"]})
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Edit rejected: {e}")
+
+    editable["edited_by_admin"] = True
+    editable["edited_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.plans.update_one({"id": plan_id}, {"$set": editable})
+    return {"ok": True, "plan_id": plan_id}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
