@@ -261,7 +261,10 @@ Return ONLY raw JSON (no markdown, no code fences) in this exact shape:
 }}
 
 Be concrete and specific. "Core work" is useless; "Pallof press for anti-rotation" is useful.
-Every entry should be one short line."""
+Every entry should be one short line.
+Do NOT make absolute medical or mortality claims (e.g. "the single best predictor of death",
+"prevents injury"). Describe what the training does, not health outcomes it guarantees — this
+content feeds a consumer product, not a clinical one."""
 
     def _call():
         return client.messages.create(
@@ -603,6 +606,27 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     # read; only the first plan for a brand-new activity pays for generation.
     activity_standards = format_activity_standards(await get_activity_standards(goal))
 
+    # The standards are written by a specialist and therefore assume a
+    # specialist's setup — GPS units, force plates, timing gates, a fixture
+    # list, coaching staff. This person has none of that. Without this the
+    # model either ignores those standards (so why include them) or, worse,
+    # pretends to follow them and invents data — "deloaded for your congested
+    # fixture week" based on fixtures that were never provided. This tells it
+    # to translate the specialist intent into what a solo gym member can
+    # actually do, and never to reference inputs it doesn't have.
+    infrastructure_reality = (
+        "IMPORTANT — REAL-WORLD CONTEXT: this person trains by themselves in a normal "
+        "commercial or home gym. They do NOT have GPS trackers, force plates, timing gates, "
+        "isokinetic dynamometers, a coaching team, or lab testing. The sport-specific standards "
+        "above describe what an elite setup would do — translate that intent into things this "
+        "person can actually do with the equipment they told you about and a stopwatch/phone. "
+        "Never prescribe testing that needs equipment they don't have, never assume access to "
+        "performance data, and never reference their fixture list, match schedule or training "
+        "history beyond exactly what they have provided. Where a standard depends on data or kit "
+        "they lack, substitute the best self-assessable equivalent (e.g. rep-quality, RPE, a timed "
+        "sprint) rather than dropping the underlying goal."
+    )
+
     is_solo = "own" in training_with.lower() or "alone" in training_with.lower()
     if is_solo:
         solo_guidance = (
@@ -688,6 +712,8 @@ User Profile:
 
 {guardrails}
 {activity_standards}
+
+{infrastructure_reality}
 
 If the notes mention any injury, condition, or limitation, you MUST adapt exercise
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
