@@ -30,7 +30,6 @@ export const BASE_QUESTIONS = [
       "Football specific",
       "Sprint / athletics",
       "Look good & stay healthy (longevity)",
-      "Rehab / return from injury",
       "Lose fat",
       "Something else (tell us below)",
     ],
