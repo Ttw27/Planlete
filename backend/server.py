@@ -833,6 +833,12 @@ drills, use the phrase someone would actually search to find it, including the s
 that helps disambiguate (e.g. "football wall pass drill", "boxing slip rope drill"). Never
 include set/rep detail in "demo".
 
+Leave "hrvTrend" as an empty string ("") unless the person has explicitly said
+they track heart-rate variability with a wearable. Most people don't, and a
+recovery metric they can't measure is noise — do NOT write "not tracked",
+"monitor via sleep" or any placeholder into it; just leave it empty and it will
+be hidden. Put any recovery-monitoring advice in the "protocols" list instead.
+
 Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
 
 {{
@@ -878,7 +884,7 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
   }},
   "recovery": {{
     "sleepTarget": "7-9h",
-    "hrvTrend": "↑ Optimal",
+    "hrvTrend": "",
     "protocols": ["...", "...", "...", "..."]
   }},
   "morningRoutine": [
