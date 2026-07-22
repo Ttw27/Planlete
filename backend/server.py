@@ -487,13 +487,28 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
 
             label = str(d.get("label", "")).lower()
             focus = str(d.get("focus", "")).lower()
-            is_rest = "rest" in label or "recovery" in label or "rest" in focus
+
+            # A day is "rest/recovery" if it's labelled that way OR if it only
+            # contains light optional work — a 20-minute mobility flow or an
+            # easy spin. The model reasonably puts these on off days, and a
+            # coach would still call that a rest day. Counting them as training
+            # days was rejecting perfectly good plans (a 4-day week with two
+            # easy top-ups reads as 6), and since the model thinks it already
+            # complied, the retry couldn't fix it — it just burned every
+            # attempt and failed after payment.
+            is_labelled_rest = (
+                "rest" in label or "recovery" in label or "rest" in focus
+                or "mobility" in label or "off" in label
+            )
+            estimated = _estimate_session_minutes(workouts)
+            is_light = len(workouts) <= 1 and estimated <= 25
+            is_rest = is_labelled_rest or is_light
+
             if not is_rest:
                 training_days_this_week += 1
 
                 # Session length, only checked on real training days
                 if requested_minutes:
-                    estimated = _estimate_session_minutes(workouts)
                     if estimated > requested_minutes * 1.5:
                         raise ValueError(
                             f"Week {week_num}, {d.get('day')}: session is roughly {estimated} min but "
@@ -502,12 +517,16 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
 
         weekly_training_days.append(training_days_this_week)
 
-    # Training days should broadly match what they asked for
+    # Training days should broadly match what they asked for. Allow +/-1, and
+    # only reject when they exceed the request — MORE sessions than asked for is
+    # the real problem (too much load); slightly fewer can be legitimate in a
+    # deload week and isn't worth failing a paid generation over.
     if requested_days:
         for i, count in enumerate(weekly_training_days, start=1):
-            if abs(count - requested_days) > 1:
+            if count > requested_days + 1:
                 raise ValueError(
-                    f"Week {i}: has {count} training days but the user asked for {requested_days}."
+                    f"Week {i}: has {count} training days but the user asked for {requested_days}. "
+                    f"Move the extra sessions to rest/recovery or remove them."
                 )
 
     # Week 4 must actually be a deload
@@ -858,11 +877,22 @@ Important:
     tagline_default = f"{goal} — {stage}" if stage and "no specific" not in stage.lower() and "general training" not in stage.lower() else goal
     plan_data.setdefault("tagline", tagline_default)
 
+    # HARD validation — structural. A plan missing a day or an exercise is
+    # genuinely broken and will error in the customer's app, so this must pass.
     validate_plan(plan_data)
-    validate_plan_semantics(plan_data, answers)
 
     plan_data["plan_version"] = PLAN_PROMPT_VERSION
     plan_data["activity_family"] = family
+
+    # SOFT validation — coaching sense. Attach the outcome rather than raising,
+    # so the caller can retry to improve the plan but still deliver THIS plan if
+    # retries run out. A soft-imperfect plan beats a paid customer getting an
+    # error every time.
+    try:
+        validate_plan_semantics(plan_data, answers)
+        plan_data["_soft_issue"] = None
+    except ValueError as e:
+        plan_data["_soft_issue"] = str(e)
 
     return plan_data
 
@@ -877,6 +907,7 @@ async def generate_plan_with_claude(answers: dict, on_stage=None) -> dict:
     """
     last_error = None
     feedback = None
+    best_plan = None
     max_attempts = 3
 
     for attempt in range(1, max_attempts + 1):
@@ -889,17 +920,26 @@ async def generate_plan_with_claude(answers: dict, on_stage=None) -> dict:
             if on_stage:
                 await on_stage("checking")
 
-            if attempt > 1:
-                logger.info(f"Plan generation succeeded on retry attempt {attempt}")
-            return plan_data
+            soft_issue = plan_data.pop("_soft_issue", None)
+            if not soft_issue:
+                # Passed everything.
+                if attempt > 1:
+                    logger.info(f"Plan generation succeeded on retry attempt {attempt}")
+                return plan_data
+
+            # Structurally sound but a soft check flagged something. Keep it as
+            # a fallback, feed the issue back, and try once more to improve it.
+            best_plan = plan_data
+            feedback = soft_issue
+            last_error = f"Soft QA issue: {soft_issue}"
+            logger.warning(f"Plan generation attempt {attempt}: {last_error} (kept as fallback)")
         except json.JSONDecodeError as e:
             last_error = f"Invalid JSON from Claude: {e}"
             feedback = "Your previous response was not valid JSON. Return raw JSON only."
             logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
         except ValueError as e:
-            last_error = f"Failed QA validation: {e}"
-            # The specific failure is fed back so the retry fixes that exact
-            # problem rather than rolling the dice on the same prompt again.
+            # Hard structural failure — cannot ship this, must retry.
+            last_error = f"Failed structural validation: {e}"
             feedback = str(e)
             logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
         except Exception as e:
@@ -907,6 +947,18 @@ async def generate_plan_with_claude(answers: dict, on_stage=None) -> dict:
             feedback = None
             logger.warning(f"Plan generation attempt {attempt} failed: {last_error}")
 
+    # Retries exhausted. If we have a structurally sound plan that only tripped
+    # a soft check, DELIVER IT — a slightly imperfect plan is far better than a
+    # paid customer getting nothing. Flag it so it can be spotted and hand-fixed
+    # in the plan editor.
+    if best_plan is not None:
+        best_plan["needs_review"] = True
+        best_plan["review_reason"] = last_error
+        logger.warning(f"Delivering best-effort plan after {max_attempts} attempts: {last_error}")
+        return best_plan
+
+    # No usable plan at all (hard failures throughout) — this genuinely can't
+    # be delivered.
     logger.error(f"Plan generation failed after {max_attempts} attempts: {last_error}")
     raise Exception(f"Plan generation failed after {max_attempts} attempts: {last_error}")
 
