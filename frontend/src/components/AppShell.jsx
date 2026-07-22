@@ -1175,19 +1175,28 @@ function RecoveryView({ recovery }) {
       </div>
     );
   }
+  // HRV needs a wearable most solo customers don't own, so the model tends to
+  // fill it with "not tracked — monitor via sleep/RPE instead". That's honest
+  // advice but reads as a broken/empty field. Only show the tile when there's
+  // a genuine tracked value; otherwise let sleep target take the full width.
+  const hrvRaw = (recovery.hrvTrend || "").trim();
+  const showHrv = hrvRaw && !/not tracked|n\/a|monitor|no device|unavailable/i.test(hrvRaw);
+
   return (
     <div className="flex flex-col">
-      <div className="px-5 py-5 border-b border-white/10 grid grid-cols-2 gap-4">
+      <div className={`px-5 py-5 border-b border-white/10 grid gap-4 ${showHrv ? "grid-cols-2" : "grid-cols-1"}`}>
         <div>
           <p className="text-overline">Sleep target</p>
           <p className="font-display text-3xl mt-2">{recovery.sleepTarget}</p>
         </div>
-        <div>
-          <p className="text-overline">HRV trend</p>
-          <p className="font-display text-3xl mt-2 text-[var(--accent)]">
-            {recovery.hrvTrend}
-          </p>
-        </div>
+        {showHrv && (
+          <div>
+            <p className="text-overline">HRV trend</p>
+            <p className="font-display text-3xl mt-2 text-[var(--accent)]">
+              {recovery.hrvTrend}
+            </p>
+          </div>
+        )}
       </div>
       <div className="px-5 py-5">
         <p className="text-overline mb-3">Protocols</p>
