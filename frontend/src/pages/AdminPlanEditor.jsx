@@ -31,6 +31,19 @@ export default function AdminPlanEditor() {
   const [recent, setRecent] = useState([]);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get(`${API}/admin/plans/recent`, {
+        params: { limit: 20 },
+        headers: { "X-Admin-Token": token },
+      })
+      .then((res) => setRecent(res.data.plans || []))
+      .catch(() => {
+        /* picker is a convenience — pasting a link still works */
+      });
+  }, [token]);
+
   if (!token) {
     navigate("/admin", { replace: true });
     return null;
@@ -122,19 +135,6 @@ export default function AdminPlanEditor() {
       setSaving(false);
     }
   };
-
-  useEffect(() => {
-    if (!token) return;
-    axios
-      .get(`${API}/admin/plans/recent`, {
-        params: { limit: 20 },
-        headers: { "X-Admin-Token": token },
-      })
-      .then((res) => setRecent(res.data.plans || []))
-      .catch(() => {
-        /* picker is a convenience — pasting a link still works */
-      });
-  }, [token]);
 
   const toggleSample = async () => {
     const next = !plan.sample_mode;
