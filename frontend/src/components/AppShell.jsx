@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink, Clock, PenLine, Check, Sunrise } from "lucide-react";
+import { Home, Dumbbell, Salad, Moon, ArrowLeft, Share2, Info, HelpCircle, ExternalLink, Clock, PenLine, Check, Sunrise, Lock } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -129,7 +129,7 @@ function getProgressSummary(history, logs) {
  * on day 29, and gives the case for a fresh block somewhere the person has
  * chosen to look.
  */
-function OngoingPanel({ history, logs, totalWeeks, cycleNumber }) {
+function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = false }) {
   const { sessionsLogged, improvements } = getProgressSummary(history, logs);
   const weeksDone = cycleNumber > 1 ? (cycleNumber - 1) * (totalWeeks || 4) : 0;
 
@@ -187,7 +187,7 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber }) {
           href="/build"
           className="block text-center bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-xs py-3 hover:bg-white transition-colors"
         >
-          Build my next block
+          {sampleMode ? "Build my own plan" : "Build my next block"}
         </a>
         {sessionsLogged > 0 && (
           <p className="text-xs text-zinc-600 leading-relaxed mt-3 text-center">
@@ -268,7 +268,7 @@ function BlockCompleteBanner({ cycleNumber = 1, totalWeeks = 4 }) {
   );
 }
 
-export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, allWeeks = null, activeWeekIndex = 0, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, allWeeks = null, activeWeekIndex = 0, sampleMode = false, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
   const [view, setRawView] = useState(initialView);
 
   // Which week is being LOOKED at. Defaults to the one they are actually in.
@@ -292,6 +292,11 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // Only nudge once they've actually rolled into a second cycle — before that
   // the tab is available but there's nothing new to point at.
   const showOngoingDot = hasWeekBrowsing && cycleNumber >= 2 && !ongoingSeen && !isOngoing;
+
+  // On a public sample, week 1 is shown in full to prove the quality and the
+  // rest is held back. All four weeks still exist on the record — this only
+  // changes what's rendered.
+  const isLockedWeek = sampleMode && !isOngoing && viewingWeek !== 0;
 
   // Tapping a bottom tab drops out of the Week 4+ panel back to the live week,
   // otherwise the nav looks dead while the panel is open.
@@ -481,7 +486,9 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
                   }`}
                 >
                   Week {i + 1}
-                  {i === activeWeekIndex ? " · now" : ""}
+                  {sampleMode && i !== 0 ? " ·" : ""}
+                  {sampleMode && i !== 0 ? <Lock size={10} className="inline ml-1 -mt-0.5" /> : null}
+                  {!sampleMode && i === activeWeekIndex ? " · now" : ""}
                 </button>
               ))}
               <button
@@ -522,15 +529,36 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto pb-24">
-          {isOngoing && (
+          {isLockedWeek && (
+            <div className="px-5 py-10 text-center">
+              <Lock size={22} className="mx-auto text-[var(--accent)] mb-4" />
+              <p className="text-overline text-zinc-500 mb-3">Week {viewingWeek + 1} — sample</p>
+              <h2 className="font-display text-2xl leading-tight mb-4">
+                The rest of the block is in the full version.
+              </h2>
+              <p className="text-sm text-zinc-400 leading-relaxed mb-6 max-w-xs mx-auto">
+                Weeks 2 to {allWeeks.length} build on week 1 — same movements, climbing loads, and a
+                deload week to recover before it starts again. Build your own and it's made around
+                your sport, your kit and your schedule.
+              </p>
+              <a
+                href="/build"
+                className="inline-block bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-xs px-8 py-3 hover:bg-white transition-colors"
+              >
+                Build my own plan
+              </a>
+            </div>
+          )}
+          {!isLockedWeek && isOngoing && (
             <OngoingPanel
+              sampleMode={sampleMode}
               history={history}
               logs={logs}
               totalWeeks={totalWeeks || (allWeeks ? allWeeks.length : 4)}
               cycleNumber={cycleNumber}
             />
           )}
-          {!isOngoing && view === "home" && (
+          {!isOngoing && !isLockedWeek && view === "home" && (
             <HomeView
               data={data}
               days={days}
@@ -550,7 +578,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               structureType={structureType}
             />
           )}
-          {!isOngoing && view === "training" && (
+          {!isOngoing && !isLockedWeek && view === "training" && (
             <TrainingView
               days={days}
               weekNumber={logWeek}
@@ -566,7 +594,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               structureType={structureType}
             />
           )}
-          {!isOngoing && view === "morning" && (
+          {!isOngoing && !isLockedWeek && view === "morning" && (
             <MorningView
               morningRoutine={morningRoutine}
               completed={completed}
@@ -580,10 +608,10 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               weekNumber={logWeek}
             />
           )}
-          {!isOngoing && view === "nutrition" && nutrition && (
+          {!isOngoing && !isLockedWeek && view === "nutrition" && nutrition && (
             <NutritionView nutrition={nutrition} />
           )}
-          {!isOngoing && view === "recovery" && (
+          {!isOngoing && !isLockedWeek && view === "recovery" && (
             <RecoveryView recovery={recovery} />
           )}
         </div>
