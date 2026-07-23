@@ -140,6 +140,8 @@ export default function GeneratedApp() {
       absoluteWeek={absoluteWeek}
       cycleNumber={cycleNumber}
       totalWeeks={weeks.length}
+      allWeeks={weeks}
+      activeWeekIndex={weekIndex}
     />
   );
 }
