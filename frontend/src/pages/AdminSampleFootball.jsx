@@ -16,6 +16,7 @@ function resolveUrl(url) {
 
 export default function AdminSampleFootball() {
   const navigate = useNavigate();
+  const [token] = useState(() => localStorage.getItem("bfy_admin_token"));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -59,7 +60,9 @@ export default function AdminSampleFootball() {
   useEffect(() => {
     const loadPlan = async () => {
       try {
-        const res = await axios.get(`${API}/admin/sample-plans/football`);
+        const res = await axios.get(`${API}/admin/sample-plans/football`, {
+          headers: { "X-Admin-Token": token },
+        });
         setFormData(res.data);
       } catch (err) {
         if (err.response?.status !== 404) {
@@ -81,7 +84,7 @@ export default function AdminSampleFootball() {
       const res = await axios.post(
         `${API}/admin/images/upload?key=${key}`,
         formDataUpload,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { headers: { "Content-Type": "multipart/form-data", "X-Admin-Token": token } }
       );
       const newSlides = [...formData.slides];
       newSlides[slideIndex].image_url = res.data.url;
@@ -107,7 +110,9 @@ export default function AdminSampleFootball() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/admin/sample-plans/football`, formData);
+      await axios.put(`${API}/admin/sample-plans/football`, formData, {
+        headers: { "X-Admin-Token": token },
+      });
       toast.success("Sample plan updated");
     } catch (err) {
       toast.error("Failed to save");

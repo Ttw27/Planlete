@@ -16,6 +16,7 @@ function resolveUrl(url) {
 
 export default function AdminSampleRehab() {
   const navigate = useNavigate();
+  const [token] = useState(() => localStorage.getItem("bfy_admin_token"));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -58,7 +59,9 @@ export default function AdminSampleRehab() {
   useEffect(() => {
     const loadPlan = async () => {
       try {
-        const res = await axios.get(`${API}/admin/sample-plans/rehab`);
+        const res = await axios.get(`${API}/admin/sample-plans/rehab`, {
+          headers: { "X-Admin-Token": token },
+        });
         setFormData(res.data);
       } catch (err) {
         if (err.response?.status !== 404) {
@@ -80,7 +83,7 @@ export default function AdminSampleRehab() {
       const res = await axios.post(
         `${API}/admin/images/upload?key=${key}`,
         formDataUpload,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { headers: { "Content-Type": "multipart/form-data", "X-Admin-Token": token } }
       );
       const newSlides = [...formData.slides];
       newSlides[slideIndex].image_url = res.data.url;
@@ -106,7 +109,9 @@ export default function AdminSampleRehab() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/admin/sample-plans/rehab`, formData);
+      await axios.put(`${API}/admin/sample-plans/rehab`, formData, {
+        headers: { "X-Admin-Token": token },
+      });
       toast.success("Sample plan updated");
     } catch (err) {
       toast.error("Failed to save");
