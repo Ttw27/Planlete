@@ -142,6 +142,7 @@ export default function GeneratedApp() {
       totalWeeks={weeks.length}
       allWeeks={weeks}
       activeWeekIndex={weekIndex}
+      sampleMode={Boolean(plan.sample_mode)}
     />
   );
 }

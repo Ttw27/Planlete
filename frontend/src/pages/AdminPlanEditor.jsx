@@ -122,6 +122,30 @@ export default function AdminPlanEditor() {
     }
   };
 
+  const toggleSample = async () => {
+    const next = !plan.sample_mode;
+    setSaving(true);
+    setNote(null);
+    try {
+      await axios.put(
+        `${API}/admin/plans/${plan.id}/edit`,
+        { sample_mode: next },
+        { headers: { "X-Admin-Token": token } }
+      );
+      setPlan((p) => ({ ...p, sample_mode: next }));
+      setNote({
+        type: "ok",
+        text: next
+          ? "Sample mode on — weeks 2+ are now hidden behind a prompt to build their own."
+          : "Sample mode off — the full block is visible again.",
+      });
+    } catch {
+      setNote({ type: "error", text: "Couldn't change sample mode." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const link = plan ? `${window.location.origin}/app/u/${plan.id}` : "";
   const copyLink = async () => {
     try {
@@ -207,6 +231,27 @@ export default function AdminPlanEditor() {
                 {plan.edited_by_admin ? " · previously edited" : ""}
               </p>
             )}
+            <div className="flex items-start justify-between gap-4 border-t border-white/10 mt-4 pt-4">
+              <div>
+                <p className="text-sm text-white">Sample mode</p>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                  Shows week 1 only, with the rest locked behind a build-your-own prompt. All four
+                  weeks stay saved — this only changes what's displayed.
+                </p>
+              </div>
+              <button
+                onClick={toggleSample}
+                disabled={saving}
+                className={`shrink-0 px-4 py-2 text-[11px] font-bold uppercase tracking-wide border transition-colors disabled:opacity-40 ${
+                  plan.sample_mode
+                    ? "bg-[#D4FF00] text-black border-[#D4FF00]"
+                    : "border-white/20 text-zinc-400 hover:border-white"
+                }`}
+              >
+                {plan.sample_mode ? "On" : "Off"}
+              </button>
+            </div>
+
             {plan.needs_review && (
               <div className="flex items-start gap-2 text-xs text-yellow-200/90 mt-3 border-t border-white/10 pt-3">
                 <AlertTriangle size={14} className="shrink-0 mt-0.5" />

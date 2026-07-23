@@ -23,7 +23,8 @@ export const BASE_QUESTIONS = [
     type: "choice",
     options: [
       "Athlete performance",
-      "Bodybuilding / muscle building",
+      "Muscle building",
+      "Bodybuilding (competing)",
       "Hybrid athlete / HYROX",
       "Boxing",
       "Kickboxing / martial arts",
@@ -161,6 +162,16 @@ export const STAGE_CONFIG = {
       "Pre-season — ramping up",
       "In-season — competing regularly",
       "No specific season — just build me a well-rounded plan",
+    ],
+  },
+  "Bodybuilding (competing)": {
+    id: "stage",
+    label: "Where are you in your competition prep?",
+    options: [
+      "Off-season — building size",
+      "Prep — 12+ weeks out",
+      "Prep — final 8 weeks",
+      "Peak week",
     ],
   },
   Boxing: {
