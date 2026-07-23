@@ -189,7 +189,7 @@ export default function AdminTestPlan() {
         className="mt-6 inline-flex items-center gap-2 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-6 py-3.5 hover:bg-white transition-colors disabled:opacity-50"
       >
         <FlaskConical size={14} />
-        {loading ? "Generating… (can take up to a minute)" : "Generate test plan"}
+        {loading ? "Generating… (2–3 minutes — leave this tab open)" : "Generate test plan"}
       </button>
 
       {error && (
