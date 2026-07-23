@@ -2500,6 +2500,48 @@ async def admin_delete_activity_standards(key: str, _: bool = Depends(require_ad
 # is that a human decides what's wrong and fixes exactly that.
 # ───────────────────────────────────────────────────────────────────────────────
 
+@api_router.get("/admin/plans/recent")
+async def admin_list_recent_plans(
+    limit: int = 30,
+    test_only: bool = False,
+    _: bool = Depends(require_admin),
+):
+    """
+    Recent plans, newest first.
+
+    Test plans previously had nowhere to live — they were saved but only
+    reachable if you'd kept the link, so anything generated and navigated away
+    from was effectively lost. Paid plans carry an order_id; test plans don't,
+    which is how the two are told apart.
+    """
+    query = {"order_id": {"$exists": False}} if test_only else {}
+    docs = (
+        await db.plans.find(
+            query,
+            {
+                "_id": 0, "id": 1, "created_at": 1, "answers": 1, "tagline": 1,
+                "order_id": 1, "sample_mode": 1, "needs_review": 1,
+            },
+        )
+        .sort("created_at", -1)
+        .to_list(min(limit, 100))
+    )
+
+    plans = []
+    for d in docs:
+        answers = d.get("answers") or {}
+        plans.append({
+            "id": d.get("id"),
+            "created_at": d.get("created_at"),
+            "goal": answers.get("goal") or d.get("tagline") or "—",
+            "name": answers.get("name") or "—",
+            "is_test": not d.get("order_id"),
+            "sample_mode": bool(d.get("sample_mode")),
+            "needs_review": bool(d.get("needs_review")),
+        })
+    return {"plans": plans}
+
+
 @api_router.get("/admin/plans/{plan_id}/edit")
 async def admin_load_plan_for_edit(plan_id: str, _: bool = Depends(require_admin)):
     """Load a generated plan's full content so it can be edited."""
