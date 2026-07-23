@@ -147,7 +147,12 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
 
       <div className="border-t border-white/10 pt-4 mb-6">
         <p className="text-overline text-zinc-500 mb-3">Where you've got to</p>
-        {sessionsLogged === 0 ? (
+        {sampleMode ? (
+          <p className="text-sm text-zinc-600 leading-relaxed">
+            In your own plan this fills with your logged sets, and each cycle sets targets from
+            your own numbers.
+          </p>
+        ) : sessionsLogged === 0 ? (
           <p className="text-sm text-zinc-600 leading-relaxed">
             Nothing logged yet — log your sets and each cycle sets targets from your own numbers.
           </p>
@@ -570,7 +575,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               history={history}
               onSaveLog={saveLog}
-              canLog={Boolean(planId) && !isPreviewWeek}
+              canLog={Boolean(planId) && !isPreviewWeek && !sampleMode}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
               setView={setView}
@@ -587,7 +592,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               history={history}
               onSaveLog={saveLog}
-              canLog={Boolean(planId) && !isPreviewWeek}
+              canLog={Boolean(planId) && !isPreviewWeek && !sampleMode}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
               initialSelectedDay={initialTrainingDay}
@@ -602,7 +607,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               history={history}
               onSaveLog={saveLog}
-              canLog={Boolean(planId) && !isPreviewWeek}
+              canLog={Boolean(planId) && !isPreviewWeek && !sampleMode}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
               weekNumber={logWeek}
