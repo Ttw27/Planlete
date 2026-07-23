@@ -352,6 +352,15 @@ export default function Landing() {
             {c("coaches_cta", "Create your first client — free")}
             <ArrowRight size={16} />
           </Link>
+          {/* Gyms and clinics need more than the single-coach flow — send them
+              somewhere that speaks to that rather than into the signup. */}
+          <p className="text-sm text-zinc-500 mt-6">
+            Running a gym, clinic or team?{" "}
+            <Link to="/for-coaches" className="text-[#D4FF00] hover:underline">
+              See what we're building for you
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
