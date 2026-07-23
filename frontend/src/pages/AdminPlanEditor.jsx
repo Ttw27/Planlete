@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import AdminLayout from "@/components/AdminLayout";
@@ -28,6 +28,7 @@ export default function AdminPlanEditor() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState(null);
+  const [recent, setRecent] = useState([]);
   const [copied, setCopied] = useState(false);
 
   if (!token) {
@@ -122,6 +123,19 @@ export default function AdminPlanEditor() {
     }
   };
 
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get(`${API}/admin/plans/recent`, {
+        params: { limit: 20 },
+        headers: { "X-Admin-Token": token },
+      })
+      .then((res) => setRecent(res.data.plans || []))
+      .catch(() => {
+        /* picker is a convenience — pasting a link still works */
+      });
+  }, [token]);
+
   const toggleSample = async () => {
     const next = !plan.sample_mode;
     setSaving(true);
@@ -202,6 +216,52 @@ export default function AdminPlanEditor() {
           {loading ? "Loading…" : "Load plan"}
         </button>
       </div>
+
+      {!plan && recent.length > 0 && (
+        <div className="max-w-2xl mb-10">
+          <p className="text-overline mb-4">Or pick a recent one</p>
+          <div className="border border-white/10 divide-y divide-white/10">
+            {recent.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setPlanId(p.id);
+                  setTimeout(load, 0);
+                }}
+                className="w-full flex items-center justify-between gap-4 px-4 py-3 text-left hover:bg-white/5 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm text-white truncate">
+                    {p.goal}
+                    {!p.is_test && (
+                      <span className="text-[10px] uppercase tracking-wider text-zinc-500 ml-2">
+                        customer
+                      </span>
+                    )}
+                    {p.sample_mode && (
+                      <span className="text-[10px] uppercase tracking-wider text-[#D4FF00] ml-2">
+                        sample
+                      </span>
+                    )}
+                    {p.needs_review && (
+                      <span className="text-[10px] uppercase tracking-wider text-yellow-300/80 ml-2">
+                        review
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {p.created_at
+                      ? new Date(p.created_at).toLocaleString("en-GB", {
+                          day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                        })
+                      : "—"}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {plan && (
         <>

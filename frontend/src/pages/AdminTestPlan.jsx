@@ -32,6 +32,7 @@ export default function AdminTestPlan() {
   const [answers, setAnswers] = useState(DEFAULTS);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [recent, setRecent] = useState([]);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -65,6 +66,23 @@ export default function AdminTestPlan() {
       return next;
     });
 
+  const loadRecent = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/plans/recent`, {
+        params: { test_only: true, limit: 20 },
+        headers: { "X-Admin-Token": token },
+      });
+      setRecent(res.data.plans || []);
+    } catch {
+      /* the list is a convenience — never block generating over it */
+    }
+  };
+
+  useEffect(() => {
+    if (token) loadRecent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const generate = async () => {
     setLoading(true);
     setError(null);
@@ -76,6 +94,7 @@ export default function AdminTestPlan() {
         { headers: { "X-Admin-Token": token } }
       );
       setResult(res.data);
+      loadRecent();
     } catch (err) {
       setError(
         err.response?.data?.detail ||
@@ -217,6 +236,44 @@ export default function AdminTestPlan() {
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? "Copied" : "Copy link"}
             </button>
+          </div>
+        </div>
+      )}
+      {recent.length > 0 && (
+        <div className="mt-14 max-w-2xl">
+          <p className="text-overline mb-4">Recent test plans</p>
+          <div className="border border-white/10 divide-y divide-white/10">
+            {recent.map((p) => (
+              <a
+                key={p.id}
+                href={`/app/u/${p.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-white/5 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm text-white truncate">
+                    {p.goal}
+                    {p.sample_mode && (
+                      <span className="text-[10px] uppercase tracking-wider text-[#D4FF00] ml-2">
+                        sample
+                      </span>
+                    )}
+                    {p.needs_review && (
+                      <span className="text-[10px] uppercase tracking-wider text-yellow-300/80 ml-2">
+                        review
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {p.created_at ? new Date(p.created_at).toLocaleString("en-GB", {
+                      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                    }) : "—"}
+                  </p>
+                </div>
+                <ExternalLink size={14} className="text-zinc-600 shrink-0" />
+              </a>
+            ))}
           </div>
         </div>
       )}
