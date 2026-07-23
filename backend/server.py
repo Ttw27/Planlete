@@ -529,48 +529,59 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
                     f"Move the extra sessions to rest/recovery or remove them."
                 )
 
-    # Week 4 must actually be a deload. The prompt asks for 30–40% fewer
-    # exercises; we validate a softer 15% so a genuine (if modest) deload
-    # passes, but a week 4 that matches week 3 is still caught. Anything the
-    # auto-trim in generate_plan_with_claude can't quietly fix lands here.
+    # Week 4 must actually be a deload — measured in total SETS, not exercise
+    # count. This matters: good coaching keeps the same core movements across
+    # the block and deloads by cutting sets and intensity, so an exercise-count
+    # check would reject a textbook deload and force a pointless retry. It also
+    # removed a perverse incentive, where padding week 3 with extra exercises
+    # was the easiest way to leave room for a visible cut.
     if len(weeks) == 4:
         def week_volume(w):
-            return sum(
-                len(d.get("workouts", []))
-                for d in w.get("days", [])
-                if "rest" not in str(d.get("label", "")).lower()
-            )
+            total = 0
+            for d in w.get("days", []):
+                if "rest" in str(d.get("label", "")).lower():
+                    continue
+                for ex in d.get("workouts", []):
+                    m = re.match(r"\s*(\d+)\s*[xX]", str(ex.get("sets", "")))
+                    # Fall back to 1 for time-based entries like "20min"
+                    total += int(m.group(1)) if m else 1
+            return total
 
         w3, w4 = week_volume(weeks[2]), week_volume(weeks[3])
         if w3 and w4 > w3 * 0.85:
             raise ValueError(
-                f"Week 4 must be a deload but has {w4} exercises vs week 3's {w3}. "
-                f"Week 4 should have roughly 30% fewer exercises than week 3."
+                f"Week 4 must be a deload but has {w4} total sets vs week 3's {w3}. "
+                f"Keep the same exercises but cut roughly 30-40% of the sets."
             )
 
 
 def autofix_deload(plan_data: dict) -> None:
     """
-    If week 4 came back too heavy to be a real deload, trim it in place so it
+    If week 4 came back too heavy to be a real deload, lighten it in place so it
     can never trigger a full regeneration.
 
-    The mechanical prompt instruction makes a heavy week 4 rare, but when it
-    slips through, regenerating the entire plan to fix one week costs the
-    customer another 2-3 minutes. Trimming the tail exercises off each week-4
-    training day is a blunt but honest deload — fewer sets of the same work —
-    and it's instant. Runs before validation, so a fixable week 4 never becomes
-    a retry.
+    Trims SETS rather than removing exercises. Keeping the same movements across
+    the block is deliberate — it's how progression is actually tracked (the app
+    compares logged weights per exercise name, so a movement that disappears
+    breaks its own progress history) and it's how a real deload works: same
+    lifts, less volume.
     """
     weeks = plan_data.get("weeks", [])
     if len(weeks) != 4:
         return
 
+    def parse_sets(ex):
+        m = re.match(r"\s*(\d+)\s*[xX]", str(ex.get("sets", "")))
+        return int(m.group(1)) if m else None
+
     def week_volume(w):
-        return sum(
-            len(d.get("workouts", []))
-            for d in w.get("days", [])
-            if "rest" not in str(d.get("label", "")).lower()
-        )
+        total = 0
+        for d in w.get("days", []):
+            if "rest" in str(d.get("label", "")).lower():
+                continue
+            for ex in d.get("workouts", []):
+                total += parse_sets(ex) or 1
+        return total
 
     w3_vol = week_volume(weeks[2])
     w4 = weeks[3]
@@ -578,31 +589,38 @@ def autofix_deload(plan_data: dict) -> None:
     if not w3_vol or w4_vol <= w3_vol * 0.7:
         return  # already a genuine deload
 
-    # Target ~65% of week 3's volume. Trim from the end of each training day's
-    # workout list (keeping at least one exercise per day) until we're there.
     target = int(w3_vol * 0.65)
-    training_days = [
-        d for d in w4.get("days", [])
-        if "rest" not in str(d.get("label", "")).lower() and len(d.get("workouts", [])) > 1
-    ]
+
+    # Reduce set counts across week 4's training days, never below 1 set, and
+    # never removing the exercise itself.
+    reducible = []
+    for d in w4.get("days", []):
+        if "rest" in str(d.get("label", "")).lower():
+            continue
+        for ex in d.get("workouts", []):
+            if parse_sets(ex) and parse_sets(ex) > 1:
+                reducible.append(ex)
 
     current = w4_vol
-    # Round-robin a single removal from each eligible day until at target.
     changed = True
     while current > target and changed:
         changed = False
-        for d in training_days:
+        for ex in reducible:
             if current <= target:
                 break
-            if len(d["workouts"]) > 1:
-                d["workouts"].pop()
+            sets = parse_sets(ex)
+            if sets and sets > 1:
+                # Rewrite "4x6" as "3x6", preserving whatever follows the reps
+                ex["sets"] = re.sub(r"^\s*\d+\s*([xX])", f"{sets - 1}\\1", str(ex["sets"]), count=1)
                 current -= 1
                 changed = True
 
-    for d in training_days:
-        d.setdefault("label", "")
-        if "deload" not in d["label"].lower():
-            d["label"] = (d["label"] + " (deload)").strip()
+    for d in w4.get("days", []):
+        if "rest" in str(d.get("label", "")).lower():
+            continue
+        label = str(d.get("label", ""))
+        if "deload" not in label.lower():
+            d["label"] = (label + " (deload)").strip()
 
     plan_data["_deload_autofixed"] = True
 
@@ -809,14 +827,23 @@ football/team sports should include change-of-direction and match-specific
 conditioning; rehab should prioritise safe, staged loading. Use your expertise
 in that specific discipline.
 
-This plan runs on a 4-week repeating cycle (a "mesocycle"). Weeks 1–3 should
-progressively increase load, volume or intensity based on the training goal.
-Week 4 MUST be a DELOAD week. Concretely: week 4 must contain roughly 30–40%
-FEWER total exercises than week 3, AND lighter loads/intensity. This is not
-optional and not a small trim — if week 3 has 20 exercises across the week,
-week 4 should have around 12–14. A week 4 that matches week 3's volume is wrong
-and will be rejected. The person needs genuine recovery before the cycle
-repeats from week 1.
+This plan runs on a 4-week repeating cycle (a "mesocycle").
+
+KEEP THE CORE EXERCISES THE SAME across all four weeks. Progression comes from
+LOAD, REPS or INTENSITY — not from adding new movements. If Monday is Back
+Squat / Nordic Curl / Copenhagen Plank in week 1, it should still be those
+movements in weeks 2, 3 and 4, with the weight, reps or effort climbing. This
+matters for two reasons: it is how progress is actually measured, and the app
+tracks logged weights per exercise — a movement that appears one week and
+vanishes the next has no history to compare against, so the person never sees
+their own improvement. You may vary one accessory per session if genuinely
+useful, but never the main lifts.
+
+Weeks 1–3 should progressively increase load, reps or intensity on those same
+movements. Week 4 MUST be a DELOAD: the SAME exercises, but roughly 30–40%
+fewer total sets and noticeably lighter loads. For example, an exercise at 4x6
+in week 3 might become 2x6 at a lighter weight in week 4. Do not achieve the
+deload by deleting exercises — reduce the sets.
 
 Return EVERY day of the week (Sun through Sat, in that exact order) for EVERY
 week — 7 day-entries x 4 weeks = 28 total. Days that are not a training day for
