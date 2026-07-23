@@ -33,6 +33,7 @@ import PublicBrandedPlan from "@/pages/PublicBrandedPlan";
 import AdminActivityStandards from "@/pages/AdminActivityStandards";
 import AdminPlanEditor from "@/pages/AdminPlanEditor";
 import AdminLoadingPreview from "@/pages/AdminLoadingPreview";
+import ForCoaches from "@/pages/ForCoaches";
 import AdminSampleFootball from "@/pages/AdminSampleFootball";
 import AdminSampleRehab from "@/pages/AdminSampleRehab";
 import AdminSampleLongevity from "@/pages/AdminSampleLongevity";
@@ -66,6 +67,7 @@ function App() {
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/test-plan" element={<AdminTestPlan />} />
+            <Route path="/for-coaches" element={<ForCoaches />} />
             <Route path="/coach" element={<CoachAuth />} />
             <Route path="/coach/dashboard" element={<CoachDashboard />} />
             <Route path="/coach/builder" element={<CoachPlanBuilder />} />
