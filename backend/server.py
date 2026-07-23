@@ -2532,6 +2532,12 @@ async def admin_save_plan_edit(
         if field in payload:
             editable[field] = payload[field]
 
+    # Display-only flag. Sample plans keep all four weeks in the database —
+    # this just hides weeks 2+ behind a prompt to build their own, so a public
+    # sample proves the quality of week 1 without giving the whole block away.
+    if "sample_mode" in payload:
+        editable["sample_mode"] = bool(payload["sample_mode"])
+
     if "weeks" in editable:
         # Re-run the same validation a generated plan must pass, so a manual
         # edit can't quietly produce a structurally broken plan (an empty day,
