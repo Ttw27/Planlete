@@ -167,8 +167,16 @@ function BlockCompleteBanner({ cycleNumber = 1, totalWeeks = 4 }) {
   );
 }
 
-export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, allWeeks = null, activeWeekIndex = 0, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
   const [view, setView] = useState(initialView);
+
+  // Which week is being LOOKED at. Defaults to the one they are actually in.
+  // Browsing ahead is a read-only preview: the plan they paid for is four weeks
+  // long, and previously only the current week was ever visible, so a full
+  // programme looked like a handful of sessions.
+  const [viewingWeek, setViewingWeek] = useState(activeWeekIndex);
+  const hasWeekBrowsing = Array.isArray(allWeeks) && allWeeks.length > 1;
+  const isPreviewWeek = hasWeekBrowsing && viewingWeek !== activeWeekIndex;
   const navigate = useNavigate();
 
   // Logs and checklist ticks key off the ABSOLUTE week, which keeps climbing
@@ -178,7 +186,11 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // at exactly the point they start mattering.
   const logWeek = absoluteWeek || weekNumber;
 
-  const days = data.days || (mode && data.modes?.[mode]?.days) || [];
+  // When browsing another week, show that week's days instead of the live one.
+  const days = (hasWeekBrowsing && allWeeks[viewingWeek]?.days)
+    || data.days
+    || (mode && data.modes?.[mode]?.days)
+    || [];
   const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;
   const recovery = data.recovery;
   const morningRoutine = data.morningRoutine;
@@ -329,6 +341,35 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
         {/* Mode toggle (football only) */}
         {modeToggle}
 
+        {/* Week selector — lets them see the whole programme they paid for,
+            not just the week they happen to be in. Other weeks are read-only. */}
+        {hasWeekBrowsing && (
+          <div className="border-b border-white/10">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 py-3">
+              {allWeeks.map((w, i) => (
+                <button
+                  key={i}
+                  onClick={() => setViewingWeek(i)}
+                  className={`shrink-0 px-3 py-1.5 border text-xs uppercase tracking-wider transition-colors ${
+                    i === viewingWeek
+                      ? "border-[var(--accent)] text-[var(--accent)]"
+                      : "border-white/10 text-zinc-500 hover:border-white/30 hover:text-white"
+                  }`}
+                >
+                  Week {i + 1}
+                  {i === activeWeekIndex ? " · now" : ""}
+                </button>
+              ))}
+            </div>
+            {isPreviewWeek && (
+              <p className="px-5 pb-3 text-xs text-zinc-500">
+                Previewing week {viewingWeek + 1} — you're currently in week {activeWeekIndex + 1}.
+                Ticking and logging stay on your current week.
+              </p>
+            )}
+          </div>
+        )}
+
         <BlockCompleteBanner cycleNumber={cycleNumber} totalWeeks={totalWeeks} />
 
         {/* Body */}
@@ -345,7 +386,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               history={history}
               onSaveLog={saveLog}
-              canLog={Boolean(planId)}
+              canLog={Boolean(planId) && !isPreviewWeek}
               setView={setView}
               brandLogo={brandLogo}
               structureType={structureType}
@@ -360,7 +401,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               history={history}
               onSaveLog={saveLog}
-              canLog={Boolean(planId)}
+              canLog={Boolean(planId) && !isPreviewWeek}
               initialSelectedDay={initialTrainingDay}
               structureType={structureType}
             />
@@ -373,7 +414,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               history={history}
               onSaveLog={saveLog}
-              canLog={Boolean(planId)}
+              canLog={Boolean(planId) && !isPreviewWeek}
               weekNumber={logWeek}
             />
           )}
