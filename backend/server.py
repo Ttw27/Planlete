@@ -2341,6 +2341,9 @@ class SamplePlan(BaseModel):
     plan_type: str
     title: str
     description: str
+    # Free text so it suits any sample — "Male · 25-34 · 4 days · full gym" for
+    # a generated one, or a physio's own framing for the rehab example.
+    profile: Optional[str] = None
     disclaimer: str = "This is a scaled back version only to be used as a sample"
     bullets: List[str] = []
     slides: List[SamplePlanSlide] = []
