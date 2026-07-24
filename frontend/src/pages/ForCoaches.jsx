@@ -37,8 +37,8 @@ const AVAILABLE_NOW = [
     body: "They save it to their phone and it behaves like an app. No download, no account for them to create, nothing for them to forget the password to.",
   },
   {
-    title: "They log, you see the numbers",
-    body: "Weights and reps recorded against every exercise, so progress is something you can point at rather than something they half-remember.",
+    title: "Your client logs every set",
+    body: "They record weights and reps against each exercise and see their own progress build session by session — so they turn up knowing what they lifted last time rather than guessing.",
   },
   {
     title: "No subscription, ever",
@@ -49,6 +49,10 @@ const AVAILABLE_NOW = [
 // Kept deliberately short so it supports the page rather than dominating it —
 // half a page of things that don't exist makes the real product look thin.
 const IN_DEVELOPMENT = [
+  {
+    title: "See your clients' logged numbers",
+    body: "Their training history in front of you, so you can adjust the next block on evidence rather than on what they remember telling you.",
+  },
   {
     title: "Multiple coaches, one account",
     body: "Every trainer in the gym working from the same place, with the owner able to see across all of it.",
