@@ -180,6 +180,9 @@ export default function PlanCarousel({
   buildHref = "/build",
   linkKey,
   defaultLink,
+  // "photo" keeps the wide editorial crop. "screens" renders app screenshots
+  // inside a phone shape so nothing is cut off.
+  variant = "photo",
 }) {
   const c = useContent();
   const sampleLink = linkKey ? c(linkKey, defaultLink) : defaultLink;
@@ -188,15 +191,23 @@ export default function PlanCarousel({
   const [showEmailGate, setShowEmailGate] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
-  const total = slides.length;
+
+  // Only show slides that actually have an image. Falling back to stock photos
+  // meant a half-filled carousel looked finished while showing pictures that
+  // had nothing to do with the plan.
+  const visible = (slides || [])
+    .map((sl) => ({ ...sl, src: images?.[sl.imageKey] || sl.fallback || null }))
+    .filter((sl) => Boolean(sl.src));
+  const total = visible.length;
 
   if (total === 0) return null;
 
   const prev = () => setCurrent((c) => (c - 1 + total) % total);
   const next = () => setCurrent((c) => (c + 1) % total);
 
-  const slide = slides[current];
-  const imgSrc = images?.[slide.imageKey] || slide.fallback;
+  const slide = visible[Math.min(current, total - 1)];
+  const imgSrc = slide.src;
+  const isScreens = variant === "screens";
 
   const handleDownloadClick = () => {
     setShowEmailGate(true);
@@ -223,14 +234,33 @@ export default function PlanCarousel({
 
       <div className="w-full bg-zinc-950 border-b border-white/10">
         {/* Images */}
-        <div className="relative aspect-[16/9] overflow-hidden">
-          <img
-            key={imgSrc}
-            src={imgSrc}
-            alt={slide.caption || planLabel}
-            className="w-full h-full object-cover transition-opacity duration-500"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div
+          className={
+            isScreens
+              ? "relative overflow-hidden py-10 flex items-center justify-center"
+              : "relative aspect-[16/9] overflow-hidden"
+          }
+        >
+          {isScreens ? (
+            <div className="relative w-[240px] sm:w-[260px] aspect-[9/19.5] rounded-[2rem] border border-white/15 bg-black overflow-hidden shadow-2xl">
+              <img
+                key={imgSrc}
+                src={imgSrc}
+                alt={slide.caption || planLabel}
+                className="w-full h-full object-cover object-top transition-opacity duration-500"
+              />
+            </div>
+          ) : (
+            <img
+              key={imgSrc}
+              src={imgSrc}
+              alt={slide.caption || planLabel}
+              className="w-full h-full object-cover transition-opacity duration-500"
+            />
+          )}
+          {!isScreens && (
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          )}
 
           {/* Counter */}
           <div className="absolute top-4 right-4 bg-black/60 backdrop-blur px-3 py-1 text-xs font-mono text-zinc-400">
@@ -238,8 +268,14 @@ export default function PlanCarousel({
           </div>
 
           {/* Caption */}
-          {slide.caption && (
+          {slide.caption && !isScreens && (
             <p className="absolute bottom-4 left-5 right-5 text-sm text-zinc-300">{slide.caption}</p>
+          )}
+
+          {slide.caption && isScreens && (
+            <p className="absolute bottom-3 left-5 right-5 text-center text-sm text-zinc-400">
+              {slide.caption}
+            </p>
           )}
 
           {/* Arrow overlays */}
