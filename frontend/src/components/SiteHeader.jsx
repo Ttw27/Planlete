@@ -64,13 +64,13 @@ export default function SiteHeader() {
           >
             Pricing
           </a>
-          <a
-            href="/#b2b"
+          <Link
+            to="/for-coaches"
             data-testid="nav-b2b"
             className="text-overline hover:text-white transition-colors"
           >
             For coaches
-          </a>
+          </Link>
           <Link
             to="/build"
             data-testid="nav-cta"
@@ -104,9 +104,9 @@ export default function SiteHeader() {
           <a href="/#pricing" className="text-overline">
             Pricing
           </a>
-          <a href="/#b2b" className="text-overline">
+          <Link to="/for-coaches" className="text-overline">
             For coaches
-          </a>
+          </Link>
           <Link
             to="/build"
             data-testid="nav-cta-mobile"
