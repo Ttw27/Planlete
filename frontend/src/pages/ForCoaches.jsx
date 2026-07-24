@@ -21,49 +21,49 @@ const BUSINESS_TYPES = [
 // up this afternoon and do all of it.
 const AVAILABLE_NOW = [
   {
-    title: "Build a plan for a client in minutes",
-    body: "Your programming, your exercises, your notes. Delivered as an app they save to their phone — no app store, no download, no login for them to forget.",
+    title: "Your logo. Your colours. Your app.",
+    body: "Upload your logo and set your brand colours, and every client plan renders in them. When your client opens their link, they see your business — not ours.",
   },
   {
-    title: "Your name on it, not ours",
-    body: "Client plans carry your branding. As far as they're concerned, it's your system.",
+    title: "Start from four expert-built templates",
+    body: "Athlete performance, longevity, football and sprint blocks ready to adapt, or start from a blank page. Either way the structure is already there.",
+  },
+  {
+    title: "Every session exactly as you'd write it",
+    body: "Your exercises, sets, reps, loads and rest. Add the reasoning behind each choice so your client understands why they're doing it — nutrition, recovery and morning routines too.",
+  },
+  {
+    title: "One link per client. No app store.",
+    body: "They save it to their phone and it behaves like an app. No download, no account for them to create, nothing for them to forget the password to.",
   },
   {
     title: "They log, you see the numbers",
-    body: "Weights and reps logged against every exercise, so progress is visible rather than remembered.",
+    body: "Weights and reps recorded against every exercise, so progress is something you can point at rather than something they half-remember.",
   },
   {
-    title: "Pay per client, nothing recurring",
-    body: "No monthly fee sitting on your card in a quiet month. You pay when you build a plan, or your client pays for their own.",
+    title: "No subscription, ever",
+    body: "Pay per client when you build a plan, or let the client pay for their own. Nothing leaves your account in a quiet month, and there's no cancellation call.",
   },
 ];
 
-// Deliberately separated and clearly labelled. A gym that signs up expecting
-// this to exist and finds a waiting list doesn't come back.
+// Kept deliberately short so it supports the page rather than dominating it —
+// half a page of things that don't exist makes the real product look thin.
 const IN_DEVELOPMENT = [
-  {
-    title: "Your own branded system",
-    body: "Your logo, your colours, your own web address. A system your members think you built.",
-  },
   {
     title: "Multiple coaches, one account",
     body: "Every trainer in the gym working from the same place, with the owner able to see across all of it.",
   },
   {
-    title: "Reusable templates",
+    title: "Your own templates, reused",
     body: "Write your beginner block once, assign it fifty times, adjust per client where it matters.",
   },
   {
-    title: "Edit any plan, any time",
-    body: "Change a session after it's gone out. The client's link updates — no resending, no version confusion.",
+    title: "Edit a plan after it's gone out",
+    body: "Change a session and the client's existing link updates. No resending, no version confusion.",
   },
   {
-    title: "Built for clinics",
-    body: "Physios writing genuine rehab programming, with their own protocols and their own professional judgement. Something we deliberately don't let AI near.",
-  },
-  {
-    title: "Volume pricing",
-    body: "Sensible rates for gyms running dozens of clients rather than a handful.",
+    title: "Volume pricing for gyms and clinics",
+    body: "Sensible rates when you're running dozens of clients rather than a handful.",
   },
 ];
 
@@ -109,9 +109,9 @@ export default function ForCoaches() {
           <span className="text-[#D4FF00]">Your name on it.</span>
         </h1>
         <p className="text-lg text-zinc-400 leading-relaxed max-w-2xl">
-          Planlete turns the plan you'd write anyway into an app your client keeps on their phone —
-          logging their sets, showing them why each exercise is there, and carrying your branding
-          rather than ours.
+          For PTs, gyms, sports clubs and rehab clinics. Write the plan you'd write anyway and your
+          client gets it as an app in your branding — your logo, your colours — that they save to
+          their phone and log their training in. No monthly fee, no lock-in, no app to build.
         </p>
         <div className="flex flex-wrap gap-3 mt-10">
           <Link
@@ -131,9 +131,13 @@ export default function ForCoaches() {
 
       <section className="max-w-5xl mx-auto px-5 md:px-8 py-16 border-t border-white/10">
         <p className="text-overline text-[#D4FF00] mb-4">— Available today</p>
-        <h2 className="font-display text-3xl md:text-4xl uppercase mb-10">
+        <h2 className="font-display text-3xl md:text-4xl uppercase mb-4">
           What you can do right now
         </h2>
+        <p className="text-sm text-zinc-500 leading-relaxed max-w-2xl mb-10">
+          All of this works today. Sign up free, build a plan, and see exactly what your client
+          would get before you pay for anything.
+        </p>
         <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">
           {AVAILABLE_NOW.map((f) => (
             <div key={f.title}>
