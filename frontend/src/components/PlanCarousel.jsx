@@ -237,19 +237,17 @@ export default function PlanCarousel({
         <div
           className={
             isScreens
-              ? "relative overflow-hidden py-10 flex items-center justify-center"
+              ? "relative overflow-hidden py-8 px-5 pb-12 flex items-center justify-center"
               : "relative aspect-[16/9] overflow-hidden"
           }
         >
           {isScreens ? (
-            <div className="relative w-[240px] sm:w-[260px] aspect-[9/19.5] rounded-[2rem] border border-white/15 bg-black overflow-hidden shadow-2xl">
-              <img
-                key={imgSrc}
-                src={imgSrc}
-                alt={slide.caption || planLabel}
-                className="w-full h-full object-cover object-top transition-opacity duration-500"
-              />
-            </div>
+            <img
+              key={imgSrc}
+              src={imgSrc}
+              alt={slide.caption || planLabel}
+              className="max-h-[70vh] w-auto max-w-full mx-auto transition-opacity duration-500"
+            />
           ) : (
             <img
               key={imgSrc}
