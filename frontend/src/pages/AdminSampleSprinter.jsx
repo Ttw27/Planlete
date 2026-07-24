@@ -72,7 +72,7 @@ export default function AdminSampleSprinter() {
       }
     };
     loadPlan();
-  }, []);
+  }, [token]);
 
   const handleImageUpload = async (slideIndex, file) => {
     if (!file) return;

@@ -73,7 +73,7 @@ export default function AdminSampleFootball() {
       }
     };
     loadPlan();
-  }, []);
+  }, [token]);
 
   const handleImageUpload = async (slideIndex, file) => {
     if (!file) return;

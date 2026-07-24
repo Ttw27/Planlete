@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useContent } from "../hooks/useContent";
 import { useImages } from "../hooks/useImages";
 import SiteHeader from "../components/SiteHeader";

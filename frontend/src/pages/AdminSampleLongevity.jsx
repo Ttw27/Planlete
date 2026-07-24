@@ -72,7 +72,7 @@ export default function AdminSampleLongevity() {
       }
     };
     loadPlan();
-  }, []);
+  }, [token]);
 
   const handleImageUpload = async (slideIndex, file) => {
     if (!file) return;
