@@ -25,6 +25,7 @@ export default function AdminSampleRehab() {
     title: "Rehab & Recovery",
     description: "Post-injury return with gentle progression and structural integrity.",
     disclaimer: "This is a scaled back version only to be used as a sample",
+    profile: "Written by a physiotherapist for one client's specific injury",
     sample_link: "",
     bullets: [
       "Structured return-to-training after injury",
@@ -156,6 +157,17 @@ export default function AdminSampleRehab() {
                   className="w-full bg-transparent border border-white/20 focus:border-[#D4FF00] outline-none p-4 text-sm h-24"
                 />
               </div>
+              <div>
+                <label className="block text-overline mb-2">Based on (shown under the bullets)</label>
+                <input
+                  type="text"
+                  value={formData.profile || ""}
+                  onChange={(e) => setFormData({ ...formData, profile: e.target.value })}
+                  placeholder="Male · 25–34 · 4 days a week · full gym"
+                  className="w-full bg-transparent border-b border-white/20 focus:border-[#D4FF00] outline-none py-3 text-lg"
+                />
+              </div>
+
               <div>
                 <label className="block text-overline mb-2">Sample Link (Live Plan URL)</label>
                 <input

@@ -25,6 +25,7 @@ export default function AdminSampleSprinter() {
     title: "Sprinter / Athletics",
     description: "Speed athlete focused on acceleration, max velocity, and explosive power.",
     disclaimer: "This is a scaled back version only to be used as a sample",
+    profile: "Male · 22–28 · 5+ years training · 4 days a week · full gym · track access",
     sample_link: "",
     bullets: [
       "Acceleration and top-end speed development",
@@ -156,6 +157,17 @@ export default function AdminSampleSprinter() {
                   className="w-full bg-transparent border border-white/20 focus:border-[#D4FF00] outline-none p-4 text-sm h-24"
                 />
               </div>
+              <div>
+                <label className="block text-overline mb-2">Based on (shown under the bullets)</label>
+                <input
+                  type="text"
+                  value={formData.profile || ""}
+                  onChange={(e) => setFormData({ ...formData, profile: e.target.value })}
+                  placeholder="Male · 25–34 · 4 days a week · full gym"
+                  className="w-full bg-transparent border-b border-white/20 focus:border-[#D4FF00] outline-none py-3 text-lg"
+                />
+              </div>
+
               <div>
                 <label className="block text-overline mb-2">Sample Link (Live Plan URL)</label>
                 <input

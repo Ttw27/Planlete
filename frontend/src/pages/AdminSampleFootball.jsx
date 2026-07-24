@@ -25,6 +25,7 @@ export default function AdminSampleFootball() {
     title: "League 1 Footballer",
     description: "Strength, explosiveness, and in-season performance.",
     disclaimer: "This is a scaled back version only to be used as a sample",
+    profile: "Male · 25–34 · 5+ years training · 4 days a week · full gym · Saturday matches",
     sample_link: "",
     bullets: [
       "Strength & power development for competitive football",
@@ -160,6 +161,17 @@ export default function AdminSampleFootball() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full bg-transparent border border-white/20 focus:border-[#D4FF00] outline-none p-4 text-sm h-24"
+                />
+              </div>
+
+              <div>
+                <label className="block text-overline mb-2">Based on (shown under the bullets)</label>
+                <input
+                  type="text"
+                  value={formData.profile || ""}
+                  onChange={(e) => setFormData({ ...formData, profile: e.target.value })}
+                  placeholder="Male · 25–34 · 4 days a week · full gym"
+                  className="w-full bg-transparent border-b border-white/20 focus:border-[#D4FF00] outline-none py-3 text-lg"
                 />
               </div>
 

@@ -57,6 +57,12 @@ export default function FootballApp() {
               </li>
             ))}
           </ul>
+          {samplePlan.profile && (
+            <p className="text-sm text-zinc-500 mt-8">
+              <span className="text-overline text-zinc-600 mr-2">Based on</span>
+              {samplePlan.profile}
+            </p>
+          )}
         </div>
       )}
       <PlanCarousel
