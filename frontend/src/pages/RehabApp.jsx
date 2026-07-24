@@ -34,7 +34,7 @@ export default function RehabApp() {
 
   const SLIDES = samplePlan?.slides.map((slide) => ({
     imageKey: slide.image_key,
-    fallback: resolveUrl(slide.image_url) || "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&q=80",
+    fallback: resolveUrl(slide.image_url) || null,
     caption: slide.caption,
   })) || [];
 
@@ -62,6 +62,7 @@ export default function RehabApp() {
       <PlanCarousel
         images={{}}
         slides={SLIDES}
+        variant="screens"
         planLabel="Rehab & Recovery Plan"
         defaultLink={samplePlan?.sample_link || "https://planlete.vercel.app/app/rehab"}
       />

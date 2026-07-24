@@ -34,7 +34,7 @@ export default function SprinterApp() {
 
   const SLIDES = samplePlan?.slides.map((slide) => ({
     imageKey: slide.image_key,
-    fallback: resolveUrl(slide.image_url) || "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1200&q=80",
+    fallback: resolveUrl(slide.image_url) || null,
     caption: slide.caption,
   })) || [];
 
@@ -62,6 +62,7 @@ export default function SprinterApp() {
       <PlanCarousel
         images={{}}
         slides={SLIDES}
+        variant="screens"
         planLabel="Sprint Training Plan"
         defaultLink={samplePlan?.sample_link || "https://planlete.vercel.app/app/sprinter"}
       />

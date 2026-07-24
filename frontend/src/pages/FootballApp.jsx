@@ -34,7 +34,7 @@ export default function FootballApp() {
 
   const SLIDES = samplePlan?.slides.map((slide) => ({
     imageKey: slide.image_key,
-    fallback: resolveUrl(slide.image_url) || "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&q=80",
+    fallback: resolveUrl(slide.image_url) || null,
     caption: slide.caption,
   })) || [];
 
@@ -62,6 +62,7 @@ export default function FootballApp() {
       <PlanCarousel
         images={{}}
         slides={SLIDES}
+        variant="screens"
         planLabel="Football Player Plan"
         defaultLink={samplePlan?.sample_link || "https://planlete.vercel.app/app/football"}
       />
