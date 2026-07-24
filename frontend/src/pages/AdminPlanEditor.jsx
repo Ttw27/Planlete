@@ -291,6 +291,26 @@ export default function AdminPlanEditor() {
                 {plan.edited_by_admin ? " · previously edited" : ""}
               </p>
             )}
+
+            {plan.answers && Object.keys(plan.answers).length > 0 && (
+              <details className="mt-4 border-t border-white/10 pt-4">
+                <summary className="text-overline text-zinc-500 cursor-pointer hover:text-white transition-colors">
+                  What they filled in
+                </summary>
+                <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                  {Object.entries(plan.answers)
+                    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+                    .map(([k, v]) => (
+                      <div key={k} className="flex justify-between gap-3 text-xs">
+                        <dt className="text-zinc-500 capitalize shrink-0">
+                          {k.replace(/_/g, " ")}
+                        </dt>
+                        <dd className="text-zinc-300 text-right break-words">{String(v)}</dd>
+                      </div>
+                    ))}
+                </dl>
+              </details>
+            )}
             <div className="flex items-start justify-between gap-4 border-t border-white/10 mt-4 pt-4">
               <div>
                 <p className="text-sm text-white">Sample mode</p>
