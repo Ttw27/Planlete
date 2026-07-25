@@ -317,6 +317,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // overwriting cycle 1's, which would have broken every progress comparison
   // at exactly the point they start mattering.
   const logWeek = absoluteWeek || weekNumber;
+  const experience = data?.answers?.experience || null;
 
   // When browsing another week, show that week's days instead of the live one.
   const days = (hasWeekBrowsing && !isOngoing && allWeeks[viewingWeek]?.days)
@@ -380,12 +381,14 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           const list = byExercise[entry.exercise_name] || (byExercise[entry.exercise_name] = {});
           // res.data is newest-first, so the first time we see a given week
           // for this exercise is already its latest logged value that week.
-          if (!(entry.week_number in list)) list[entry.week_number] = entry.value;
+          if (!(entry.week_number in list)) {
+            list[entry.week_number] = { value: entry.value, rpe: entry.rpe || null };
+          }
         }
         const historyMap = {};
         for (const [name, weekMap] of Object.entries(byExercise)) {
           historyMap[name] = Object.entries(weekMap)
-            .map(([wk, value]) => ({ weekNumber: parseInt(wk, 10), value }))
+            .map(([wk, v]) => ({ weekNumber: parseInt(wk, 10), value: v.value, rpe: v.rpe }))
             .sort((a, b) => a.weekNumber - b.weekNumber);
         }
         setHistory(historyMap);
@@ -398,7 +401,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
     };
   }, [planId]);
 
-  const saveLog = async (day, exerciseName, value) => {
+  const saveLog = async (day, exerciseName, value, rpe = null) => {
     const key = `${logWeek || 0}-${day}-${exerciseName}`;
     setLogs((prev) => ({ ...prev, [key]: value })); // optimistic
     if (!planId) return;
@@ -409,6 +412,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
         day,
         exercise_name: exerciseName,
         value,
+        rpe,
       });
     } catch {
       toast.error("Couldn't save that log — check your connection and try again.");
@@ -530,7 +534,8 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           </div>
         )}
 
-        <BlockCompleteBanner cycleNumber={cycleNumber} totalWeeks={totalWeeks} />
+        <BlockCompleteBanner cycleNumber={cycleNumber}
+              experience={experience} totalWeeks={totalWeeks} />
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto pb-24">
@@ -561,6 +566,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               logs={logs}
               totalWeeks={totalWeeks || (allWeeks ? allWeeks.length : 4)}
               cycleNumber={cycleNumber}
+              experience={experience}
             />
           )}
           {!isOngoing && !isLockedWeek && view === "home" && (
@@ -578,6 +584,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               canLog={Boolean(planId) && !isPreviewWeek && !sampleMode}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
+              experience={experience}
               setView={setView}
               brandLogo={brandLogo}
               structureType={structureType}
@@ -595,6 +602,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               canLog={Boolean(planId) && !isPreviewWeek && !sampleMode}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
+              experience={experience}
               initialSelectedDay={initialTrainingDay}
               structureType={structureType}
             />
@@ -610,6 +618,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               canLog={Boolean(planId) && !isPreviewWeek && !sampleMode}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
+              experience={experience}
               weekNumber={logWeek}
             />
           )}
@@ -712,7 +721,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1}) {
+function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
   // Phases have no auto-detection (nobody knows "which phase" from a date
   // alone) — just default to the first one; day-based plans still pick
   // today's real weekday as before.
@@ -776,7 +785,8 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
               currentWeek={weekNumber}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
-              onSaveLog={(value) => onSaveLog(today.day, w.name, value)}
+              experience={experience}
+              onSaveLog={(value, rpe) => onSaveLog(today.day, w.name, value, rpe)}
               canLog={canLog}
             />
           ))}
@@ -860,7 +870,7 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
   );
 }
 
-function MorningView({ morningRoutine, completed, onToggleDone, logs, history, onSaveLog, canLog, weekNumber , totalWeeks = null, cycleNumber = 1}) {
+function MorningView({ morningRoutine, completed, onToggleDone, logs, history, onSaveLog, canLog, weekNumber , totalWeeks = null, cycleNumber = 1, experience = null}) {
   const items = morningRoutine || [];
   const doneCount = items.filter((_, i) => completed.has(`morning-${i}`)).length;
 
@@ -891,7 +901,7 @@ function MorningView({ morningRoutine, completed, onToggleDone, logs, history, o
                   onToggleChecked={() => onToggleDone(key)}
                   loggedValue={logs[`${weekNumber || 0}-Morning-${w.name}`]}
                   exerciseHistory={history?.[w.name]}
-                  onSaveLog={(value) => onSaveLog("Morning", w.name, value)}
+                  onSaveLog={(value, rpe) => onSaveLog("Morning", w.name, value, rpe)}
                   canLog={canLog}
                 />
               );
@@ -903,7 +913,7 @@ function MorningView({ morningRoutine, completed, onToggleDone, logs, history, o
   );
 }
 
-function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" , totalWeeks = null, cycleNumber = 1}) {
+function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
   const isPhases = structureType === "phases";
   const todayIndex = isPhases ? -1 : Math.min(new Date().getDay(), days.length - 1); // -1 = no "today" concept for phases
   const [selected, setSelected] = useState(initialSelectedDay ?? (isPhases ? 0 : todayIndex));
@@ -980,7 +990,8 @@ function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history
               currentWeek={weekNumber}
               totalWeeks={totalWeeks}
               cycleNumber={cycleNumber}
-              onSaveLog={(value) => onSaveLog(d.day, w.name, value)}
+              experience={experience}
+              onSaveLog={(value, rpe) => onSaveLog(d.day, w.name, value, rpe)}
               canLog={canLog}
             />
           ))}
@@ -1052,7 +1063,7 @@ function RestTimer({ seconds }) {
  * their own logged numbers makes each cycle measurably harder than the last,
  * and turns a static plan into one that adapts to the person using it.
  */
-function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber) {
+function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber, experience) {
   if (!exerciseHistory?.length || cycleNumber < 2 || !totalWeeks) return null;
 
   // Compare like with like: the same week of the previous cycle.
@@ -1073,28 +1084,58 @@ function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber) {
   if (num === null) return null;
   const unit = parseLoggedUnit(reference.value).toLowerCase();
 
+  // How that last effort FELT decides whether we push, hold, or ease off. Without
+  // this the target only ever climbs, which is how a plan pushes a struggling or
+  // older lifter toward injury — it would tell them to go heavier after a set
+  // they barely finished.
+  const rpe = reference.rpe; // "easy" | "right" | "hard" | undefined
+
+  // Base jump scales with experience: a novice adds weight far faster than an
+  // intermediate, so a flat number is wrong for most people.
+  const exp = (experience || "").toLowerCase();
+  const isNovice = exp.includes("brand new") || exp.includes("<1") || exp.includes("less than");
+  const isAdvanced = exp.includes("5+") || exp.includes("3-5") || exp.includes("3–5");
+
   // Weight-based work gets a concrete number to beat. Everything else (reps,
   // holds, bodyweight) can't be loaded, so aim to match or exceed instead.
   const isWeight = ["kg", "kgs", "lb", "lbs"].includes(unit);
   if (isWeight) {
-    // Small, sane jump — big enough to be progress, small enough to be safe.
-    const increment = num >= 60 ? 2.5 : 1;
-    const target = Math.round((num + increment) * 2) / 2;
+    let base = num >= 60 ? 2.5 : 1;
+    if (isNovice) base = num >= 60 ? 5 : 2.5;
+    else if (isAdvanced) base = num >= 60 ? 2.5 : 1;
+
+    if (rpe === "hard") {
+      // Last time was a grind — hold the weight and consolidate rather than push.
+      return {
+        text: `Hold ${num}${unit}`,
+        sub: "last cycle felt hard — nail it before adding weight",
+      };
+    }
+    if (rpe === "easy") base *= 2; // room to move faster
+
+    const target = Math.round((num + base) * 2) / 2;
     return {
       text: `Target ${target}${unit}`,
       sub: `you did ${reference.value} last cycle`,
     };
   }
 
+  if (rpe === "hard") {
+    return {
+      text: `Repeat ${reference.value}`,
+      sub: "last cycle felt hard — match it cleanly first",
+    };
+  }
   return {
     text: `Match or beat ${reference.value}`,
     sub: "from last cycle",
   };
 }
 
-function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exerciseHistory, currentWeek, totalWeeks = null, cycleNumber = 1, onSaveLog, canLog = false }) {
+function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exerciseHistory, currentWeek, totalWeeks = null, cycleNumber = 1, experience = null, onSaveLog, canLog = false }) {
   const [panel, setPanel] = useState(null); // null | "reason" | "lookup" | "timer" | "log"
   const [logInput, setLogInput] = useState("");
+  const [logRpe, setLogRpe] = useState(null); // "easy" | "right" | "hard"
   const [timerChoice, setTimerChoice] = useState(null); // "hold" | "rest" — set on open
   const hasReason = Boolean(w.reason);
   const restSeconds = parseDurationSeconds(w.rest);
@@ -1104,7 +1145,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
   const holdSeconds = parseDurationSeconds(w.sets);
   const hasAnyTimer = restSeconds !== null || holdSeconds !== null;
   const nudge = getProgressNudge(exerciseHistory, currentWeek);
-  const cycleTarget = getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber);
+  const cycleTarget = getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber, experience);
 
   // The model returns a "demo" search phrase per exercise, because it knows
   // that "Wall Pass Combination" is best searched as "football wall pass drill"
@@ -1123,7 +1164,8 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
 
   const submitLog = () => {
     if (!logInput.trim()) return;
-    onSaveLog?.(logInput.trim());
+    onSaveLog?.(logInput.trim(), logRpe);
+    setLogRpe(null);
     setPanel(null);
   };
 
@@ -1330,6 +1372,32 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
             >
               Save
             </button>
+          </div>
+
+          {/* How the set felt. Steers next cycle's target — a "hard" set holds
+              the weight rather than pushing it up, which is what stops the plan
+              driving a struggling lifter into heavier and heavier loads. */}
+          <div className="mt-3">
+            <p className="text-[11px] text-zinc-500 mb-1.5">How did that feel?</p>
+            <div className="flex gap-2">
+              {[
+                { key: "easy", label: "Easy" },
+                { key: "right", label: "About right" },
+                { key: "hard", label: "Hard" },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setLogRpe((r) => (r === opt.key ? null : opt.key))}
+                  className={`text-[11px] px-3 py-1.5 border transition-colors ${
+                    logRpe === opt.key
+                      ? "border-[var(--accent)] text-[var(--accent)]"
+                      : "border-white/15 text-zinc-400 hover:border-white/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
