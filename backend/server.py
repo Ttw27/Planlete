@@ -692,6 +692,21 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     equipment = answers.get("equipment", "Full gym")
     session = answers.get("session", "60 min")
     nutrition_pref = answers.get("nutrition", "No — training only")
+    diet_pref = (answers.get("diet") or "").strip()
+    allergies = (answers.get("allergies") or "").strip()
+
+    diet_block = ""
+    if diet_pref and diet_pref.lower() not in ("no restrictions", ""):
+        diet_block += (
+            f"\nDIETARY REQUIREMENT: this person is {diet_pref}. EVERY meal, snack and food "
+            f"suggestion in the nutrition section must comply — no exceptions. A single "
+            f"non-compliant food makes the whole plan wrong for them."
+        )
+    if allergies and allergies.lower() not in ("none", "no", "n/a"):
+        diet_block += (
+            f"\nALLERGIES / FOODS TO AVOID: {allergies}. These must NEVER appear anywhere in "
+            f"the nutrition section, including as minor ingredients."
+        )
     notes = answers.get("notes", "").strip() or "None provided"
     training_with = answers.get("training_with", "On my own").strip()
     match_day = answers.get("match_day", "").strip()
@@ -798,6 +813,7 @@ User Profile:
 - Equipment: {equipment}
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition_pref}
+{diet_block}
 - Training context: {training_with}
 {match_day_line}
 - Injuries, allergies or other notes from the user: {notes}
@@ -816,6 +832,11 @@ User Profile:
 If the notes mention any injury, condition, or limitation, you MUST adapt exercise
 selection to avoid aggravating it and substitute safer alternatives. If allergies or
 dietary restrictions are mentioned, avoid those foods entirely in the nutrition section.
+
+For any exercise with a meaningful load (barbell, dumbbell or machine work at a working
+weight), tell the person to warm up first — a couple of lighter build-up sets before the
+working sets. State this briefly in that exercise's "reason" or as a short note; never
+have them load a heavy working weight cold, especially if they are newer to training.
 
 Design the exercise selection and weekly structure specifically for the stated
 goal/sport rather than a generic template — e.g. combat sports (boxing,
@@ -1162,6 +1183,7 @@ class WeightLogCreate(BaseModel):
     day: str
     exercise_name: str
     value: str  # e.g. "82.5kg" or "10 reps" — kept as a simple string, deliberately basic
+    rpe: Optional[str] = None  # "easy" | "right" | "hard" — how the set felt
 
 
 class WeightLog(BaseModel):
@@ -1172,6 +1194,7 @@ class WeightLog(BaseModel):
     day: str
     exercise_name: str
     value: str
+    rpe: Optional[str] = None
     logged_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
