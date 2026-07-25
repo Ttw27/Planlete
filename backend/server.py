@@ -1524,7 +1524,7 @@ async def create_manual_plan(payload: ManualPlanCreate, _: bool = Depends(requir
         }],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
-        "morningRoutine": payload.morningRoutine,
+        "morningRoutine": [m.model_dump() for m in payload.morningRoutine],
         "manually_authored": True,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -2137,7 +2137,7 @@ async def coach_create_client(payload: ClientPlanCreate, coach: dict = Depends(g
         "days": [d.model_dump() for d in payload.days],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
-        "morningRoutine": payload.morningRoutine,
+        "morningRoutine": [m.model_dump() for m in payload.morningRoutine],
         "allow_logging": payload.allow_logging,
         "payment_status": payment_status,
         "disclaimer_accepted": True,
@@ -2169,7 +2169,7 @@ async def coach_update_client(client_id: str, payload: ClientPlanCreate, coach: 
         "days": [d.model_dump() for d in payload.days],
         "nutrition": payload.nutrition.model_dump() if payload.nutrition else None,
         "recovery": payload.recovery.model_dump() if payload.recovery else None,
-        "morningRoutine": payload.morningRoutine,
+        "morningRoutine": [m.model_dump() for m in payload.morningRoutine],
         "allow_logging": payload.allow_logging,
     }
     await db.client_plans.update_one({"id": client_id}, {"$set": updates})
