@@ -84,6 +84,25 @@ export const BASE_QUESTIONS = [
     options: ["Yes — full plan", "Yes — just targets", "No — training only"],
   },
   {
+    id: "diet",
+    label: "Any dietary preference?",
+    type: "choice",
+    options: ["No restrictions", "Vegetarian", "Vegan", "Pescatarian", "Halal", "Other"],
+    hint: "So your meals and targets are built around what you actually eat.",
+    // Pointless to ask someone who declined nutrition — only show it when they
+    // asked for a plan or targets.
+    showIf: (a) => (a.nutrition || "").toLowerCase().startsWith("yes"),
+  },
+  {
+    id: "allergies",
+    label: "Any food allergies or foods to avoid?",
+    type: "text",
+    placeholder: "e.g. nuts, dairy, shellfish — or leave blank",
+    hint: "We'll keep these out of your nutrition entirely.",
+    optional: true,
+    showIf: (a) => (a.nutrition || "").toLowerCase().startsWith("yes"),
+  },
+  {
     id: "match_day",
     label: "Which day do you usually play or compete?",
     type: "choice",
@@ -256,9 +275,15 @@ export default function BuildApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const questions = buildQuestions(answers.goal);
-  const q = questions[step];
-  const progress = ((step + 1) / (questions.length + 1)) * 100;
+  // Questions with a showIf only appear when their condition is met (e.g. diet
+  // questions once nutrition is wanted). Filtering the list rather than the
+  // render keeps step numbering and the progress bar honest.
+  const questions = buildQuestions(answers.goal).filter(
+    (question) => !question.showIf || question.showIf(answers)
+  );
+  const safeStep = Math.min(step, questions.length - 1);
+  const q = questions[safeStep];
+  const progress = ((safeStep + 1) / (questions.length + 1)) * 100;
 
   const setAnswer = (val) => setAnswers((a) => ({ ...a, [q.id]: val }));
 
@@ -271,15 +296,15 @@ export default function BuildApp() {
       toast.error("Enter a valid email");
       return;
     }
-    if (step < questions.length - 1) {
-      setStep(step + 1);
+    if (safeStep < questions.length - 1) {
+      setStep(safeStep + 1);
     } else {
       submit();
     }
   };
 
   const back = () => {
-    if (step > 0) setStep(step - 1);
+    if (safeStep > 0) setStep(safeStep - 1);
     else setPath(null);
   };
 
@@ -357,7 +382,7 @@ export default function BuildApp() {
         <div className="mb-12">
           <div className="flex items-center justify-between mb-3">
             <p className="text-overline">
-              Question {String(step + 1).padStart(2, "0")} /{" "}
+              Question {String(safeStep + 1).padStart(2, "0")} /{" "}
               {String(questions.length).padStart(2, "0")}
             </p>
             <p className="text-overline text-[#D4FF00]">
@@ -458,7 +483,7 @@ export default function BuildApp() {
           >
             {submitting
               ? "Taking you to checkout…"
-              : step === questions.length - 1
+              : safeStep === questions.length - 1
               ? "Continue to payment — £4.99"
               : q.optional && !answers[q.id]
               ? "Skip"

@@ -51,7 +51,9 @@ export default function AdminTestPlan() {
       });
   }, [navigate]);
 
-  const questions = buildQuestions(answers.goal);
+  const questions = buildQuestions(answers.goal).filter(
+    (q) => !q.showIf || q.showIf(answers)
+  );
 
   const set = (key, value) =>
     setAnswers((a) => {
