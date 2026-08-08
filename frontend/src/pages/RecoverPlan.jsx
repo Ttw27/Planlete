@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
+import { useSeo } from "@/lib/useSeo";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -13,6 +14,13 @@ const API = `${BACKEND_URL}/api`;
  * address, so it can't be used to find out who is a customer.
  */
 export default function RecoverPlan() {
+  useSeo({
+    title: "Lost Your Plan? — Planlete",
+    description:
+      "Enter the email you bought your plan with and we will send the link again.",
+    canonical: "https://www.planlete.co.uk/recover",
+  });
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);

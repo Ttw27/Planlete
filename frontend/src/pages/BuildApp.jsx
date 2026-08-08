@@ -7,6 +7,7 @@ import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
 import OfferBar from "@/components/OfferBar";
 import { usePricing } from "@/lib/pricing";
+import { useSeo } from "@/lib/useSeo";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -330,6 +331,13 @@ export function buildQuestions(goal) {
 }
 
 export default function BuildApp() {
+  useSeo({
+    title: "Build Your Training Plan — Planlete",
+    description:
+      "Answer a few questions about your schedule, equipment and goal, and get a four-week periodised plan as an app. One payment, no subscription.",
+    canonical: "https://www.planlete.co.uk/build",
+  });
+
   const { plan, planStandard } = usePricing();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

@@ -4,6 +4,7 @@ import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { Check, ArrowRight } from "lucide-react";
+import { useSeo } from "@/lib/useSeo";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -125,6 +126,13 @@ const IN_DEVELOPMENT = [
 ];
 
 export default function ForCoaches() {
+  useSeo({
+    title: "Planlete for Coaches, Physios & Gyms — Client Training Apps",
+    description:
+      "Build client training plans as apps, with your reasoning on every exercise and logging built in. Days or phases for rehab. You build it, you approve it.",
+    canonical: "https://www.planlete.co.uk/for-coaches",
+  });
+
   const [businessType, setBusinessType] = useState("");
   const [email, setEmail] = useState("");
   const [details, setDetails] = useState("");

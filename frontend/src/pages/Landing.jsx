@@ -6,6 +6,7 @@ import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import OfferBar from "../components/OfferBar";
 import { usePricing } from "@/lib/pricing";
+import { useSeo } from "@/lib/useSeo";
 
 // ─── Marquee ────────────────────────────────────────────────────────────────
 const MARQUEE_ITEMS = [
@@ -147,6 +148,13 @@ function PlanCard({ plan, images, c }) {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function Landing() {
+  useSeo({
+    title: "Planlete — Personalised 4-Week Training Plans, One Payment",
+    description:
+      "A four-week training plan built around your schedule, equipment and goal — delivered as an app, not a PDF. One payment, no subscription. Beginners to athletes.",
+    canonical: "https://www.planlete.co.uk/",
+  });
+
   const c = useContent();
   const { images } = useImages();
   const { plan, planStandard } = usePricing();

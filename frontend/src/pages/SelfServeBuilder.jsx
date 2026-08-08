@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import PlanBuilderForm from "@/components/PlanBuilderForm";
 import { usePricing } from "@/lib/pricing";
+import { useSeo } from "@/lib/useSeo";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -20,6 +21,13 @@ const API = `${BACKEND_URL}/api`;
  * answers, and the backend branches accordingly after payment confirms.
  */
 export default function SelfServeBuilder() {
+  useSeo({
+    title: "Build Your Own Plan Your Way — Planlete",
+    description:
+      "Already know what you want to train? Enter your own sessions and get them as an app on your phone, with logging and rest timers built in.",
+    canonical: "https://www.planlete.co.uk/build/manual",
+  });
+
   const { plan, planStandard } = usePricing();
   const [submitting, setSubmitting] = useState(false);
 
