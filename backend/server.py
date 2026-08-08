@@ -50,7 +50,16 @@ ADMIN_ALERT_EMAIL = os.environ.get("ADMIN_ALERT_EMAIL")
 # recurring) — Stripe subscriptions need a pre-created Price object, unlike
 # the one-off consumer checkout which creates its price inline.
 COACH_SUBSCRIPTION_PRICE_ID = os.environ.get("COACH_SUBSCRIPTION_PRICE_ID")
-COACH_CLIENT_PLAN_PENCE = int(os.environ.get("COACH_CLIENT_PLAN_PENCE", "499"))
+# ── Pricing ───────────────────────────────────────────────────────────────
+# Every price lives here and nowhere else. The frontend reads these through
+# /api/config/pricing, so changing a price is a single env var on Railway
+# rather than a hunt through display strings.
+#   *_PENCE          — what is actually charged today
+#   *_STANDARD_PENCE — the "normally £X" strikethrough price
+PLAN_PRICE_PENCE = int(os.environ.get("PLAN_PRICE_PENCE", "499"))
+PLAN_STANDARD_PENCE = int(os.environ.get("PLAN_STANDARD_PENCE", "2000"))
+COACH_CLIENT_PLAN_PENCE = int(os.environ.get("COACH_CLIENT_PLAN_PENCE", "899"))
+COACH_CLIENT_STANDARD_PENCE = int(os.environ.get("COACH_CLIENT_STANDARD_PENCE", "2599"))
 
 
 def send_email(to: str, subject: str, html: str) -> None:
@@ -1380,12 +1389,6 @@ class PlanRecoverRequest(BaseModel):
     email: EmailStr
 
 
-class FunnelEventCreate(BaseModel):
-    event: str
-    path: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
-
-
 class TweakRequestCreate(BaseModel):
     message: str
     email: Optional[EmailStr] = None
@@ -1781,7 +1784,7 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
                 "price_data": {
                     "currency": "gbp",
                     "product_data": {"name": product_name},
-                    "unit_amount": 499,
+                    "unit_amount": PLAN_PRICE_PENCE,
                 },
                 "quantity": 1,
             }],
@@ -2184,57 +2187,52 @@ async def recover_plans(payload: PlanRecoverRequest):
     }
 
 
-# ── Funnel events ─────────────────────────────────────────────────────────
-# Deliberately first-party and cookieless: an event name, a path and a
-# timestamp. Enough to see where people drop out of the builder without
-# taking on a third-party tracker or a consent banner.
-@api_router.post("/events")
-async def record_event(payload: FunnelEventCreate):
-    allowed = {
-        "landing_view", "builder_started", "builder_completed",
-        "checkout_opened", "payment_succeeded", "plan_opened",
-        "rebuild_started", "draft_emailed",
-    }
-    if payload.event not in allowed:
-        # Silently ignore rather than error — a stale frontend firing an
-        # unknown event should never surface as a console error to a customer.
-        return {"ok": True}
-    await db.funnel_events.insert_one({
-        "event": payload.event,
-        "path": payload.path,
-        "meta": payload.meta or {},
-        "at": datetime.now(timezone.utc).isoformat(),
-    })
-    return {"ok": True}
-
-
 @api_router.get("/admin/funnel")
 async def admin_funnel(days: int = 30, _: bool = Depends(require_admin)):
+    """
+    Funnel over the existing analytics_events collection. Counts distinct
+    sessions per step rather than raw events — one person refreshing the
+    builder five times is one person, not five.
+    """
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     pipeline = [
-        {"$match": {"at": {"$gte": since}}},
-        {"$group": {"_id": "$event", "count": {"$sum": 1}}},
+        {"$match": {"timestamp": {"$gte": since}}},
+        {"$group": {"_id": {"event": "$event", "session": "$session_id"}}},
+        {"$group": {"_id": "$_id.event", "sessions": {"$sum": 1}}},
     ]
-    rows = await db.funnel_events.aggregate(pipeline).to_list(50)
-    counts = {r["_id"]: r["count"] for r in rows}
+    rows = await db.analytics_events.aggregate(pipeline).to_list(200)
+    counts = {r["_id"]: r["sessions"] for r in rows}
+
     order = [
-        "landing_view", "builder_started", "builder_completed",
+        "page_view", "builder_started", "builder_completed",
         "checkout_opened", "payment_succeeded", "plan_opened",
     ]
-    funnel = []
-    previous = None
+    funnel, previous = [], None
     for step in order:
         n = counts.get(step, 0)
         funnel.append({
             "step": step,
             "count": n,
-            "conversion_from_previous": (
-                round(100 * n / previous, 1) if previous else None
-            ),
+            "conversion_from_previous": round(100 * n / previous, 1) if previous else None,
         })
         if n:
             previous = n
     return {"days": days, "funnel": funnel, "raw": counts}
+
+
+@api_router.get("/config/pricing")
+async def get_pricing():
+    """
+    Single source of truth for prices, read by the frontend at load. Public
+    by design — these are printed on the site anyway.
+    """
+    return {
+        "plan_pence": PLAN_PRICE_PENCE,
+        "plan_standard_pence": PLAN_STANDARD_PENCE,
+        "coach_client_pence": COACH_CLIENT_PLAN_PENCE,
+        "coach_client_standard_pence": COACH_CLIENT_STANDARD_PENCE,
+        "currency": "GBP",
+    }
 
 
 @api_router.get("/admin/diagnostics")
@@ -2252,6 +2250,12 @@ async def admin_diagnostics(_: bool = Depends(require_admin)):
         "anthropic_configured": bool(os.environ.get("ANTHROPIC_API_KEY") or EMERGENT_KEY),
         "frontend_url": FRONTEND_URL,
         "edit_window_hours": EDIT_WINDOW_HOURS,
+        "pricing": {
+            "plan": f"£{PLAN_PRICE_PENCE / 100:.2f}",
+            "plan_standard": f"£{PLAN_STANDARD_PENCE / 100:.2f}",
+            "coach_client_plan": f"£{COACH_CLIENT_PLAN_PENCE / 100:.2f}",
+            "coach_client_standard": f"£{COACH_CLIENT_STANDARD_PENCE / 100:.2f}",
+        },
         "email_dns_reminder": (
             "Resend will only deliver reliably once SPF, DKIM and DMARC are "
             "verified for the sending domain. Check the Domains page in Resend "
