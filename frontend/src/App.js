@@ -16,6 +16,9 @@ import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsConditions from "@/pages/TermsConditions";
 import RefundPolicy from "@/pages/RefundPolicy";
 import GeneratedApp from "@/pages/GeneratedApp";
+import RebuildPlan from "@/pages/RebuildPlan";
+import ResumeDraft from "@/pages/ResumeDraft";
+import RecoverPlan from "@/pages/RecoverPlan";
 import SaveToPhoneInstructions from "@/pages/SaveToPhoneInstructions";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminImages from "@/pages/AdminImages";
@@ -59,6 +62,9 @@ function App() {
             <Route path="/app/football" element={<FootballApp />} />
             <Route path="/app/sprinter" element={<SprinterApp />} />
             <Route path="/app/u/:id/save-instructions" element={<SaveToPhoneInstructions />} />
+            <Route path="/build/resume/:token" element={<ResumeDraft />} />
+            <Route path="/recover" element={<RecoverPlan />} />
+            <Route path="/app/u/:id/next" element={<RebuildPlan />} />
             <Route path="/app/u/:id" element={<GeneratedApp />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/content" element={<AdminContent />} />
