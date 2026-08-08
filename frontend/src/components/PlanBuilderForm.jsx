@@ -199,6 +199,7 @@ export default function PlanBuilderForm({
 
   // Emailing the draft covers what localStorage can't: switching device,
   // clearing the browser, or building on a phone and finishing on a laptop.
+  const [helpOpen, setHelpOpen] = useState(false);
   const [emailPromptOpen, setEmailPromptOpen] = useState(false);
   const [resumeEmail, setResumeEmail] = useState("");
   const [emailingDraft, setEmailingDraft] = useState(false);
@@ -387,6 +388,61 @@ export default function PlanBuilderForm({
             </div>
           </div>
         )}
+        {/* How this works — collapsed by default so it helps the people who
+            need it without getting in the way of those who don't. */}
+        {!initialData && (
+          <div className="w-full order-first mb-4 border border-white/10">
+            <button
+              type="button"
+              onClick={() => setHelpOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-overline text-[#D4FF00]">
+                New here? How this works
+              </span>
+              <span className="text-zinc-500 text-lg leading-none">
+                {helpOpen ? "−" : "+"}
+              </span>
+            </button>
+            {helpOpen && (
+              <div className="px-4 pb-5 pt-1 text-sm text-zinc-400 leading-relaxed space-y-3 border-t border-white/10">
+                <p>
+                  You're building the app your plan lives in. The preview on the right
+                  updates as you go — that's exactly what you'll see on your phone.
+                </p>
+                <ol className="space-y-2 list-none">
+                  <li>
+                    <span className="text-[#D4FF00] font-mono-display text-xs mr-2">01</span>
+                    <span className="text-white">Details</span> — your name, and any notes
+                    you want on the plan.
+                  </li>
+                  <li>
+                    <span className="text-[#D4FF00] font-mono-display text-xs mr-2">02</span>
+                    <span className="text-white">Train</span> — pick a day, give it a
+                    focus, then add your exercises with sets, reps, load and rest. Add a
+                    reason to any exercise and you'll see it in the app when you tap that
+                    movement.
+                  </li>
+                  <li>
+                    <span className="text-[#D4FF00] font-mono-display text-xs mr-2">03</span>
+                    <span className="text-white">Morning, Fuel, Recover</span> — optional.
+                    Leave any of them empty and the tab simply won't appear.
+                  </li>
+                </ol>
+                <p>
+                  Prefer to structure by stage rather than by weekday? Switch from Days to
+                  Phases at the top of the Train tab — better for rehab or a build-up
+                  where "week one" matters more than "Monday".
+                </p>
+                <p className="text-zinc-500">
+                  Nothing is charged until you check out, and your work saves to this
+                  device as you go — so closing the tab won't lose it.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           {/* Finish later — only offered once there's something worth saving. */}
           {!initialData && (clientName || (days || []).some((d) => (d.workouts || []).length > 0)) && (

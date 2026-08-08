@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { usePricing } from "@/lib/pricing";
 
 export default function SiteHeader() {
+  const { plan } = usePricing();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
@@ -112,7 +114,7 @@ export default function SiteHeader() {
             data-testid="nav-cta-mobile"
             className="bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-5 py-3 inline-block text-center"
           >
-            Build my plan — £4.99
+            {`Build my plan — ${plan}`}
           </Link>
         </div>
       )}

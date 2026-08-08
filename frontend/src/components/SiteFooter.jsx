@@ -36,18 +36,11 @@ export default function SiteFooter() {
             <div>
               <p className="text-overline mb-3">Planlete · Built for You</p>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                Training apps built around you — athletes, everyday people,
-                football players, sprinters and rehab clients. One-off. No
-                subscription.
+                Training apps built around you — complete beginners, gym
+                regulars and athletes alike. One-off. No subscription.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm text-zinc-400">
-              <Link
-                to="/app/athlete"
-                className="hover:text-[#D4FF00] transition-colors"
-              >
-                Athlete app
-              </Link>
               <Link
                 to="/app/longevity"
                 className="hover:text-[#D4FF00] transition-colors"
@@ -72,6 +65,12 @@ export default function SiteFooter() {
               >
                 Build my plan
               </Link>
+              <Link
+                to="/for-coaches"
+                className="hover:text-[#D4FF00] transition-colors"
+              >
+                For coaches
+              </Link>
             </div>
           </div>
         </div>
@@ -82,6 +81,7 @@ export default function SiteFooter() {
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link to="/refunds" className="hover:text-white transition-colors">Refunds</Link>
+            <Link to="/recover" className="hover:text-white transition-colors">Lost your plan?</Link>
           </div>
         </div>
         <div className="mt-4 text-xs text-zinc-600">
