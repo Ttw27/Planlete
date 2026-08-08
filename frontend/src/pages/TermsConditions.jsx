@@ -57,12 +57,49 @@ export default function TermsConditions() {
           <section>
             <h2 className="text-white font-display text-xl mb-3">4. Payment and pricing</h2>
             <p>
-              Plans are sold as a one-off payment (currently £4.99 as a launch offer; the
-              standard price is £20). This is a single payment for a single generated plan, not
+              Plans are sold as a one-off payment (currently discounted as a launch offer; the
+              standard price is shown at checkout). This is a single payment for a single generated plan, not
               a subscription. If your goals, circumstances, or health change, you're welcome to
               purchase a new plan at any time — each plan is independently generated and
               charged for separately. Payments are processed securely by Stripe; we do not
               store your card details.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">4a. Corrections, and when your plan is fixed</h2>
+            <p>
+              Once your plan has been generated you have a short window in which to tell us
+              something is wrong with it — 48 hours from generation, or until you log your
+              first training session against the plan, whichever happens first. Within that
+              window, contact us through your plan and we will correct genuine errors: for
+              example, a plan that doesn't match the answers you gave, or one that's clearly
+              unsuitable for the experience level you stated.
+            </p>
+            <p className="mt-3">
+              After that window closes, your plan is fixed and we will not amend it. This is
+              because a plan you have started training on is no longer a plan with a mistake
+              in it — it is a programme you are part-way through, and changing it means
+              building a new one. If you want a different plan at that point, you can buy a
+              follow-on block (see 4b) or start again from the questionnaire.
+            </p>
+            <p className="mt-3">
+              Nothing in this section affects your legal rights if a plan is faulty, not as
+              described, or not fit for purpose. Those rights are set out in the Consumer
+              Rights Act 2015 and cannot be limited by these terms — see our{" "}
+              <Link to="/refunds" className="text-[#D4FF00] underline">Refund Policy</Link>.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">4b. Follow-on blocks</h2>
+            <p>
+              If you already own a generated plan, you can buy a follow-on block built from
+              it — for instance because you've picked up an injury, your training days have
+              changed, you're away from your usual gym, or you've finished the four weeks.
+              A follow-on block is charged at the same one-off price as any other plan and
+              is delivered as a separate plan at its own link. Your existing plan continues
+              to work and anything you have logged against it is unaffected.
             </p>
           </section>
 

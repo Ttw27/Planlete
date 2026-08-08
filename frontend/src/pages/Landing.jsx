@@ -5,6 +5,7 @@ import { useImages } from "../hooks/useImages";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import OfferBar from "../components/OfferBar";
+import { usePricing } from "@/lib/pricing";
 
 // ─── Marquee ────────────────────────────────────────────────────────────────
 const MARQUEE_ITEMS = [
@@ -38,15 +39,6 @@ const SPORTS = [
 // ─── Sample Plans ────────────────────────────────────────────────────────────
 const PLANS = [
   {
-    id: "rehab",
-    label: "Rehab & Recovery",
-    body: "Written by a qualified physio, not AI. An example of what a practitioner can build for their client on Planlete.",
-    href: "/app/rehab",
-    imageKey: "card_rehab",
-    fallback: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80",
-    tag: "Physio built",
-  },
-  {
     id: "longevity",
     label: "Longevity & Fitness",
     body: "Four days per week. Built around joints, posture, energy and the long game.",
@@ -72,6 +64,52 @@ const PLANS = [
     imageKey: "card_sprinter",
     fallback: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
     tag: "Free sample",
+  },
+];
+
+// Ordered deliberately: the ordinary reasons people train come first, and the
+// sport-specific stuff last. Every entry here maps to a real goal or a real
+// answer in the questionnaire — nothing aspirational.
+const COVERAGE = [
+  {
+    title: "Starting out",
+    items: [
+      "Never lifted before",
+      "Coming back after years off",
+      "Been going to the gym but with no real plan",
+      "Only got two or three days a week",
+    ],
+  },
+  {
+    title: "Normal gym goals",
+    items: [
+      "Build muscle",
+      "Lose fat",
+      "Get generally stronger",
+      "Look good and stay healthy",
+    ],
+  },
+  {
+    title: "Wherever you train",
+    items: [
+      "Full commercial gym",
+      "Home gym with a barbell and rack",
+      "Dumbbells only",
+      "Hotel gym or travelling",
+      "Bodyweight only",
+    ],
+  },
+  {
+    title: "Strength & physique",
+    items: ["Powerlifting", "Bodybuilding", "Calisthenics and skills", "Hypertrophy blocks"],
+  },
+  {
+    title: "Running & conditioning",
+    items: ["5k and 10k", "Half marathon", "Marathon and longer", "CrossFit", "HYROX and hybrid"],
+  },
+  {
+    title: "Sport specific",
+    items: ["Football", "Sprinting and athletics", "Boxing", "Kickboxing and martial arts"],
   },
 ];
 
@@ -111,6 +149,7 @@ function PlanCard({ plan, images, c }) {
 export default function Landing() {
   const c = useContent();
   const { images } = useImages();
+  const { plan, planStandard } = usePricing();
 
   return (
     <div className="min-h-screen bg-black text-white font-body">
@@ -144,7 +183,7 @@ export default function Landing() {
               to="/build"
               className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
             >
-              {c("hero_primary_cta", "Build my plan — £4.99")}
+              {`${c("hero_primary_cta", "Build my plan")} — ${plan}`}
               <ArrowRight size={16} />
             </Link>
             <a
@@ -155,7 +194,7 @@ export default function Landing() {
             </a>
           </div>
           <p className="mt-4 text-zinc-500 text-xs uppercase tracking-widest">
-            Free samples below · £4.99 for your own · not £20
+            {`Free samples below · ${plan} for your own · not ${planStandard}`}
           </p>
         </div>
       </section>
@@ -262,26 +301,52 @@ export default function Landing() {
               <span className="block text-[#D4FF00]">No sign up needed.</span>
             </h2>
             <p className="text-zinc-400 max-w-sm leading-relaxed">
-              Browse the sample plans. Save one to your phone. See exactly what your personalised app could look like — then build yours for £4.99.
+              Browse the sample plans. Save one to your phone. See exactly what your personalised app could look like — then build yours for {plan}.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {PLANS.map((plan) => (
               <PlanCard key={plan.id} plan={plan} images={images} c={c} />
             ))}
           </div>
 
-          {/* Four samples can't show everything the questionnaire covers, so
-              say so plainly rather than letting people assume we don't do
-              their sport. */}
-          <p className="text-sm text-zinc-500 mt-8 text-center leading-relaxed">
-            Also covering marathon, triathlon, HYROX, tennis, boxing, powerlifting, getting into
-            running and plenty more —{" "}
-            <Link to="/build" className="text-[var(--accent)] hover:underline">
-              build yours in a couple of minutes
-            </Link>
-            .
-          </p>
+          {/* Three samples can't show everything the questionnaire covers, and
+              all three happen to look athletic — which puts off exactly the
+              people most likely to buy. Say plainly who this is for. */}
+          <div className="mt-14 border-t border-white/10 pt-12">
+            <p className="text-overline text-zinc-500 mb-4">— Who this is actually for</p>
+            <h3 className="font-display text-2xl md:text-3xl uppercase mb-4 max-w-2xl">
+              You don't need to be an athlete. Most people using this aren't.
+            </h3>
+            <p className="text-zinc-400 leading-relaxed max-w-2xl mb-10">
+              The samples above are sport-specific because that's what's hardest to get
+              right. But the question we ask first is how much experience you've got —
+              and "brand new" is a perfectly normal answer.
+            </p>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+              {COVERAGE.map((group) => (
+                <div key={group.title}>
+                  <h4 className="text-white text-base mb-3">{group.title}</h4>
+                  <ul className="space-y-1.5">
+                    {group.items.map((item) => (
+                      <li key={item} className="text-sm text-zinc-400 leading-relaxed">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-sm text-zinc-500 mt-10 leading-relaxed max-w-2xl">
+              Not on the list? There's a "something else" option and it's read properly —{" "}
+              <Link to="/build" className="text-[var(--accent)] hover:underline">
+                build yours in a couple of minutes
+              </Link>
+              .
+            </p>
+          </div>
         </div>
       </section>
 
@@ -293,19 +358,19 @@ export default function Landing() {
           </span>
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-6">
             <span className="block">{c("pricing_headline_a", "Your own app.")}</span>
-            <span className="block text-[#D4FF00]">{c("pricing_headline_b", "Normally £20. Now £4.99.")}</span>
+            <span className="block text-[#D4FF00]">{`Normally ${planStandard}. Now ${plan}.`}</span>
           </h2>
           <p className="text-zinc-400 max-w-xl mx-auto leading-relaxed mb-10">
             {c(
               "pricing_explainer",
-              "We're running a launch offer to seed the first wave of users with real feedback. Once we hit our cap, the price reverts to £20."
+              `We're running a launch offer to seed the first wave of users with real feedback. Once we hit our cap, the price reverts to ${planStandard}.`
             )}
           </p>
           <Link
             to="/build"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            Build my plan — £4.99
+            {`Build my plan — ${plan}`}
             <ArrowRight size={16} />
           </Link>
           <p className="mt-4 text-zinc-600 text-xs uppercase tracking-widest">
@@ -325,7 +390,7 @@ export default function Landing() {
           <p className="text-zinc-400 max-w-2xl leading-relaxed text-lg">
             {c(
               "flex_body",
-              "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same £4.99, brand new app, made for where you are now."
+              "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same price, brand new app, made for where you are now."
             )}
           </p>
         </div>
@@ -374,7 +439,7 @@ export default function Landing() {
             to="/build"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            {c("footer_cta", "Build my plan — £4.99")}
+            {`${c("footer_cta", "Build my plan")} — ${plan}`}
             <ArrowRight size={16} />
           </Link>
           <p className="mt-6 text-zinc-600 text-xs uppercase tracking-widest">

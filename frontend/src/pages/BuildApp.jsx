@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import SiteHeader from "@/components/SiteHeader";
 import OfferBar from "@/components/OfferBar";
+import { usePricing } from "@/lib/pricing";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -293,7 +294,7 @@ export const STAGE_CONFIG = {
 // Activities where an advisory is warranted before someone starts training
 // hard. This is a notice, not a screen — it does not gate the purchase or
 // record a confirmation. It exists because combat and long-distance endurance
-// carry real cardiovascular and impact risk, and a £4.99 plan is no substitute
+// carry real cardiovascular and impact risk, and a generated plan is no substitute
 // for a GP knowing what you are about to do.
 const GP_ADVISORY = [
   { match: ["boxing", "kickboxing", "mma", "muay thai", "fight", "combat", "bjj", "wrestling"],
@@ -329,6 +330,7 @@ export function buildQuestions(goal) {
 }
 
 export default function BuildApp() {
+  const { plan, planStandard } = usePricing();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [path, setPath] = useState(null); // null (choosing) | "ai"
@@ -432,7 +434,7 @@ export default function BuildApp() {
             How do you want<br />to build your plan?
           </h2>
           <p className="text-zinc-400 mb-12 max-w-xl">
-            Same price either way — £4.99, one-off, either app is yours to keep.
+            Same price either way — {plan}, one-off, either app is yours to keep.
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -485,8 +487,8 @@ export default function BuildApp() {
               {String(questions.length).padStart(2, "0")}
             </p>
             <p className="text-overline text-[#D4FF00]">
-              Launch offer · £4.99{" "}
-              <span className="line-through text-zinc-600">£20</span>
+              Launch offer · {plan}{" "}
+              <span className="line-through text-zinc-600">{planStandard}</span>
             </p>
           </div>
           <div className="h-px bg-white/10 relative overflow-hidden">
@@ -576,7 +578,7 @@ export default function BuildApp() {
             <p className="text-overline text-zinc-500 mb-3">Before you pay</p>
             <ul className="text-sm text-zinc-400 leading-relaxed space-y-2">
               <li>
-                One payment of £4.99. There's no subscription and nothing renews.
+                One payment of {plan}. There's no subscription and nothing renews.
               </li>
               <li>
                 Your plan is generated for you and is yours to keep — you can come back
@@ -586,7 +588,7 @@ export default function BuildApp() {
                 You've got <span className="text-white">48 hours</span> after it's built to
                 tell us if something's wrong, or until you log your first session,
                 whichever comes first. After that the plan is fixed, and changes mean a
-                new block at £4.99.
+                new block at {plan}.
               </li>
             </ul>
             <p className="text-xs text-zinc-600 mt-4">
@@ -617,7 +619,7 @@ export default function BuildApp() {
             {submitting
               ? "Taking you to checkout…"
               : safeStep === questions.length - 1
-              ? "Continue to payment — £4.99"
+              ? `Continue to payment — ${plan}`
               : q.optional && !answers[q.id]
               ? "Skip"
               : "Continue"}
@@ -626,8 +628,8 @@ export default function BuildApp() {
         </div>
 
         <p className="text-xs text-zinc-500 mt-10 text-center">
-          By continuing you agree to a one-off launch-offer charge of £4.99
-          (normally £20) to receive your personalised app, our{" "}
+          By continuing you agree to a one-off launch-offer charge of {plan}
+          (normally {planStandard}) to receive your personalised app, our{" "}
           <Link to="/terms" className="text-zinc-300 underline hover:text-white">
             Terms
           </Link>{" "}

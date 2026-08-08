@@ -46,6 +46,59 @@ const AVAILABLE_NOW = [
   },
 ];
 
+// Every item here maps to a real field in PlanBuilderForm. If the builder
+// changes, this needs to change with it — a coaches page that overstates the
+// tool is worse than no coaches page.
+const BUILDER_TABS = [
+  {
+    tab: "Details",
+    body: "Client name and email, plus your own notes. Their name is what appears on the app they open.",
+  },
+  {
+    tab: "Train",
+    body: "The sessions. Structure them Monday to Sunday, or as Phase 1, 2, 3 — which is what you want for rehab or return-to-play work that progresses by stage rather than by weekday.",
+  },
+  {
+    tab: "Morning",
+    body: "A morning routine if you prescribe one. Mobility, breathing, weigh-ins, whatever you already use.",
+  },
+  {
+    tab: "Fuel",
+    body: "Meals with calories and macros, if nutrition is part of what you offer.",
+  },
+  {
+    tab: "Recover",
+    body: "Sleep targets and recovery protocols sat alongside the training, rather than in a separate document nobody opens.",
+  },
+];
+
+const BUILDER_CONTROLS = [
+  {
+    title: "A reason on every movement",
+    body: "Free text, per exercise. Your client taps it and sees why you chose that lift for them. It's the difference between a plan someone follows and one they quietly stop opening in week three.",
+  },
+  {
+    title: "Sets, reps, load and rest",
+    body: "Exactly as you'd write them. Nothing is rounded, standardised or 'optimised' behind your back.",
+  },
+  {
+    title: "How it progresses",
+    body: "Set each exercise to hold steady or climb at a rate you choose, so the block moves forward without you rewriting it every week.",
+  },
+  {
+    title: "Rest timers, on or off",
+    body: "Per exercise. On gives your client a timer between sets in the app.",
+  },
+  {
+    title: "Logging, on or off",
+    body: "Let them record weights and reps as they train, or switch it off entirely if you'd rather they just followed the session.",
+  },
+  {
+    title: "Live preview as you build",
+    body: "The app renders beside you while you work, so nothing goes out that you haven't already seen from your client's side.",
+  },
+];
+
 // Kept deliberately short so it supports the page rather than dominating it —
 // half a page of things that don't exist makes the real product look thin.
 const IN_DEVELOPMENT = [
@@ -152,6 +205,42 @@ export default function ForCoaches() {
                   <p className="text-sm text-zinc-400 leading-relaxed">{f.body}</p>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-5 md:px-8 py-16 border-t border-white/10">
+        <p className="text-overline text-[#D4FF00] mb-4">— Inside the builder</p>
+        <h2 className="font-display text-3xl md:text-4xl uppercase mb-4">
+          What you're actually filling in
+        </h2>
+        <p className="text-sm text-zinc-500 leading-relaxed max-w-2xl mb-10">
+          Five tabs. Fill in what's relevant to how you work and skip the rest — empty
+          sections don't appear in your client's app at all. A live preview sits beside
+          you the whole time, so you see exactly what they'll see before anything is sent.
+        </p>
+
+        <div className="border-t border-white/10 mb-12">
+          {BUILDER_TABS.map((t) => (
+            <div
+              key={t.tab}
+              className="border-b border-white/10 py-5 flex flex-col sm:flex-row gap-2 sm:gap-8"
+            >
+              <div className="sm:w-32 shrink-0">
+                <span className="font-mono-display text-sm text-[#D4FF00]">{t.tab}</span>
+              </div>
+              <p className="text-sm text-zinc-400 leading-relaxed">{t.body}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="font-display text-2xl uppercase mb-6">And per exercise</h3>
+        <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">
+          {BUILDER_CONTROLS.map((c) => (
+            <div key={c.title} className="border-l-2 border-[#D4FF00]/30 pl-4">
+              <h4 className="text-white text-base mb-2">{c.title}</h4>
+              <p className="text-sm text-zinc-400 leading-relaxed">{c.body}</p>
             </div>
           ))}
         </div>

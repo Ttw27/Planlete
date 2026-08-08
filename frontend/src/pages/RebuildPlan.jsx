@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Check, ArrowLeft } from "lucide-react";
 import { track } from "@/lib/analytics";
+import { usePricing } from "@/lib/pricing";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,7 +16,7 @@ const API = `${BACKEND_URL}/api`;
  * through the questionnaire again, this inherits everything they told us the
  * first time and only asks what is different.
  *
- * The same £4.99 as any other plan. The backend receives derived_from plus
+ * The same price as any other plan. The backend receives derived_from plus
  * this change request and builds the next block from the previous one.
  */
 
@@ -32,6 +33,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function RebuildPlan() {
   const { id } = useParams();
+  const { plan: planPrice } = usePricing();
   const [plan, setPlan] = useState(null);
   const [error, setError] = useState(null);
   const [reasons, setReasons] = useState([]);
@@ -231,7 +233,7 @@ export default function RebuildPlan() {
             disabled={submitting || !reasons.length}
             className="w-full sm:w-auto bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? "Starting checkout…" : "Build my next block — £4.99"}
+            {submitting ? "Starting checkout…" : `Build my next block — ${planPrice}`}
           </button>
         </div>
       </div>

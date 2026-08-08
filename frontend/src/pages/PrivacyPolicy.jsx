@@ -64,6 +64,41 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
+            <h2 className="text-white font-display text-xl mb-3">Unfinished plans you ask us to save</h2>
+            <p>
+              If you're part-way through building a plan and choose "email me a link to
+              finish later", we store what you've entered so far against your email address
+              so you can pick it up again on any device. These unfinished drafts are deleted
+              after 30 days. Your browser also keeps a copy on your own device so a closed
+              tab doesn't lose your work — that copy never leaves your device and you can
+              clear it by dismissing the restore prompt or clearing your browser data.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">Getting your plan back</h2>
+            <p>
+              If you lose the link to a plan you've bought, you can ask us to send it again
+              from the recovery page. We only ever send plans to the email address they were
+              purchased with, and we give the same response whether or not a plan exists for
+              the address entered — so the page can't be used to find out whether somebody
+              is a customer.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">How we measure the site</h2>
+            <p>
+              We record a small number of anonymous events so we can see where people get
+              stuck — for example, that someone started the builder, or reached the payment
+              page. Each event is a name, the page it happened on, and a timestamp. We use no
+              advertising or analytics cookies, no third-party trackers, and nothing that
+              identifies you personally, which is why you won't see a cookie banner on this
+              site. These events cannot be linked back to you or to your plan.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-white font-display text-xl mb-3">How we use your information</h2>
             <ul className="list-disc pl-5 flex flex-col gap-2">
               <li>To generate your personalised training plan and deliver it to you by email.</li>

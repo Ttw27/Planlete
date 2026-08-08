@@ -6,6 +6,7 @@ import axios from "axios";
 import { ArrowLeft } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
 import PlanBuilderForm from "@/components/PlanBuilderForm";
+import { usePricing } from "@/lib/pricing";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -13,12 +14,13 @@ const API = `${BACKEND_URL}/api`;
 /**
  * The customer-facing self-serve builder — for people who already know
  * exactly what they want and don't need the AI questionnaire. Same builder
- * component as the coach/admin versions, same £4.99 price, same real app on
+ * component as the coach/admin versions, same price, same real app on
  * the other end. Payment happens before anything is saved, same as the AI
  * path — /checkout/create-session just receives manual_plan instead of
  * answers, and the backend branches accordingly after payment confirms.
  */
 export default function SelfServeBuilder() {
+  const { plan, planStandard } = usePricing();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (payload) => {
@@ -58,14 +60,14 @@ export default function SelfServeBuilder() {
         </h1>
         <p className="text-sm text-zinc-400 mb-10 max-w-xl">
           Same features as the AI-built apps — timer, logging, progress tracking — just running
-          exactly what you enter. £4.99, one-off, yours to keep.
+          exactly what you enter. {plan}, one-off, yours to keep.
         </p>
 
         <PlanBuilderForm
           mode="self"
           onSubmit={handleSubmit}
           submitting={submitting}
-          submitLabel="Continue to payment — £4.99"
+          submitLabel={`Continue to payment — ${plan}`}
         />
 
         {/* Shown before payment, deliberately. Finding out what you bought
@@ -73,12 +75,12 @@ export default function SelfServeBuilder() {
         <div className="mt-10 border border-white/10 bg-white/[0.02] p-5 max-w-2xl">
           <p className="text-overline text-zinc-500 mb-3">Before you pay</p>
           <ul className="text-sm text-zinc-400 leading-relaxed space-y-2">
-            <li>One payment of £4.99. No subscription, nothing renews.</li>
+            <li>One payment of {plan}. No subscription, nothing renews.</li>
             <li>The app is yours to keep and comes back whenever you open the link.</li>
             <li>
               You've got <span className="text-white">48 hours</span> after it's built to
               change what you entered, or until you log your first session, whichever
-              comes first. After that it's fixed, and changes mean a new plan at £4.99.
+              comes first. After that it's fixed, and changes mean a new plan at {plan}.
             </li>
           </ul>
           <p className="text-xs text-zinc-600 mt-4">

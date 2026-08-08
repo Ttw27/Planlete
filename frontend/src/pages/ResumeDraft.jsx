@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import PlanBuilderForm from "@/components/PlanBuilderForm";
 import SiteHeader from "@/components/SiteHeader";
+import { usePricing } from "@/lib/pricing";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,6 +16,7 @@ const API = `${BACKEND_URL}/api`;
  */
 export default function ResumeDraft() {
   const { token } = useParams();
+  const { plan, planStandard } = usePricing();
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -88,7 +90,7 @@ export default function ResumeDraft() {
           initialData={initialData}
           onSubmit={handleSubmit}
           submitting={submitting}
-          submitLabel="Continue to payment — £4.99"
+          submitLabel={`Continue to payment — ${plan}`}
         />
       </div>
     </div>

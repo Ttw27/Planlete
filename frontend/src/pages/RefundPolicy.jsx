@@ -31,6 +31,34 @@ export default function RefundPolicy() {
           </section>
 
           <section>
+            <h2 className="text-white font-display text-xl mb-3">Corrections within 48 hours</h2>
+            <p>
+              Separately from any refund, every generated plan comes with a correction
+              window: 48 hours from when it's built, or until you log your first session
+              against it, whichever comes first. If something's wrong — the plan doesn't
+              match the answers you gave, or it's clearly unsuitable for the experience
+              level you stated — tell us inside that window and we'll put it right. There's
+              no charge for a correction.
+            </p>
+            <p className="mt-3">
+              This exists so a genuine error has a quick fix that doesn't depend on you
+              asking for your money back. After the window closes the plan is fixed; if you
+              want it changed at that point, a follow-on block is charged as a new purchase.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-white font-display text-xl mb-3">Your rights if a plan is faulty</h2>
+            <p>
+              Nothing on this page limits your rights under the Consumer Rights Act 2015.
+              Digital content must be of satisfactory quality, fit for purpose, and as
+              described. If a plan doesn't meet that standard, you're entitled to a repair
+              or replacement and, where that isn't possible or doesn't fix it, a refund —
+              regardless of the correction window above having closed.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-white font-display text-xl mb-3">When we will refund you</h2>
             <ul className="list-disc pl-5 flex flex-col gap-2">
               <li>If you were charged but never received your plan due to a technical fault on our end, and we're unable to resolve it promptly.</li>
@@ -69,7 +97,7 @@ export default function RefundPolicy() {
               We don't offer refunds simply because you've changed your mind after receiving a
               working, complete plan, or because the specific exercises or nutrition
               suggestions weren't to your taste — the whole point of the one-off, low price is
-              that you're welcome to build a fresh plan (for a new £4.99 charge) any time your
+              that you're welcome to build a fresh plan (charged as a new purchase) any time your
               goals or circumstances change, rather than needing a refund on the original.
             </p>
           </section>
