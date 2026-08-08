@@ -19,6 +19,7 @@ import GeneratedApp from "@/pages/GeneratedApp";
 import RebuildPlan from "@/pages/RebuildPlan";
 import ResumeDraft from "@/pages/ResumeDraft";
 import RecoverPlan from "@/pages/RecoverPlan";
+import AdminFunnel from "@/pages/AdminFunnel";
 import SaveToPhoneInstructions from "@/pages/SaveToPhoneInstructions";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminImages from "@/pages/AdminImages";
@@ -71,6 +72,7 @@ function App() {
             <Route path="/admin/images" element={<AdminImages />} />
             <Route path="/admin/leads" element={<AdminLeads />} />
             <Route path="/admin/support" element={<AdminSupport />} />
+            <Route path="/admin/funnel" element={<AdminFunnel />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/test-plan" element={<AdminTestPlan />} />
             <Route path="/for-coaches" element={<ForCoaches />} />
