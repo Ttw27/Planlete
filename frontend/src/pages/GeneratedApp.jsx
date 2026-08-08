@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
+import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 import AppShell from "@/components/AppShell";
 import ContactSupportPanel from "@/components/ContactSupportPanel";
 
@@ -43,7 +45,10 @@ export default function GeneratedApp() {
     axios
       .get(`${API}/plans/${id}`)
       .then((res) => {
-        if (alive) setPlan(res.data);
+        if (alive) {
+          setPlan(res.data);
+          track("plan_opened");
+        }
       })
       .catch(() => alive && setError("Plan not found"));
     return () => {
@@ -132,17 +137,134 @@ export default function GeneratedApp() {
   // comparisons don't collide when the week number resets to 1 on cycle 2.
   const absoluteWeek = (cycleNumber - 1) * weeks.length + weekIndex + 1;
 
+  // Follow-on blocks only make sense for generated plans — a manually
+  // authored one has no questionnaire behind it to derive from.
+  const canRebuild = Boolean(plan.answers?.goal) && !plan.manually_authored && !plan.sample_mode;
+
   return (
-    <AppShell
-      data={data}
-      planId={plan.id}
-      weekNumber={weekIndex + 1}
-      absoluteWeek={absoluteWeek}
-      cycleNumber={cycleNumber}
-      totalWeeks={weeks.length}
-      allWeeks={weeks}
-      activeWeekIndex={weekIndex}
-      sampleMode={Boolean(plan.sample_mode)}
-    />
+    <>
+      <AppShell
+        data={data}
+        planId={plan.id}
+        weekNumber={weekIndex + 1}
+        absoluteWeek={absoluteWeek}
+        cycleNumber={cycleNumber}
+        totalWeeks={weeks.length}
+        allWeeks={weeks}
+        activeWeekIndex={weekIndex}
+        sampleMode={Boolean(plan.sample_mode)}
+      />
+      {canRebuild && <PlanFooterActions plan={plan} />}
+    </>
+  );
+}
+
+/**
+ * Everything that lives beneath the plan itself: the correction window while
+ * it's still open, and the follow-on block route once it isn't. Deliberately
+ * one component — from the customer's point of view "something's wrong" and
+ * "something's changed" are the same impulse arriving at different times.
+ */
+function PlanFooterActions({ plan }) {
+  const [status, setStatus] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    axios
+      .get(`${API}/plans/${plan.id}/edit-status`)
+      .then((res) => setStatus(res.data))
+      .catch(() => setStatus({ editable: false, reason: "not_available" }));
+  }, [plan.id]);
+
+  const submitTweak = async () => {
+    if (message.trim().length < 10) {
+      toast.error("Tell us a bit more about what's wrong");
+      return;
+    }
+    setSending(true);
+    try {
+      await axios.post(`${API}/plans/${plan.id}/tweak-request`, { message: message.trim() });
+      setSent(true);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Couldn't send that. Try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const deadline = status?.until
+    ? new Date(status.until).toLocaleString("en-GB", {
+        weekday: "long", hour: "2-digit", minute: "2-digit",
+      })
+    : null;
+
+  return (
+    <div className="bg-[#050505] border-t border-white/10 px-6 py-10">
+      <div className="max-w-3xl mx-auto space-y-8">
+        {status?.editable && (
+          <div className="border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-5">
+            <p className="text-overline text-[#D4FF00] mb-2">
+              Correctable until {deadline}
+            </p>
+            {sent ? (
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                Got it — we'll look at your plan personally and come back to you by email.
+                Your plan stays exactly as it is in the meantime.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-zinc-400 leading-relaxed mb-4">
+                  Something not right? Tell us now and we'll fix it. This closes after
+                  48 hours, or once you log your first session.
+                </p>
+                {open ? (
+                  <div className="space-y-3">
+                    <textarea
+                      rows={3}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="e.g. I said 3 days but it's given me 5, or the volume is far too low for my experience"
+                      className="w-full bg-transparent border border-white/15 focus:border-[#D4FF00] outline-none px-4 py-3 text-sm text-white placeholder:text-white/25"
+                    />
+                    <button
+                      onClick={submitTweak}
+                      disabled={sending}
+                      className="bg-[#D4FF00] text-black text-[11px] font-bold uppercase tracking-wide px-5 py-3 hover:bg-white transition-colors disabled:opacity-40"
+                    >
+                      {sending ? "Sending…" : "Send it"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setOpen(true)}
+                    className="border border-[#D4FF00]/40 text-[#D4FF00] text-[11px] font-bold uppercase tracking-wide px-5 py-3 hover:bg-[#D4FF00] hover:text-black transition-colors"
+                  >
+                    Something's wrong with my plan
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        <div>
+          <p className="text-overline text-[#D4FF00] mb-3">Something changed?</p>
+          <p className="text-zinc-400 text-sm leading-relaxed mb-5 max-w-xl">
+            Picked up an injury, lost a training day, away for a fortnight, or just
+            finished the four weeks? We'll build your next block from this one — same
+            goal, same history, adjusted. No questionnaire to fill in again.
+          </p>
+          <Link
+            to={`/app/u/${plan.id}/next`}
+            className="inline-block border border-[#D4FF00]/40 text-[#D4FF00] text-[11px] font-bold uppercase tracking-wide px-5 py-3 hover:bg-[#D4FF00] hover:text-black transition-colors"
+          >
+            Build my next block
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

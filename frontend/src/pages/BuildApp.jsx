@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { track } from "@/lib/analytics";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -25,6 +26,10 @@ export const BASE_QUESTIONS = [
       "Athlete performance",
       "Muscle building",
       "Bodybuilding (competing)",
+      "Powerlifting",
+      "Calisthenics / skills",
+      "Running / endurance",
+      "CrossFit",
       "Hybrid athlete / HYROX",
       "Boxing",
       "Kickboxing / martial arts",
@@ -68,8 +73,32 @@ export const BASE_QUESTIONS = [
       "Full gym",
       "Home gym (barbell + rack)",
       "Dumbbells only",
+      "Hotel / travelling",
       "Bodyweight only",
     ],
+    hint: "Hotel gyms vary — pick that and we'll build around dumbbells, a bench and a treadmill, with substitutions if it's more basic.",
+  },
+  {
+    id: "club_days",
+    label: "Which days do you train with your club or squad?",
+    type: "multi",
+    options: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    hint: "So your gym sessions fit around them instead of stacking on top.",
+    showIf: (a) =>
+      /team|squad|club/i.test(a.training_with || ""),
+  },
+  {
+    id: "bar_access",
+    label: "Do you have a pull-up bar or rings?",
+    type: "choice",
+    options: [
+      "Yes — a fixed bar",
+      "Yes — bar and rings",
+      "Rings only",
+      "Neither",
+    ],
+    hint: "Most bar skills are impossible without one — we'll use floor progressions instead if not.",
+    goals: ["Calisthenics / skills"],
   },
   {
     id: "session",
@@ -220,6 +249,45 @@ export const STAGE_CONFIG = {
       "Yes — final weeks (peaking/tapering)",
     ],
   },
+  Powerlifting: {
+    id: "stage",
+    label: "Do you have a meet coming up?",
+    options: [
+      "No — building strength generally",
+      "Yes — 8+ weeks out",
+      "Yes — final 4 weeks (peaking)",
+      "Meet week — taper me",
+    ],
+  },
+  "Calisthenics / skills": {
+    id: "stage",
+    label: "Where are you with the skills?",
+    options: [
+      "Beginner — working towards my first pull-up and dip",
+      "Intermediate — strict pull-ups and dips, chasing the muscle-up",
+      "Advanced — muscle-up solid, working levers and handstand",
+      "No specific skill — I just want to train bodyweight properly",
+    ],
+  },
+  "Running / endurance": {
+    id: "stage",
+    label: "What are you training for?",
+    options: [
+      "5k or 10k",
+      "Half marathon",
+      "Marathon or longer",
+      "No race — general running fitness",
+    ],
+  },
+  CrossFit: {
+    id: "stage",
+    label: "Do you have a competition coming up?",
+    options: [
+      "No — general training",
+      "Yes — several weeks out (building)",
+      "Yes — final weeks (peaking)",
+    ],
+  },
 };
 
 // Activities where an advisory is warranted before someone starts training
@@ -230,7 +298,7 @@ export const STAGE_CONFIG = {
 const GP_ADVISORY = [
   { match: ["boxing", "kickboxing", "mma", "muay thai", "fight", "combat", "bjj", "wrestling"],
     text: "Combat sports are physically demanding and carry a real injury risk. If you have any existing health condition, or you're new to training at this intensity, please speak to your GP before you start." },
-  { match: ["marathon", "ultra", "ironman", "triathlon", "half marathon"],
+  { match: ["marathon", "ultra", "ironman", "triathlon", "half marathon", "endurance"],
     text: "Endurance events place sustained load on your heart and joints. If you have any existing health condition, or you're returning after time off, please speak to your GP before starting this plan." },
 ];
 
@@ -285,11 +353,40 @@ export default function BuildApp() {
   const q = questions[safeStep];
   const progress = ((safeStep + 1) / (questions.length + 1)) * 100;
 
-  const setAnswer = (val) => setAnswers((a) => ({ ...a, [q.id]: val }));
+  const startedRef = useRef(false);
+  const setAnswer = (val) => {
+    // Fires once, on the first answer — the difference between "landed on
+    // the page" and "actually started" is the most important drop-off in
+    // the whole funnel.
+    if (!startedRef.current) {
+      startedRef.current = true;
+      track("builder_started");
+    }
+    setAnswers((a) => ({ ...a, [q.id]: val }));
+  };
+
+  // Multi-select questions accumulate into an array and, unlike single-choice,
+  // must not auto-advance — the person needs to tick several before moving on.
+  const toggleAnswer = (opt) =>
+    setAnswers((a) => {
+      const current = Array.isArray(a[q.id]) ? a[q.id] : [];
+      return {
+        ...a,
+        [q.id]: current.includes(opt)
+          ? current.filter((x) => x !== opt)
+          : [...current, opt],
+      };
+    });
 
   const next = () => {
-    if (!answers[q.id] && !q.optional) {
-      toast.error("Pick or type an answer to continue");
+    const answered =
+      q.type === "multi"
+        ? Array.isArray(answers[q.id]) && answers[q.id].length > 0
+        : Boolean(answers[q.id]);
+    if (!answered && !q.optional) {
+      toast.error(
+        q.type === "multi" ? "Pick at least one to continue" : "Pick or type an answer to continue"
+      );
       return;
     }
     if (q.type === "email" && !answers[q.id].includes("@")) {
@@ -310,8 +407,10 @@ export default function BuildApp() {
 
   const submit = async () => {
     setSubmitting(true);
+    track("builder_completed", { goal: answers.goal });
     try {
       const res = await axios.post(`${API}/checkout/create-session`, { answers });
+      track("checkout_opened", { kind: "ai" });
       // Send them to Stripe's hosted checkout — the plan is generated only
       // after payment is confirmed, on the /build/success page.
       window.location.href = res.data.checkout_url;
@@ -423,14 +522,17 @@ export default function BuildApp() {
           ) : (
             <div className="grid sm:grid-cols-2 gap-3">
               {q.options.map((opt) => {
-                const active = answers[q.id] === opt;
+                const active =
+                  q.type === "multi"
+                    ? Array.isArray(answers[q.id]) && answers[q.id].includes(opt)
+                    : answers[q.id] === opt;
                 return (
                   <button
                     key={opt}
                     data-testid={`build-option-${q.id}-${opt
                       .replace(/[^a-z0-9]/gi, "-")
                       .toLowerCase()}`}
-                    onClick={() => setAnswer(opt)}
+                    onClick={() => (q.type === "multi" ? toggleAnswer(opt) : setAnswer(opt))}
                     className={`text-left px-5 py-4 border transition-all ${
                       active
                         ? "border-[#D4FF00] bg-[#D4FF00]/5 text-white"
@@ -465,6 +567,37 @@ export default function BuildApp() {
             </p>
           )}
         </div>
+
+        {/* Before they pay — what they're actually buying. Shown here rather
+            than after checkout, so nobody discovers the terms once they've
+            already been charged. */}
+        {safeStep === questions.length - 1 && (
+          <div className="mt-10 border border-white/10 bg-white/[0.02] p-5">
+            <p className="text-overline text-zinc-500 mb-3">Before you pay</p>
+            <ul className="text-sm text-zinc-400 leading-relaxed space-y-2">
+              <li>
+                One payment of £4.99. There's no subscription and nothing renews.
+              </li>
+              <li>
+                Your plan is generated for you and is yours to keep — you can come back
+                to it whenever you like.
+              </li>
+              <li>
+                You've got <span className="text-white">48 hours</span> after it's built to
+                tell us if something's wrong, or until you log your first session,
+                whichever comes first. After that the plan is fixed, and changes mean a
+                new block at £4.99.
+              </li>
+            </ul>
+            <p className="text-xs text-zinc-600 mt-4">
+              By continuing you agree to our{" "}
+              <Link to="/terms" className="underline hover:text-zinc-400">Terms</Link>,{" "}
+              <Link to="/privacy" className="underline hover:text-zinc-400">Privacy Policy</Link>{" "}
+              and{" "}
+              <Link to="/refunds" className="underline hover:text-zinc-400">Refund Policy</Link>.
+            </p>
+          </div>
+        )}
 
         {/* Navigation */}
         <div className="mt-12 flex items-center justify-between">

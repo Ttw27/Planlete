@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import axios from "axios";
 import { ArrowLeft } from "lucide-react";
@@ -31,6 +32,8 @@ export default function SelfServeBuilder() {
     }
     setSubmitting(true);
     try {
+      track("builder_completed", { kind: "manual" });
+      track("checkout_opened", { kind: "manual" });
       const res = await axios.post(`${API}/checkout/create-session`, {
         manual_plan: payload,
       });
@@ -64,6 +67,27 @@ export default function SelfServeBuilder() {
           submitting={submitting}
           submitLabel="Continue to payment — £4.99"
         />
+
+        {/* Shown before payment, deliberately. Finding out what you bought
+            after being charged is how refund requests start. */}
+        <div className="mt-10 border border-white/10 bg-white/[0.02] p-5 max-w-2xl">
+          <p className="text-overline text-zinc-500 mb-3">Before you pay</p>
+          <ul className="text-sm text-zinc-400 leading-relaxed space-y-2">
+            <li>One payment of £4.99. No subscription, nothing renews.</li>
+            <li>The app is yours to keep and comes back whenever you open the link.</li>
+            <li>
+              You've got <span className="text-white">48 hours</span> after it's built to
+              change what you entered, or until you log your first session, whichever
+              comes first. After that it's fixed, and changes mean a new plan at £4.99.
+            </li>
+          </ul>
+          <p className="text-xs text-zinc-600 mt-4">
+            By continuing you agree to our{" "}
+            <Link to="/terms" className="underline hover:text-zinc-400">Terms</Link>,{" "}
+            <Link to="/privacy" className="underline hover:text-zinc-400">Privacy Policy</Link>{" "}
+            and <Link to="/refunds" className="underline hover:text-zinc-400">Refund Policy</Link>.
+          </p>
+        </div>
       </div>
     </div>
   );
