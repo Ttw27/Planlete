@@ -18,7 +18,7 @@ export const CONTENT_GROUPS = [
           "Stop screenshot-ing workout plans from Instagram. Get a proper training app — personalised to you, on your phone, ready to go. Built on a foundation of widely published training science and coaching methodology.",
         long: true,
       },
-      { key: "hero_primary_cta", label: "Primary CTA button", default: "Build my plan — £4.99" },
+      { key: "hero_primary_cta", label: "Primary CTA button", default: "Build my plan" },
       { key: "hero_secondary_cta", label: "Secondary CTA button", default: "Try a free sample" },
     ],
   },
@@ -90,7 +90,7 @@ export const CONTENT_GROUPS = [
       {
         key: "flex_body",
         label: "Body paragraph",
-        default: "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same £4.99, brand new app, made for where you are now.",
+        default: "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same one-off price, brand new app, made for where you are now.",
         long: true,
       },
     ],
@@ -115,11 +115,11 @@ export const CONTENT_GROUPS = [
     fields: [
       { key: "pricing_badge", label: "Badge text", default: "Launch offer · 75% off · Limited time" },
       { key: "pricing_headline_a", label: "Headline line 1", default: "Your own app." },
-      { key: "pricing_headline_b", label: "Headline line 2 (accent)", default: "Normally £20. Now £4.99." },
+      { key: "pricing_headline_b", label: "Headline line 2 (accent)", default: "Now at launch pricing." },
       {
         key: "pricing_explainer",
         label: "Explainer paragraph",
-        default: "We're running a launch offer to seed the first wave of users with real feedback. Once we hit our cap, the price reverts to £20.",
+        default: "We're running a launch offer to seed the first wave of users with real feedback. Once we hit our cap, the price goes back up.",
         long: true,
       },
     ],
@@ -156,7 +156,7 @@ export const CONTENT_GROUPS = [
         default: "Stop saving plans to your camera roll. Get an app that actually works.",
         long: true,
       },
-      { key: "footer_cta", label: "Footer CTA button", default: "Build my plan — £4.99" },
+      { key: "footer_cta", label: "Footer CTA button", default: "Build my plan" },
     ],
   },
 ];

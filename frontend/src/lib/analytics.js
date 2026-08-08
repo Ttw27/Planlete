@@ -1,36 +1,68 @@
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 /**
- * First-party, cookieless funnel tracking. Sends an event name and the
- * current path — nothing identifying, no cookie, no third party, so it
- * needs no consent banner.
+ * First-party, cookieless analytics.
  *
- * Deliberately fire-and-forget: analytics must never delay a page or
- * surface an error to someone trying to buy something.
+ * Everything goes to the existing /api/analytics/track endpoint and the
+ * analytics_events collection — one system, not two. No cookies, no third
+ * party, nothing that identifies a person, which is why the site needs no
+ * consent banner.
+ *
+ * Exports:
+ *   trackPageView()     — route changes, called from App.js
+ *   track(event, meta)  — funnel steps (builder_started, checkout_opened…)
+ *   trackEvent          — alias of track, kept for older call sites
  */
-export function track(event, meta) {
+
+// Per-tab id so one visit's steps can be grouped without identifying anyone.
+// sessionStorage, so it dies with the tab and never persists.
+function sessionId() {
+  try {
+    let id = sessionStorage.getItem("pl_sid");
+    if (!id) {
+      id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem("pl_sid", id);
+    }
+    return id;
+  } catch {
+    return "no-session";
+  }
+}
+
+function send(event, meta) {
   try {
     const body = JSON.stringify({
       event,
+      session_id: sessionId(),
       path: window.location.pathname,
-      meta: meta || {},
+      timestamp: new Date().toISOString(),
+      metadata: meta || {},
     });
+    const url = `${BACKEND_URL}/api/analytics/track`;
+
     // sendBeacon survives the page being navigated away from, which matters
-    // for checkout_opened — that fires immediately before a redirect to Stripe.
+    // for checkout_opened — that fires immediately before a Stripe redirect.
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(
-        `${BACKEND_URL}/api/events`,
-        new Blob([body], { type: "application/json" })
-      );
+      navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
       return;
     }
-    fetch(`${BACKEND_URL}/api/events`, {
+    fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
       keepalive: true,
     }).catch(() => {});
   } catch {
-    // Never let tracking break anything.
+    // Analytics must never break the page or delay someone trying to buy.
   }
 }
+
+export function trackPageView() {
+  send("page_view");
+}
+
+export function track(event, meta) {
+  send(event, meta);
+}
+
+export const trackEvent = track;
