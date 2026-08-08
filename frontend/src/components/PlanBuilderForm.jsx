@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { track } from "@/lib/analytics";
 import { Plus, Trash2, Eye, EyeOff, Clock, Info } from "lucide-react";
 import AppShell from "@/components/AppShell";
 
@@ -109,6 +110,126 @@ export default function PlanBuilderForm({
   const [section, setSection] = useState("details"); // details | train | fuel | recover
   const [selectedDay, setSelectedDay] = useState(new Date().getDay());
   const [showPreview, setShowPreview] = useState(false);
+
+  // ── Draft autosave ────────────────────────────────────────────────────────
+  // The builder can take a long time to fill in and nothing is persisted
+  // server-side until payment clears, so a closed tab used to lose everything.
+  // State is mirrored to localStorage on every change and offered back on the
+  // next visit. Deliberately NOT auto-applied — silently repopulating a form
+  // someone thought was blank is worse than asking.
+  const DRAFT_KEY = `planlete_draft_${mode}`;
+  const DRAFT_MAX_AGE_DAYS = 30;
+  const [foundDraft, setFoundDraft] = useState(null);
+  const restoredOrDismissed = useRef(false);
+
+  useEffect(() => {
+    // Editing an existing plan has its own source of truth — no draft prompt.
+    if (initialData) return;
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      const ageDays = (Date.now() - (draft.savedAt || 0)) / 86400000;
+      if (ageDays > DRAFT_MAX_AGE_DAYS) {
+        window.localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      setFoundDraft(draft);
+    } catch {
+      // A corrupt draft should never block the builder from opening.
+      try { window.localStorage.removeItem(DRAFT_KEY); } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Don't overwrite a draft the user hasn't answered the prompt on yet.
+    if (initialData) return;
+    if (foundDraft && !restoredOrDismissed.current) return;
+    const empty =
+      !clientName && !clientEmail && !notes &&
+      !morningRoutine.length &&
+      days.every((d) => !d.label && !d.focus && !(d.workouts || []).length);
+    if (empty) return;
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        savedAt: Date.now(),
+        clientName, clientEmail, notes, structureType,
+        days, nutrition, recovery, morningRoutine, allowLogging,
+        // disclaimerAccepted is deliberately not stored — it must be
+        // re-accepted every time, not inherited from a week-old draft.
+      }));
+    } catch {
+      // Private browsing or a full quota — autosave is a convenience, never
+      // a requirement, so failing here must stay silent.
+    }
+  }, [clientName, clientEmail, notes, structureType, days, nutrition,
+      recovery, morningRoutine, allowLogging, foundDraft, initialData, DRAFT_KEY]);
+
+  const restoreDraft = () => {
+    const d = foundDraft;
+    if (!d) return;
+    if (d.clientName != null) setClientName(d.clientName);
+    if (d.clientEmail != null) setClientEmail(d.clientEmail);
+    if (d.notes != null) setNotes(d.notes);
+    if (d.structureType) setStructureType(d.structureType);
+    if (Array.isArray(d.days) && d.days.length) setDays(d.days);
+    if (d.nutrition) setNutrition(d.nutrition);
+    if (d.recovery) setRecovery(d.recovery);
+    if (Array.isArray(d.morningRoutine)) setMorningRoutine(d.morningRoutine);
+    if (typeof d.allowLogging === "boolean") setAllowLogging(d.allowLogging);
+    restoredOrDismissed.current = true;
+    setFoundDraft(null);
+  };
+
+  const discardDraft = () => {
+    try { window.localStorage.removeItem(DRAFT_KEY); } catch {}
+    restoredOrDismissed.current = true;
+    setFoundDraft(null);
+  };
+
+  const draftAge = (savedAt) => {
+    const mins = Math.round((Date.now() - savedAt) / 60000);
+    if (mins < 60) return `${Math.max(mins, 1)} min ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+    const days_ = Math.round(hrs / 24);
+    return `${days_} day${days_ === 1 ? "" : "s"} ago`;
+  };
+
+  // Emailing the draft covers what localStorage can't: switching device,
+  // clearing the browser, or building on a phone and finishing on a laptop.
+  const [emailPromptOpen, setEmailPromptOpen] = useState(false);
+  const [resumeEmail, setResumeEmail] = useState("");
+  const [emailingDraft, setEmailingDraft] = useState(false);
+  const [draftEmailed, setDraftEmailed] = useState(false);
+
+  const emailDraft = async () => {
+    if (!resumeEmail.includes("@")) return;
+    setEmailingDraft(true);
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/drafts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: resumeEmail.trim(),
+          mode,
+          draft: {
+            clientName, clientEmail, notes, structureType,
+            days, nutrition, recovery, morningRoutine, allowLogging,
+          },
+        }),
+      });
+      setDraftEmailed(true);
+      track("draft_emailed");
+    } catch {
+      // Non-fatal — localStorage still holds the draft either way.
+    } finally {
+      setEmailingDraft(false);
+    }
+  };
+  // ──────────────────────────────────────────────────────────────────────────
+
 
   // ── Day/exercise editing ──
   const updateDay = (index, patch) => {
@@ -242,7 +363,70 @@ export default function PlanBuilderForm({
     <div className="flex flex-col lg:flex-row gap-6">
       {/* ── Builder ── */}
       <div className="flex-1 min-w-0">
+        {foundDraft && (
+          <div className="mb-5 border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-4 flex flex-wrap items-center gap-x-4 gap-y-3 justify-between">
+            <div className="text-sm text-zinc-200">
+              You've got an unfinished plan saved on this device
+              <span className="text-zinc-400"> — {draftAge(foundDraft.savedAt)}.</span>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={restoreDraft}
+                className="bg-[#D4FF00] text-black text-[11px] font-bold uppercase tracking-wide px-3 py-2 hover:bg-white transition-colors"
+              >
+                Pick up where I left off
+              </button>
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="border border-white/15 text-zinc-400 text-[11px] uppercase tracking-wide px-3 py-2 hover:text-white hover:border-white/30 transition-colors"
+              >
+                Start fresh
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+          {/* Finish later — only offered once there's something worth saving. */}
+          {!initialData && (clientName || (days || []).some((d) => (d.workouts || []).length > 0)) && (
+            <div className="w-full order-last mt-2">
+              {draftEmailed ? (
+                <p className="text-xs text-[#D4FF00]">
+                  Link sent — check your inbox. You can close this whenever you like.
+                </p>
+              ) : emailPromptOpen ? (
+                <div className="flex flex-wrap gap-2 items-center">
+                  <input
+                    type="email"
+                    value={resumeEmail}
+                    onChange={(e) => setResumeEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="bg-transparent border border-white/15 focus:border-[#D4FF00] outline-none px-3 py-2 text-sm text-white placeholder:text-white/25"
+                  />
+                  <button
+                    type="button"
+                    onClick={emailDraft}
+                    disabled={emailingDraft || !resumeEmail.includes("@")}
+                    className="bg-[#D4FF00] text-black text-[11px] font-bold uppercase tracking-wide px-4 py-2 disabled:opacity-40"
+                  >
+                    {emailingDraft ? "Sending…" : "Send me the link"}
+                  </button>
+                  <span className="text-xs text-zinc-600">
+                    Nothing is charged — you only pay at checkout.
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEmailPromptOpen(true)}
+                  className="text-xs text-zinc-500 underline hover:text-zinc-300"
+                >
+                  Email me a link to finish this later
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex gap-1 border border-white/10">
             {SECTIONS.map((s) => (
               <button
