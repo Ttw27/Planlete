@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Personal plan apps — unique per customer, no reason to index and no
+# reason for them to appear in anyone else's search results.
+Disallow: /app/u/
+Disallow: /build/resume/
+Disallow: /c/
+
+# Admin
+Disallow: /admin
+
+Sitemap: https://www.planlete.co.uk/sitemap.xml
