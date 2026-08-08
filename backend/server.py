@@ -39,6 +39,11 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://planlete.vercel.app")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 RESEND_FROM = os.environ.get("RESEND_FROM", "Planlete <hello@planlete.co.uk>")
+# Where operational alerts go — a payment that produced no plan, a correction
+# request, anything that needs a human. Without this set, failures are only
+# visible by opening the admin panel and looking, which is no use when you're
+# away from your desk.
+ADMIN_ALERT_EMAIL = os.environ.get("ADMIN_ALERT_EMAIL")
 
 # Coach/physio builder pricing. COACH_SUBSCRIPTION_PRICE_ID must be created as
 # a recurring Price in the Stripe Dashboard first (Products -> Add product ->
@@ -68,6 +73,23 @@ def send_email(to: str, subject: str, html: str) -> None:
             logger.info(f"Email sent to {to}: {subject}")
     except Exception as e:
         logger.error(f"Resend email error sending to {to}: {e}")
+
+
+def notify_admin(subject: str, body_html: str) -> None:
+    """
+    Operational alert to whoever runs this. Best-effort like send_email — an
+    alert failing must never take down the thing it was alerting about.
+    """
+    if not ADMIN_ALERT_EMAIL:
+        logger.warning(f"ADMIN_ALERT_EMAIL not set — no alert sent for: {subject}")
+        return
+    send_email(
+        to=ADMIN_ALERT_EMAIL,
+        subject=f"[Planlete] {subject}",
+        html=body_html,
+    )
+
+
 stripe.api_key = STRIPE_SECRET_KEY
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
@@ -150,10 +172,21 @@ ACTIVITY_FAMILIES = {
         "marathon", "half marathon", "10k", "5k", "ultra", "ironman",
         "triathlon", "sportive", "cycling", "running", "swim",
     ],
-    "hybrid": ["hyrox", "crossfit", "obstacle", "spartan", "hybrid"],
+    # Specific disciplines are matched before the broader families they would
+    # otherwise fall into. Order matters here — family_for_goal returns the
+    # first match, so powerlifting must be checked before "strength" and
+    # crossfit before "hybrid", or they inherit the wrong guardrails.
+    "powerlifting": ["powerlifting", "power lifting", "strongman", "squat bench deadlift"],
+    "calisthenics": [
+        "calisthenic", "muscle-up", "muscle up", "handstand", "planche",
+        "front lever", "back lever", "street workout", "gymnastic", "bar skills",
+        "bodyweight skill",
+    ],
+    "crossfit": ["crossfit", "cross fit", "wod", "metcon", "functional fitness"],
+    "hybrid": ["hyrox", "obstacle", "spartan", "hybrid"],
     "combat": ["boxing", "kickboxing", "mma", "muay thai", "bjj", "wrestling", "fight"],
     "team": ["football", "rugby", "basketball", "netball", "hockey", "cricket", "soccer"],
-    "strength": ["powerlifting", "strongman", "hypertrophy", "bodybuilding", "muscle"],
+    "strength": ["hypertrophy", "bodybuilding", "muscle"],
     "speed": ["sprint", "athletics", "track"],
 }
 
@@ -198,6 +231,40 @@ FAMILY_GUARDRAILS = {
   person has stated they train with a team or squad.
 - If a match day is given, that day must be the match itself — never a hard training session.
   The day before must be light and sharp, and the day after must be recovery.""",
+    "powerlifting": """POWERLIFTING GUARDRAILS (mandatory):
+- The squat, bench and deadlift are the plan. Accessories exist to serve them, never to
+  replace them or to chase set counts per muscle group.
+- All loads must be expressed as percentages of an estimated 1RM, never as absolute weights.
+- Never programme a true 1RM attempt in week 1, and never more than once in the whole block.
+- Never programme heavy squats and heavy deadlifts on consecutive days.
+- Intensity and volume move inversely across the block — as percentages climb, total volume falls.
+- Week 4 must reduce both, and if a meet is stated as imminent it must be a genuine taper:
+  low volume, sharp, nothing that leaves residual fatigue.
+- Never prescribe a grinding rep to failure on a competition lift with no spotter mentioned.""",
+    "calisthenics": """CALISTHENICS GUARDRAILS (mandatory):
+- Skill work always comes first in a session, on a fresh nervous system. Never at the end,
+  never after fatiguing strength work.
+- Progressions must be gated on prerequisites. Never programme a muscle-up progression for
+  someone who cannot yet do strict pull-ups and straight-bar dips; never programme a planche
+  progression without the prior lean and tuck holds. State the prerequisite in the reasoning.
+- Include dedicated straight-arm scapular work and elbow tendon preparation every week.
+  Elbow and shoulder tendinopathy is the primary injury in this discipline and it comes from
+  straight-arm loading progressed too fast.
+- Static holds must be prescribed in seconds with a clear progression target — never
+  "hold as long as possible", which trains failure rather than the position.
+- Never programme maximal skill attempts on consecutive days.
+- If no pull-up bar or rings are available, never prescribe bar or ring skills. Substitute
+  floor-based progressions and say so.""",
+    "crossfit": """CROSSFIT GUARDRAILS (mandatory):
+- Never programme high-rep olympic lifting under heavy fatigue. Technical failure under load
+  is the primary injury mechanism in this sport.
+- Technique and skill work goes before the conditioning piece, never after it.
+- Never programme heavy barbell work and high-volume gymnastics (kipping pull-ups,
+  toes-to-bar, handstand press-ups) at high volume in the same session.
+- Build strict strength before adding kipping volume, and cap kipping volume for anyone
+  who has not stated multiple years of experience.
+- Never programme maximal lifts on consecutive days.
+- Week 4 must reduce volume meaningfully.""",
     "strength": """STRENGTH GUARDRAILS (mandatory):
 - Never programme true maximal (1RM) attempts more than once in the block.
 - Keep weekly sets per muscle group within a sane hypertrophy range (roughly 10-20 working sets).
@@ -671,6 +738,44 @@ def validate_plan(plan_data: dict) -> None:
         raise ValueError("Missing morningRoutine section")
 
 
+def _summarise_plan_for_prompt(plan: dict, max_weeks: int = 2) -> str:
+    """
+    Compress a stored plan into something small enough to sit inside another
+    prompt. Sending all 28 days back verbatim would roughly double the cost of
+    every follow-on generation for no benefit — the model needs the shape and
+    the movement selection, not every set and rep of week 3.
+    """
+    lines = []
+    ans = plan.get("answers") or {}
+    if ans.get("goal"):
+        lines.append(f"Original goal: {ans['goal']}")
+    if ans.get("days"):
+        lines.append(f"Original availability: {ans['days']} days per week")
+    if ans.get("equipment"):
+        lines.append(f"Original equipment: {ans['equipment']}")
+
+    for week in (plan.get("weeks") or [])[:max_weeks]:
+        wk = week.get("weekNumber", "?")
+        lines.append(f"\nWeek {wk} — {week.get('theme', '')}")
+        for day in week.get("days") or []:
+            workouts = day.get("workouts") or []
+            if not workouts:
+                lines.append(f"  {day.get('label', '?')}: rest")
+                continue
+            names = []
+            for w in workouts[:8]:
+                sets, reps = w.get("sets"), w.get("reps")
+                sr = f" {sets}x{reps}" if sets and reps else ""
+                names.append(f"{w.get('name', '?')}{sr}")
+            lines.append(f"  {day.get('label', '?')} ({day.get('focus', '')}): " + ", ".join(names))
+
+    total_weeks = len(plan.get("weeks") or [])
+    if total_weeks > max_weeks:
+        lines.append(f"\n(Weeks {max_weeks + 1}–{total_weeks} followed the same structure with "
+                     f"progressive overload applied.)")
+    return "\n".join(lines)
+
+
 async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = None) -> dict:
     """One attempt at generating a plan via Claude. May raise on API error,
     invalid JSON, or failed validation — the caller (generate_plan_with_claude)
@@ -709,6 +814,9 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
         )
     notes = answers.get("notes", "").strip() or "None provided"
     training_with = answers.get("training_with", "On my own").strip()
+    club_days = answers.get("club_days") or []
+    if isinstance(club_days, str):
+        club_days = [d.strip() for d in club_days.split(",") if d.strip()]
     match_day = answers.get("match_day", "").strip()
     injury = answers.get("injury", "").strip()
 
@@ -779,6 +887,46 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
         else ""
     )
 
+    # ── Derived plans ─────────────────────────────────────────────────────
+    # A derived plan is a new block built from one the customer already owns,
+    # because something changed: an injury, a schedule change, different
+    # equipment, or a trip. They are paying again, so this must be a genuinely
+    # new block — not the old one with two exercises swapped.
+    previous_plan = answers.get("_previous_plan") or {}
+    change_request = answers.get("_change_request") or {}
+    derived_guidance = ""
+    if previous_plan:
+        prev_summary = _summarise_plan_for_prompt(previous_plan)
+        reasons = change_request.get("reasons") or []
+        detail = (change_request.get("detail") or "").strip()
+        keep = (change_request.get("keep") or "").strip()
+        derived_guidance = (
+            "\nTHIS IS A FOLLOW-ON BLOCK.\n"
+            "The person already trained on the plan summarised below and has come back "
+            "because something changed. Build the NEXT block for them.\n\n"
+            f"THEIR PREVIOUS PLAN:\n{prev_summary}\n\n"
+            f"WHAT HAS CHANGED: {'; '.join(reasons) if reasons else 'not specified'}\n"
+            + (f"IN THEIR WORDS: {detail}\n" if detail else "")
+            + (f"WHAT THEY WANT KEPT: {keep}\n" if keep else "")
+            + "\nRules for a follow-on block:\n"
+            "- Carry forward the movements and structure that were working, unless the change "
+            "makes them unsuitable. Familiarity is a feature; they liked this plan.\n"
+            "- Progress from where the previous block ended — this is block two, not a restart.\n"
+            "- Apply the stated change thoroughly and everywhere, not cosmetically. If an injury "
+            "is named, every session must respect it, not just the obvious one.\n"
+            "- If the change is a reduction in available days, rebuild the split properly for the "
+            "new number rather than deleting sessions from the old one.\n"
+            "- Say plainly in the reasoning where the plan differs from their last one and why.\n"
+        )
+
+    club_days_line = (
+        f"- Club/squad training days: {', '.join(club_days)}. These sessions already happen and "
+        f"are NOT optional — do not schedule gym work that duplicates their load, and never place "
+        f"a heavy lower-body session on the day before one. Gym sessions must fit around them."
+        if club_days
+        else ""
+    )
+
     stage_line = f"- Training stage: {stage}" if stage else ""
     stage_guidance = ""
     if stage:
@@ -815,6 +963,7 @@ User Profile:
 - Include Nutrition: {nutrition_pref}
 {diet_block}
 - Training context: {training_with}
+{club_days_line}
 {match_day_line}
 - Injuries, allergies or other notes from the user: {notes}
 
@@ -823,6 +972,7 @@ User Profile:
 {solo_guidance}
 {injury_guidance}
 {retry_guidance}
+{derived_guidance}
 
 {guardrails}
 {activity_standards}
@@ -1170,6 +1320,11 @@ class CheckoutSessionRequest(BaseModel):
     # questionnaire path, manual_plan for the self-serve builder path.
     answers: Optional[Dict[str, Any]] = None
     manual_plan: Optional[Dict[str, Any]] = None
+    # Follow-on blocks: the id of a plan the customer already owns, plus what
+    # has changed. Answers are inherited from the source plan, so they never
+    # refill the questionnaire.
+    derived_from: Optional[str] = None
+    change_request: Optional[Dict[str, Any]] = None
 
 
 class CheckoutSessionResponse(BaseModel):
@@ -1212,8 +1367,34 @@ class SupportRequest(BaseModel):
     message: str
     order_id: Optional[str] = None
     session_id: Optional[str] = None
+    plan_id: Optional[str] = None
+    # "contact" for general enquiries, "tweak" for in-window corrections to a
+    # plan. Kept separate so the inbox distinguishes "this is wrong" from
+    # "I have a question" — they need different response times.
+    kind: str = "contact"
     resolved: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class PlanRecoverRequest(BaseModel):
+    email: EmailStr
+
+
+class FunnelEventCreate(BaseModel):
+    event: str
+    path: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
+
+class TweakRequestCreate(BaseModel):
+    message: str
+    email: Optional[EmailStr] = None
+
+
+class PlanDraftCreate(BaseModel):
+    email: EmailStr
+    mode: str = "self"
+    draft: Dict[str, Any]
 
 
 class AdminLoginRequest(BaseModel):
@@ -1546,14 +1727,38 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Payments are not configured yet.")
 
-    if bool(payload.answers) == bool(payload.manual_plan):
+    source_plan = None
+    if payload.derived_from:
+        if payload.answers or payload.manual_plan:
+            raise HTTPException(
+                status_code=400,
+                detail="A follow-on block inherits its answers — don't send answers or manual_plan.",
+            )
+        source_plan = await db.plans.find_one({"id": payload.derived_from}, {"_id": 0})
+        if not source_plan:
+            raise HTTPException(status_code=404, detail="We couldn't find that plan.")
+        if not (source_plan.get("answers") or {}).get("goal"):
+            # Manually-authored plans have no questionnaire behind them, so
+            # there is nothing to derive a new block from.
+            raise HTTPException(
+                status_code=400,
+                detail="Follow-on blocks are only available for generated plans.",
+            )
+    elif bool(payload.answers) == bool(payload.manual_plan):
         raise HTTPException(status_code=400, detail="Provide exactly one of answers or manual_plan.")
 
-    kind = "ai" if payload.answers else "manual"
-    product_name = (
-        "Planlete — Personalised Training App" if kind == "ai"
-        else "Planlete — Your Own Plan, Built Your Way"
-    )
+    if source_plan:
+        kind = "derived"
+    elif payload.answers:
+        kind = "ai"
+    else:
+        kind = "manual"
+
+    product_name = {
+        "ai": "Planlete — Personalised Training App",
+        "manual": "Planlete — Your Own Plan, Built Your Way",
+        "derived": "Planlete — Your Next Block",
+    }[kind]
 
     order_id = str(uuid.uuid4())
     order = {
@@ -1561,6 +1766,8 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
         "kind": kind,
         "answers": payload.answers,
         "manual_plan": payload.manual_plan,
+        "derived_from": payload.derived_from,
+        "change_request": payload.change_request,
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -1605,8 +1812,29 @@ async def process_paid_order(order_id: str, order: dict) -> None:
     answers = order.get("answers") or {}
     manual_plan = order.get("manual_plan") or {}
 
-    email = (answers.get("email") if kind == "ai" else manual_plan.get("client_email")) or None
-    name = (answers.get("name") if kind == "ai" else manual_plan.get("client_name")) or "there"
+    source_plan = None
+    if kind == "derived":
+        source_plan = await db.plans.find_one({"id": order.get("derived_from")}, {"_id": 0})
+        if not source_plan:
+            raise ValueError(f"Source plan {order.get('derived_from')} no longer exists.")
+        # Inherit everything they told us originally, then layer the change on
+        # top — they should never have to answer the questionnaire twice.
+        answers = dict(source_plan.get("answers") or {})
+        change = order.get("change_request") or {}
+        for key in ("days", "equipment", "session", "match_day", "club_days", "bar_access"):
+            if change.get(key):
+                answers[key] = change[key]
+        if change.get("detail"):
+            answers["notes"] = ((answers.get("notes") or "") + "\n" + change["detail"]).strip()
+        answers["_previous_plan"] = source_plan
+        answers["_change_request"] = change
+
+    email = (
+        manual_plan.get("client_email") if kind == "manual" else answers.get("email")
+    ) or None
+    name = (
+        manual_plan.get("client_name") if kind == "manual" else answers.get("name")
+    ) or "there"
 
     try:
         if kind == "manual":
@@ -1650,7 +1878,21 @@ async def process_paid_order(order_id: str, order: dict) -> None:
             plan_data["order_id"] = order_id
             # Stored so a future block can be built from what they originally
             # told us, rather than making them fill the questionnaire in again.
-            plan_data["answers"] = answers
+            # The underscore-prefixed keys are prompt scaffolding only — storing
+            # them would nest the whole previous plan inside this one, and again
+            # inside the next, growing without limit.
+            plan_data["answers"] = {
+                k: v for k, v in answers.items() if not k.startswith("_")
+            }
+            if kind == "derived":
+                plan_data["derived_from"] = order.get("derived_from")
+                plan_data["change_request"] = order.get("change_request")
+
+        # Correctable for a short window, then locked. Set here rather than at
+        # payment time so a slow generation doesn't eat into it.
+        plan_data["editable_until"] = (
+            datetime.now(timezone.utc) + timedelta(hours=EDIT_WINDOW_HOURS)
+        ).isoformat()
 
         await db.plans.insert_one(plan_data)
 
@@ -1691,6 +1933,13 @@ async def process_paid_order(order_id: str, order: dict) -> None:
         await db.pending_orders.update_one(
             {"id": order_id},
             {"$set": {"status": "paid_generation_failed", "error": str(e)}}
+        )
+        notify_admin(
+            "Paid order failed to generate",
+            f"<p><strong>They have been charged and have no plan.</strong></p>"
+            f"<p>Order: {order_id}<br>Kind: {kind}<br>Customer: {email or 'unknown'}</p>"
+            f"<p>Error:<br><code>{str(e)[:800]}</code></p>"
+            f'<p><a href="{FRONTEND_URL}/admin/orders">Open admin orders</a></p>',
         )
         if email:
             send_email(
@@ -1762,7 +2011,7 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
 
 
 @api_router.post("/webhooks/stripe")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
     """
     Safety-net audit trail: marks an order as 'paid' in the database even if
     the customer never makes it back to the success page. Does NOT generate
@@ -1830,6 +2079,21 @@ async def stripe_webhook(request: Request):
                     )
                     logger.info(f"Stripe webhook: order {order_id} confirmed paid")
 
+                    # Generation normally happens on the success page. If the
+                    # customer closed the tab, lost signal, or the redirect
+                    # failed, that never fires — and they have paid for
+                    # nothing. Kick it off here instead. The status guard
+                    # above means only one path can ever claim an order, so
+                    # this cannot double-generate.
+                    order["status"] = "paid"
+                    background_tasks.add_task(process_paid_order, order_id, order)
+                    notify_admin(
+                        "Order generated via webhook fallback",
+                        f"<p>Order {order_id} was paid but the customer never reached the "
+                        f"success page, so generation was started from the webhook instead.</p>"
+                        f"<p>Worth a glance — if this happens often, the redirect is broken.</p>",
+                    )
+
     elif event_type in ("customer.subscription.deleted", "customer.subscription.updated"):
         subscription_id = data_object.get("id") if isinstance(data_object, dict) else data_object.id
         status = data_object.get("status") if isinstance(data_object, dict) else data_object.status
@@ -1877,10 +2141,268 @@ async def create_support_request(payload: SupportRequestCreate):
     return req
 
 
+# ── Plan recovery ─────────────────────────────────────────────────────────
+# The emailed link is the only route into something the customer paid for.
+# Lose the email and the plan is gone. This re-sends every plan attached to
+# an address — and only ever to that address, so knowing someone's email
+# grants nothing you couldn't already get by asking them.
+@api_router.post("/plans/recover")
+async def recover_plans(payload: PlanRecoverRequest):
+    email = payload.email.strip().lower()
+    docs = await db.plans.find(
+        {"answers.email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}},
+        {"_id": 0, "id": 1, "brand": 1, "created_at": 1, "answers.goal": 1},
+    ).sort("created_at", -1).to_list(50)
+
+    if docs:
+        rows = "".join(
+            f'<li style="margin-bottom:10px;">'
+            f'<a href="{FRONTEND_URL}/app/u/{d["id"]}">'
+            f'{(d.get("answers") or {}).get("goal") or d.get("brand") or "Your plan"}</a>'
+            f'<br><span style="color:#666;font-size:12px;">'
+            f'built {(d.get("created_at") or "")[:10]}</span></li>'
+            for d in docs
+        )
+        send_email(
+            to=email,
+            subject="Your Planlete plans",
+            html=(
+                "<div style=\"font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;\">"
+                f"<p>Here {'is the plan' if len(docs) == 1 else 'are the plans'} we have "
+                "for this email address:</p>"
+                f"<ul style=\"padding-left:18px;\">{rows}</ul>"
+                "<p style=\"color:#666;font-size:13px;\">Bookmark the link or save it to your "
+                "home screen so you don't lose it again.</p></div>"
+            ),
+        )
+
+    # Always the same response, whether or not anything matched — otherwise
+    # this becomes a way to test which email addresses are customers.
+    return {
+        "ok": True,
+        "message": "If we've got a plan for that email, it's on its way to your inbox.",
+    }
+
+
+# ── Funnel events ─────────────────────────────────────────────────────────
+# Deliberately first-party and cookieless: an event name, a path and a
+# timestamp. Enough to see where people drop out of the builder without
+# taking on a third-party tracker or a consent banner.
+@api_router.post("/events")
+async def record_event(payload: FunnelEventCreate):
+    allowed = {
+        "landing_view", "builder_started", "builder_completed",
+        "checkout_opened", "payment_succeeded", "plan_opened",
+        "rebuild_started", "draft_emailed",
+    }
+    if payload.event not in allowed:
+        # Silently ignore rather than error — a stale frontend firing an
+        # unknown event should never surface as a console error to a customer.
+        return {"ok": True}
+    await db.funnel_events.insert_one({
+        "event": payload.event,
+        "path": payload.path,
+        "meta": payload.meta or {},
+        "at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"ok": True}
+
+
+@api_router.get("/admin/funnel")
+async def admin_funnel(days: int = 30, _: bool = Depends(require_admin)):
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    pipeline = [
+        {"$match": {"at": {"$gte": since}}},
+        {"$group": {"_id": "$event", "count": {"$sum": 1}}},
+    ]
+    rows = await db.funnel_events.aggregate(pipeline).to_list(50)
+    counts = {r["_id"]: r["count"] for r in rows}
+    order = [
+        "landing_view", "builder_started", "builder_completed",
+        "checkout_opened", "payment_succeeded", "plan_opened",
+    ]
+    funnel = []
+    previous = None
+    for step in order:
+        n = counts.get(step, 0)
+        funnel.append({
+            "step": step,
+            "count": n,
+            "conversion_from_previous": (
+                round(100 * n / previous, 1) if previous else None
+            ),
+        })
+        if n:
+            previous = n
+    return {"days": days, "funnel": funnel, "raw": counts}
+
+
+@api_router.get("/admin/diagnostics")
+async def admin_diagnostics(_: bool = Depends(require_admin)):
+    """
+    Config sanity check. Everything here fails silently in production by
+    design, which is exactly why it needs somewhere to be looked at.
+    """
+    return {
+        "stripe_configured": bool(STRIPE_SECRET_KEY),
+        "stripe_webhook_secret_set": bool(STRIPE_WEBHOOK_SECRET),
+        "resend_configured": bool(RESEND_API_KEY),
+        "resend_from": RESEND_FROM,
+        "admin_alert_email_set": bool(ADMIN_ALERT_EMAIL),
+        "anthropic_configured": bool(os.environ.get("ANTHROPIC_API_KEY") or EMERGENT_KEY),
+        "frontend_url": FRONTEND_URL,
+        "edit_window_hours": EDIT_WINDOW_HOURS,
+        "email_dns_reminder": (
+            "Resend will only deliver reliably once SPF, DKIM and DMARC are "
+            "verified for the sending domain. Check the Domains page in Resend "
+            "— an unverified domain sends straight to spam, which looks "
+            "identical to no email at all."
+        ),
+    }
+
+
 @api_router.get("/admin/support", response_model=List[SupportRequest])
 async def admin_list_support_requests(_: bool = Depends(require_admin)):
     docs = await db.support_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return [SupportRequest(**d) for d in docs]
+
+
+# ── Grace window ──────────────────────────────────────────────────────────
+# A plan is correctable for a short period after it is generated, then locks.
+# The window exists so somebody's typo or a genuinely poor generation does not
+# force a refund; the lock exists so one payment does not become an unlimited
+# plan-rewriting subscription. It closes early once they start training,
+# because at that point they are not fixing a mistake, they are redesigning
+# the programme — and that is what a follow-on block is for.
+EDIT_WINDOW_HOURS = 48
+
+
+async def _edit_status(plan: dict) -> dict:
+    until_raw = plan.get("editable_until")
+    if not until_raw:
+        # Plans created before this feature existed never had a window.
+        return {"editable": False, "until": None, "reason": "not_available"}
+
+    try:
+        until = datetime.fromisoformat(until_raw)
+    except ValueError:
+        return {"editable": False, "until": None, "reason": "not_available"}
+
+    logged = await db.weight_logs.find_one({"plan_id": plan.get("id")})
+    if logged:
+        return {"editable": False, "until": until_raw, "reason": "training_started"}
+
+    if datetime.now(timezone.utc) > until:
+        return {"editable": False, "until": until_raw, "reason": "window_expired"}
+
+    return {"editable": True, "until": until_raw, "reason": None}
+
+
+@api_router.get("/plans/{plan_id}/edit-status")
+async def get_plan_edit_status(plan_id: str):
+    plan = await db.plans.find_one({"id": plan_id}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return await _edit_status(plan)
+
+
+@api_router.post("/plans/{plan_id}/tweak-request", response_model=SupportRequest)
+async def create_tweak_request(plan_id: str, payload: TweakRequestCreate):
+    """
+    In-window correction request. Deliberately routed to a human rather than
+    regenerating automatically: a regeneration would produce a different plan
+    rather than fixing the specific thing that is wrong, and every one of these
+    is evidence about where generation is failing.
+    """
+    plan = await db.plans.find_one({"id": plan_id}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    status = await _edit_status(plan)
+    if not status["editable"]:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This plan is locked. You can build a follow-on block from it instead."
+                if status["reason"] != "not_available"
+                else "Corrections aren't available for this plan — please contact support."
+            ),
+        )
+
+    email = payload.email or (plan.get("answers") or {}).get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="We need an email to reply to.")
+
+    req = SupportRequest(
+        email=email,
+        message=payload.message,
+        plan_id=plan_id,
+        order_id=plan.get("order_id"),
+        kind="tweak",
+    )
+    await db.support_requests.insert_one(req.model_dump())
+    logger.info(f"Tweak request for plan {plan_id} from {email}")
+
+    # Time-limited by design, so this one can't wait for you to check the panel.
+    notify_admin(
+        "Correction requested — 48h window open",
+        f"<p>Plan: {plan_id}<br>From: {email}</p>"
+        f"<p><strong>What they said:</strong><br>{req.message}</p>"
+        f'<p><a href="{FRONTEND_URL}/app/u/{plan_id}">Open their plan</a> · '
+        f'<a href="{FRONTEND_URL}/admin/support">Admin support</a></p>',
+    )
+
+    send_email(
+        to=email,
+        subject="We've got your correction request",
+        html=(
+            "<p>Thanks — we've received your request and we'll look at your plan "
+            "personally.</p><p>Your plan stays exactly where it is in the meantime: "
+            f'<a href="{FRONTEND_URL}/app/u/{plan_id}">open it here</a>.</p>'
+        ),
+    )
+    return req
+
+
+# ── Finish-later drafts ───────────────────────────────────────────────────
+# localStorage covers the closed-tab case, but not switching device or
+# clearing the browser. This stores a draft server-side against a one-time
+# token and emails the link back.
+@api_router.post("/drafts")
+async def save_plan_draft(payload: PlanDraftCreate):
+    token = uuid.uuid4().hex
+    await db.plan_drafts.insert_one({
+        "token": token,
+        "email": payload.email,
+        "mode": payload.mode,
+        "draft": payload.draft,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    link = f"{FRONTEND_URL}/build/resume/{token}"
+    send_email(
+        to=payload.email,
+        subject="Your unfinished Planlete plan",
+        html=(
+            "<p>Here's the link back to the plan you started building:</p>"
+            f'<p><a href="{link}">Pick up where you left off</a></p>'
+            "<p>The link works for 30 days. Nothing has been charged — you only "
+            "pay when you finish and check out.</p>"
+        ),
+    )
+    return {"ok": True}
+
+
+@api_router.get("/drafts/{token}")
+async def get_plan_draft(token: str):
+    doc = await db.plan_drafts.find_one({"token": token}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="That link has expired or doesn't exist.")
+    age_days = (
+        datetime.now(timezone.utc) - datetime.fromisoformat(doc["created_at"])
+    ).days
+    if age_days > 30:
+        raise HTTPException(status_code=404, detail="That link has expired.")
+    return {"mode": doc.get("mode", "self"), "draft": doc.get("draft", {})}
 
 
 @api_router.patch("/admin/support/{request_id}/resolve")
