@@ -801,8 +801,9 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
         </div>
       </div>
 
-      {/* Quick stats */}
-      {nutrition && (
+      {/* Quick stats — hidden when the plan carries no numeric targets (under-18
+          plans), where showing "0g" everywhere would be both broken and wrong. */}
+      {nutrition && Number(nutrition.calories) > 0 && (
         <div className="px-5 py-5 border-t border-white/10 grid grid-cols-4 gap-2">
           <Stat label="Cal" value={nutrition.calories} />
           <Stat label="Protein" value={`${nutrition.protein}g`} />
@@ -1406,16 +1407,28 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
 }
 
 function NutritionView({ nutrition }) {
-  const total = nutrition.protein * 4 + nutrition.carbs * 4 + nutrition.fats * 9;
-  const pPct = Math.round(((nutrition.protein * 4) / total) * 100);
-  const cPct = Math.round(((nutrition.carbs * 4) / total) * 100);
-  const fPct = 100 - pPct - cPct;
+  // Under-18 plans deliberately carry no calorie or macro targets, so every
+  // figure comes back as 0. Rendering the block anyway divides by zero, gives
+  // NaN bar widths, and shows a child a "0 kcal" daily target — the exact
+  // opposite of the intent. Guidance replaces the numbers instead.
+  const hasTargets =
+    Number(nutrition.calories) > 0 ||
+    Number(nutrition.protein) > 0 ||
+    Number(nutrition.carbs) > 0 ||
+    Number(nutrition.fats) > 0;
+
+  const total =
+    nutrition.protein * 4 + nutrition.carbs * 4 + nutrition.fats * 9;
+  const pPct = total > 0 ? Math.round(((nutrition.protein * 4) / total) * 100) : 0;
+  const cPct = total > 0 ? Math.round(((nutrition.carbs * 4) / total) * 100) : 0;
+  const fPct = total > 0 ? 100 - pPct - cPct : 0;
 
   const FALLBACK_DISCLAIMER =
     "Always speak to your GP or a qualified healthcare professional before starting any new supplement — especially if you have an existing health condition, take medication, or are pregnant or breastfeeding.";
 
   return (
     <div className="flex flex-col">
+      {hasTargets && (
       <div className="px-5 py-5 border-b border-white/10">
         <p className="text-overline">Daily target</p>
         <p className="font-display text-5xl mt-2">{nutrition.calories}</p>
@@ -1451,11 +1464,33 @@ function NutritionView({ nutrition }) {
           </span>
         </div>
       </div>
+      )}
 
       {nutrition.note && (
         <p className="px-5 py-4 text-sm text-zinc-300 border-b border-white/10">
           {nutrition.note}
         </p>
+      )}
+
+      {nutrition.adjustments?.length > 0 && (
+        <div className="px-5 py-5 border-b border-white/10">
+          <p className="text-overline mb-1">Days that differ</p>
+          <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+            The targets above are your baseline for a normal training day. These are the
+            days that change.
+          </p>
+          <div className="flex flex-col gap-2">
+            {nutrition.adjustments.map((a, i) => (
+              <div key={i} className="border border-white/10 px-3 py-3">
+                <p className="text-overline text-[var(--accent)]">{a.when}</p>
+                <p className="text-sm text-white mt-1.5 leading-relaxed">{a.change}</p>
+                {a.why && (
+                  <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">{a.why}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {nutrition.meals && (
