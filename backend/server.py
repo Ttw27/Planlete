@@ -990,7 +990,7 @@ def _json_from_message(message) -> dict:
     return json.loads(cleaned)
 
 
-async def _complete_missing_weeks(plan_data: dict, answers: dict, original_prompt: str) -> dict:
+async def _complete_missing_weeks(plan_data: dict, answers: dict) -> dict:
     """
     Top up a plan that came back with fewer than four weeks.
 
@@ -1025,12 +1025,53 @@ async def _complete_missing_weeks(plan_data: dict, answers: dict, original_promp
     themes = {2: "Build", 3: "Peak", 4: "Deload"}
     wanted = ", ".join(f"week {n} ({themes.get(n, '')})" for n in missing)
 
+    # The continuation is a fresh call with no memory of the original brief, so
+    # the constraints that are easiest to violate have to be restated. Without
+    # these it will happily put barbell work into a dumbbell-only plan, or a
+    # partner drill in front of someone who trains alone, and the plan then
+    # fails validation on the new weeks and costs the retry this was avoiding.
+    constraints = [f"- Equipment available: {answers.get('equipment', 'Full gym')}"]
+    facilities = answers.get("facilities") or []
+    if isinstance(facilities, str):
+        facilities = [f.strip() for f in facilities.split(",") if f.strip()]
+    if facilities:
+        constraints.append(f"- Facilities beyond the gym: {', '.join(facilities)}. Use nothing else.")
+    training_with = answers.get("training_with") or "On my own"
+    constraints.append(f"- Training context: {training_with}")
+    if any(t in training_with.lower() for t in ("own", "alone", "solo")):
+        constraints.append("- They train ALONE. No partner drills, sparring or opposed work.")
+    club_days = answers.get("club_days") or []
+    if isinstance(club_days, str):
+        club_days = [d.strip() for d in club_days.split(",") if d.strip()]
+    if club_days:
+        constraints.append(
+            f"- Club/squad days: {', '.join(club_days)}. Keep these as club sessions with real "
+            f"content, and do not count them as the sessions you are prescribing."
+        )
+    match_day = (answers.get("match_day") or "").strip()
+    if match_day and "not currently" not in match_day.lower():
+        constraints.append(
+            f"- Match day: {match_day}. Never a hard session; keep the day before light and the "
+            f"day after recovery."
+        )
+    injury = (answers.get("injury") or "").strip()
+    if injury:
+        constraints.append(f"- Injuries to work around, in every session: {injury}")
+    constraints.append(
+        f"- Sessions per week you are prescribing: {answers.get('days', '3')}, not counting any "
+        f"club training or match day."
+    )
+    constraints.append(f"- Typical session length: {answers.get('session', '60 min')}")
+
     continuation = f"""You previously produced part of a 4-week training plan but stopped early.
 Here is what you produced:
 
 {summary}
 
 Produce ONLY the missing weeks: {wanted}.
+
+These constraints still apply and must be respected in every week you produce:
+{chr(10).join(constraints)}
 
 Rules:
 - Keep the SAME exercises on the same days as the weeks above. Progression comes from
@@ -1107,7 +1148,61 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
             f"\nALLERGIES / FOODS TO AVOID: {allergies}. These must NEVER appear anywhere in "
             f"the nutrition section, including as minor ingredients."
         )
-    notes = answers.get("notes", "").strip() or "None provided"
+    notes = answers.get("notes", "").strip()
+    bodyweight = (answers.get("bodyweight") or "").strip()
+    height = (answers.get("height") or "").strip()
+    daily_activity = (answers.get("daily_activity") or "").strip()
+
+    # Under-18s do not get calorie targets or a deficit. The training side of the
+    # plan is unchanged, but a specific, confident-looking calorie number aimed
+    # at a child is not something this product should produce, and it becomes a
+    # problem exactly once. Anyone wanting more than general fuelling guidance at
+    # that age should be talking to a parent or a GP, not to us.
+    is_minor = "under 18" in str(age).lower()
+
+    if is_minor:
+        nutrition_brief = (
+            "\nAGE-APPROPRIATE NUTRITION — THIS PERSON IS UNDER 18.\n"
+            "Do NOT give a calorie target, a calorie deficit, a weight-loss target, or macro "
+            "gram targets. Set \"calories\", \"protein\", \"carbs\" and \"fats\" all to 0 and put the "
+            "guidance in \"note\" and \"meals\" instead.\n"
+            "Give general food-quality and fuelling advice only: eating enough to support growth "
+            "and training, protein at each meal, carbohydrate around sessions, hydration. Frame "
+            "meals as examples rather than a prescription.\n"
+            "In \"note\", say plainly that specific calorie or weight targets at this age should be "
+            "set with a parent, guardian or GP rather than from an app.\n"
+            "This applies even if the stated goal is fat loss. Never build a deficit.\n"
+        )
+    else:
+        profile_bits = []
+        if bodyweight:
+            profile_bits.append(f"bodyweight {bodyweight}")
+        if height:
+            profile_bits.append(f"height {height}")
+        if daily_activity:
+            profile_bits.append(f"activity outside training: {daily_activity.lower()}")
+
+        if profile_bits:
+            nutrition_brief = (
+                f"\nNUTRITION MUST BE CALCULATED FROM THEIR ACTUAL BODY DATA: "
+                f"{', '.join(profile_bits)}.\n"
+                "Work out maintenance calories from their bodyweight, height, age and the activity "
+                "level above, then adjust for the stated goal. Set protein from BODYWEIGHT, not "
+                "from a round number that looks about right: roughly 1.6-2.2g per kg for someone "
+                "training regularly, at the higher end when in a deficit.\n"
+                "State the resulting protein target in grams and make sure it is consistent with "
+                "the bodyweight given. A target that ignores their actual size is the most "
+                "obvious possible sign the plan was not built for them.\n"
+                "Never prescribe an aggressive deficit. Fat loss should be a moderate deficit they "
+                "can sustain alongside this training load, not the fastest possible route.\n"
+            )
+        else:
+            nutrition_brief = (
+                "\nNo bodyweight was given, so calorie and macro figures are estimates only. Say so "
+                "briefly in \"note\" rather than presenting them as precise targets.\n"
+            )
+
+    notes = notes or "None provided"
     training_with = answers.get("training_with", "On my own").strip()
     club_days = answers.get("club_days") or []
     if isinstance(club_days, str):
@@ -1325,6 +1420,7 @@ User Profile:
 {facilities_line}
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition_pref}
+{nutrition_brief}
 {diet_block}
 - Training context: {training_with}
 {club_days_line}
@@ -1391,6 +1487,23 @@ existing commitments. Remaining days are rest/recovery days.
 Every single day, including rest days, MUST have at least one entry in "workouts" —
 never return an empty workouts array.
 
+EVERY EXERCISE ENTRY MUST BE SOMETHING THE PERSON CAN ACTUALLY DO.
+
+Never use an umbrella name that hides its contents. "Pre-Training Activation
+Circuit", "Core Finisher", "Mobility Flow", "Conditioning Block" and
+"Warm-up Routine" are all failures: the person is holding a phone in a gym and
+those tell them nothing, and there is no demo video for a circuit you invented.
+
+Either give each movement its own entry, or, if it genuinely is a circuit, spell
+the contents out in the name:
+
+  BAD:  "Pre-Training Activation Circuit", sets "1x8min"
+  GOOD: "Activation circuit: glute bridge x10, banded lateral walk x10 each way,
+         leg swings x10 each leg", sets "2 rounds"
+
+The same applies to anything vague: "core work", "accessories", "prehab". Name
+the movements. If you cannot name them, do not program them.
+
 Every exercise MUST include a "demo" field: the best short search phrase for finding a
 demonstration video of that movement. For standard gym lifts this is just the plain
 exercise name ("back squat", "romanian deadlift"). For sport-specific or unusually named
@@ -1438,6 +1551,10 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
     "carbs": 260,
     "fats": 80,
     "note": "One or two sentences of nutrition guidance tailored to the goal and any allergies noted.",
+    "adjustments": [
+      {{"when": "Match day", "change": "Carbs up ~80g, most of it in the 3 hours before kick-off.", "why": "Tops up muscle glycogen so you don't fade in the last 20 minutes."}},
+      {{"when": "Rest day", "change": "Carbs down ~60g, protein and fats unchanged.", "why": "You're not fuelling a session, but recovery still needs the protein."}}
+    ],
     "meals": [
       {{"time": "08:00", "name": "Breakfast", "items": "..."}},
       {{"time": "11:00", "name": "Mid-morning", "items": "..."}},
@@ -1468,6 +1585,7 @@ Important:
 - Every workout entry MUST include a "reason" field: one short sentence (max ~20 words) explaining why THIS exercise was chosen for THIS person's goal, experience level, or any injury noted — not a generic description. Rest/recovery day entries can use "reason" to explain why rest is programmed there too.
 - If any injury, condition or limitation was noted, prioritise safety and note substitutions directly in the exercise name or via a safer alternative exercise choice
 - If nutrition was declined ("No — training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
+- "adjustments" is 2-4 entries covering the day types this person actually has: a rest day always, a match/competition day if they compete, and a hard training day where it matters. The main calorie and macro figures above are the BASELINE for a normal training day, and each adjustment says how that day differs. Keep protein steady across all of them and move carbohydrate — that is how it actually works. Give a real number in "change" (e.g. "carbs up ~80g"), never a vague instruction like "eat a bit more". If someone has no match day and no rest-day variation worth stating, return a rest-day entry only.
 - "morningRoutine" must be 3-6 real, quick mobility/stretching/activation items (same fields as a workout: name, sets, load, rest, reason) — genuinely appropriate as a short morning routine, not a repeat of the day's main training
 - Return valid JSON only — no markdown, no commentary, no trailing commas
 - Double-check before responding: every one of the 28 day-entries (4 weeks x 7 days) must be present, in Sun-Mon-Tue-Wed-Thu-Fri-Sat order, and every workout entry must have all five fields (name, sets, load, rest, reason) filled in — an incomplete plan is a failed response
@@ -1511,7 +1629,7 @@ Important:
             f"Plan came back with {len(weeks)} week(s) — requesting the missing weeks "
             f"rather than regenerating the whole plan"
         )
-        plan_data = await _complete_missing_weeks(plan_data, answers, prompt)
+        plan_data = await _complete_missing_weeks(plan_data, answers)
 
     plan_data["answers"] = answers
     plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
