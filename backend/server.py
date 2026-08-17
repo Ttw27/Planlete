@@ -171,7 +171,7 @@ EXPECTED_DAY_ORDER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 # Bumped whenever the prompt or plan schema meaningfully changes, and stamped
 # onto every generated plan. Without this, a complaint three months from now is
 # impossible to trace back to which version of the prompt produced it.
-PLAN_PROMPT_VERSION = "2026-07-v2"
+PLAN_PROMPT_VERSION = "2026-08-v3"
 
 
 # Which activity family a goal belongs to. Drives the hard guardrails below —
@@ -468,6 +468,70 @@ def _forbidden_equipment_terms(equipment: str) -> List[str]:
     return []
 
 
+# Facilities are deliberately separate from equipment. A gym is somewhere you
+# go most days; a running track is often somewhere you get to once a week. They
+# have different frequencies, so a plan that treats them the same either wastes
+# the facility or builds the whole block around something they can reach on a
+# Tuesday. Before this existed the model had no way of knowing a sprinter had a
+# track, so it either invented one or fell back to treadmill work.
+#
+# Terms are kept tight on purpose. A false positive here costs a full retry,
+# which is exactly what this release is trying to reduce, so each list only
+# contains phrases that are unambiguous in an exercise name.
+FACILITY_TERMS = {
+    "Running track": ["running track", "on the track", "track session", "400m track", "tartan track"],
+    "Grass or astro pitch": ["on the pitch", "astro", "grass pitch", "full pitch"],
+    "Pool": ["swim", "pool", "lengths", "front crawl", "backstroke"],
+    "Boxing gym or bag": ["heavy bag", "punch bag", "punching bag", "bag work", "bag round"],
+    "Hills or stairs": ["hill sprint", "hill run", "stair sprint", "stair run", "hill repeat"],
+    "Open road or trail": ["trail run", "road run", "long road"],
+}
+
+
+def _forbidden_facility_terms(facilities) -> List[str]:
+    """
+    Terms for facilities the person specifically told us they do NOT have.
+
+    Only fires when the facilities question was actually answered — an unanswered
+    question means we don't know, and guessing "they have nothing" would reject
+    good plans for everyone who never saw the question.
+    """
+    if not facilities:
+        return []
+    if isinstance(facilities, str):
+        facilities = [f.strip() for f in facilities.split(",") if f.strip()]
+    selected = {str(f).strip() for f in facilities}
+    if "Nothing else" in selected and len(selected) == 1:
+        # They explicitly said gym only, so every facility term is off-limits.
+        return [t for terms in FACILITY_TERMS.values() for t in terms]
+
+    forbidden = []
+    for facility, terms in FACILITY_TERMS.items():
+        if facility not in selected:
+            forbidden.extend(terms)
+    return forbidden
+
+
+# Labels that mark a day as an existing commitment rather than a session we are
+# prescribing. A club night and a match already happen whether or not anyone
+# writes a plan, so counting them against the number of sessions the person
+# asked us for is how a footballer who wanted 3 gym days ends up being told the
+# plan has 5 and triggering a pointless regeneration.
+COMMITMENT_DAY_TERMS = [
+    "match", "matchday", "match day", "fixture", "game day", "gameday",
+    "club training", "club session", "squad", "team training", "team session",
+    "competition", "race day", "fight night",
+]
+
+
+def _is_commitment_day(day: dict, club_days: list) -> bool:
+    label = str(day.get("label", "")).lower()
+    focus = str(day.get("focus", "")).lower()
+    if any(term in label or term in focus for term in COMMITMENT_DAY_TERMS):
+        return True
+    return str(day.get("day", "")).strip() in set(club_days or [])
+
+
 # Exercises that cannot be done alone. Checked when the person has said they
 # train solo, which is the default.
 PARTNER_TERMS = [
@@ -526,6 +590,11 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
     """
     equipment = answers.get("equipment", "")
     forbidden = _forbidden_equipment_terms(equipment)
+    facilities = answers.get("facilities") or []
+    forbidden_facilities = _forbidden_facility_terms(facilities)
+    club_days = answers.get("club_days") or []
+    if isinstance(club_days, str):
+        club_days = [d.strip() for d in club_days.split(",") if d.strip()]
     requested_minutes = _parse_minutes(answers.get("session", ""))
     # Defaults to solo when unset — the safer failure, and the common case.
     training_with = (answers.get("training_with") or "on my own").lower()
@@ -544,12 +613,29 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
             workouts = d.get("workouts", [])
             names = " ".join(str(ex.get("name", "")).lower() for ex in workouts)
 
+            # A club night or a match is an existing commitment, not a session
+            # we prescribed. It is exempt from nearly every check below: a match
+            # obviously involves an opponent and a pitch, and it runs as long as
+            # it runs regardless of the session length they asked for. Counting
+            # it also made a footballer who asked for 3 gym sessions read as 5,
+            # which burned a full regeneration on a plan that was already right.
+            if _is_commitment_day(d, club_days):
+                continue
+
             # Equipment they do not have
             for term in forbidden:
                 if term in names:
                     raise ValueError(
                         f"Week {week_num}, {d.get('day')}: prescribes '{term}' but the user's "
                         f"equipment is '{equipment}'. Use only equipment they actually have."
+                    )
+
+            # Facilities they told us they cannot get to
+            for term in forbidden_facilities:
+                if term in names:
+                    raise ValueError(
+                        f"Week {week_num}, {d.get('day')}: prescribes '{term}' but the user did "
+                        f"not list that facility. Use only the facilities they said they can reach."
                     )
 
             # Anything needing another person, when they train alone
@@ -701,6 +787,94 @@ def autofix_deload(plan_data: dict) -> None:
     plan_data["_deload_autofixed"] = True
 
 
+def autofix_training_days(plan_data: dict, answers: dict) -> None:
+    """
+    If the plan prescribes more training days than the person asked for, convert
+    the surplus into active recovery in place rather than regenerating.
+
+    This is the single most common soft failure, and it used to cost a full
+    3-minute retry every time it fired. The model tends to over-deliver: someone
+    asks for 3 sessions and gets 5, because more training reads as more value.
+    Trimming is both faster and more honest to what they actually asked for.
+
+    Two things this is careful about:
+
+    - The days to trim are chosen ONCE, from week 1, and the same day names are
+      then converted in all four weeks. Trimming week by week would leave a
+      block where Thursday is a session in week 1 and recovery in week 2, which
+      breaks the per-exercise progression the app tracks.
+    - The lightest days go first, measured by total sets. If something has to be
+      dropped it should be the accessory day, not the main lower-body session.
+    """
+    requested = _parse_minutes(str(answers.get("days", "")))
+    weeks = plan_data.get("weeks", [])
+    if not requested or len(weeks) != 4:
+        return
+
+    club_days = answers.get("club_days") or []
+    if isinstance(club_days, str):
+        club_days = [d.strip() for d in club_days.split(",") if d.strip()]
+
+    def sets_in(day):
+        total = 0
+        for ex in day.get("workouts", []):
+            m = re.match(r"\s*(\d+)\s*[xX]", str(ex.get("sets", "")))
+            total += int(m.group(1)) if m else 1
+        return total
+
+    def is_prescribed_session(day):
+        if _is_commitment_day(day, club_days):
+            return False
+        label = str(day.get("label", "")).lower()
+        focus = str(day.get("focus", "")).lower()
+        if any(t in label for t in ("rest", "recovery", "mobility", "off")) or "rest" in focus:
+            return False
+        workouts = day.get("workouts", [])
+        if len(workouts) <= 1 and _estimate_session_minutes(workouts) <= 25:
+            return False
+        return True
+
+    week1_sessions = [d for d in weeks[0].get("days", []) if is_prescribed_session(d)]
+    surplus = len(week1_sessions) - requested
+    if surplus <= 0:
+        return
+
+    # Lightest first, so the most important sessions survive. Ties break
+    # towards the END of the week: when every session carries the same set
+    # count the sort is otherwise stable and drops Monday, which is almost
+    # always the main lower-body day. Later days are more often accessory or
+    # top-up work, so they are the safer thing to lose.
+    day_order = {d: i for i, d in enumerate(EXPECTED_DAY_ORDER)}
+    to_convert = {
+        d.get("day")
+        for d in sorted(
+            week1_sessions,
+            key=lambda d: (sets_in(d), -day_order.get(d.get("day"), 0)),
+        )[:surplus]
+    }
+
+    for w in weeks:
+        for d in w.get("days", []):
+            if d.get("day") not in to_convert:
+                continue
+            d["label"] = "Active recovery"
+            d["focus"] = "Recovery"
+            d["workouts"] = [{
+                "name": "Easy walk or light mobility",
+                "sets": "25min",
+                "load": "Easy",
+                "rest": "—",
+                "demo": "mobility flow",
+                "reason": (
+                    "You asked for "
+                    f"{requested} sessions a week, so this day stays easy — recovery is what "
+                    "lets the sessions that matter actually land."
+                ),
+            }]
+
+    plan_data["_days_autofixed"] = sorted(to_convert)
+
+
 def validate_plan(plan_data: dict) -> None:
     """
     Deterministic quality check on the plan Claude just generated. Raises a
@@ -785,6 +959,118 @@ def _summarise_plan_for_prompt(plan: dict, max_weeks: int = 2) -> str:
     return "\n".join(lines)
 
 
+def _json_from_message(message) -> dict:
+    """
+    Pull the JSON object out of a Claude response.
+
+    Claude Sonnet 5 can include a "thinking" block ahead of the actual answer on
+    a prompt this complex, so content[0] is not reliably the text. On long
+    generations it also intermittently wraps the answer in ```json fences or
+    adds a line of preamble, which made a raw json.loads fail with "line 1
+    column 1" — and every one of those failures used to cost a full retry.
+    Stripping fences and slicing to the outermost braces removes that entire
+    class of wasted regeneration.
+    """
+    response_text = None
+    for block in message.content:
+        if getattr(block, "type", None) == "text":
+            response_text = block.text
+            break
+    if response_text is None:
+        raise Exception("Claude response contained no text block")
+
+    cleaned = response_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned).strip()
+    first = cleaned.find("{")
+    last = cleaned.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        cleaned = cleaned[first:last + 1]
+
+    return json.loads(cleaned)
+
+
+async def _complete_missing_weeks(plan_data: dict, answers: dict, original_prompt: str) -> dict:
+    """
+    Top up a plan that came back with fewer than four weeks.
+
+    A targeted continuation is both faster and better than a full retry. Faster
+    because it generates two or three weeks rather than four plus all the
+    nutrition and recovery scaffolding. Better because the weeks it already
+    produced are kept, so the block progresses from what week 1 actually says
+    instead of being replaced by a different plan that happens to have the right
+    shape.
+
+    Deliberately attempted once. If the continuation also comes back wrong, the
+    caller's normal retry loop takes over — this is an optimisation on the happy
+    path, not a second retry mechanism layered underneath the first.
+    """
+    existing = plan_data.get("weeks", [])
+    have = len(existing)
+    missing = list(range(have + 1, 5))
+
+    # Only the parts of each existing week the model needs to continue from,
+    # rather than the whole thing — the point is a small, fast call.
+    summary_lines = []
+    for w in existing:
+        summary_lines.append(f"Week {w.get('weekNumber')} ({w.get('theme', '')}):")
+        for d in w.get("days", []):
+            names = ", ".join(
+                f"{ex.get('name')} {ex.get('sets', '')}".strip()
+                for ex in d.get("workouts", [])
+            )
+            summary_lines.append(f"  {d.get('day')} — {d.get('label', '')}: {names}")
+    summary = "\n".join(summary_lines)
+
+    themes = {2: "Build", 3: "Peak", 4: "Deload"}
+    wanted = ", ".join(f"week {n} ({themes.get(n, '')})" for n in missing)
+
+    continuation = f"""You previously produced part of a 4-week training plan but stopped early.
+Here is what you produced:
+
+{summary}
+
+Produce ONLY the missing weeks: {wanted}.
+
+Rules:
+- Keep the SAME exercises on the same days as the weeks above. Progression comes from
+  load, reps or intensity, never from swapping movements — the app tracks logged weights
+  per exercise name, so a movement that appears one week and vanishes the next has no
+  history to compare against.
+- Week 4 MUST be a deload: the same exercises with roughly 30-40% fewer total sets and
+  noticeably lighter loads. Reduce sets, do not delete exercises.
+- Every week has all 7 days, in Sun, Mon, Tue, Wed, Thu, Fri, Sat order. Every day has at
+  least one entry in "workouts", including rest days.
+- Every workout entry needs name, sets, load, rest and reason. Exercises also need demo.
+
+Return ONLY raw JSON (no markdown, no commentary) in this exact shape:
+
+{{"weeks": [{{"weekNumber": {missing[0]}, "theme": "...", "days": [{{"day": "Sun", "label": "...", "focus": "...", "workouts": [{{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}}]}}]}}]}}
+"""
+
+    client = get_anthropic_client()
+    with client.messages.stream(
+        model="claude-sonnet-5",
+        max_tokens=24000,
+        messages=[{"role": "user", "content": continuation}],
+    ) as stream:
+        message = stream.get_final_message()
+
+    extra = _json_from_message(message).get("weeks", [])
+    if not isinstance(extra, list) or not extra:
+        # Nothing usable. Hand back what we had and let the normal retry loop
+        # deal with it rather than inventing weeks.
+        return plan_data
+
+    plan_data["weeks"] = existing + extra
+    # Renumber defensively — the continuation occasionally restarts at 1.
+    for i, w in enumerate(plan_data["weeks"], start=1):
+        w["weekNumber"] = i
+    plan_data["_weeks_completed_by_continuation"] = len(extra)
+    logger.info(f"Continuation supplied {len(extra)} missing week(s)")
+    return plan_data
+
+
 async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = None) -> dict:
     """One attempt at generating a plan via Claude. May raise on API error,
     invalid JSON, or failed validation — the caller (generate_plan_with_claude)
@@ -827,6 +1113,10 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     if isinstance(club_days, str):
         club_days = [d.strip() for d in club_days.split(",") if d.strip()]
     match_day = answers.get("match_day", "").strip()
+    facilities = answers.get("facilities") or []
+    if isinstance(facilities, str):
+        facilities = [f.strip() for f in facilities.split(",") if f.strip()]
+    facility_access = (answers.get("facility_access") or "").strip()
     injury = answers.get("injury", "").strip()
 
     family = family_for_goal(goal)
@@ -889,12 +1179,73 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
             f"Fix that specific problem in this attempt while still satisfying every other rule.\n"
         )
 
+    has_match = bool(match_day) and "not currently" not in match_day.lower()
     match_day_line = (
-        f"- Match/competition day: {match_day} — this day must be the match itself, never a hard "
+        f"- Match/competition day: {match_day}. This day is the match itself, never a hard "
         f"training session. Keep the day before light and the day after recovery."
-        if match_day and "not currently" not in match_day.lower()
+        if has_match
         else ""
     )
+
+    # Everything above tells the model what NOT to do on these days. Left there,
+    # it does exactly that and leaves them empty, so someone who bought a
+    # football plan opens Saturday and finds a blank card reading 0/0 done. For
+    # a sport-specific product these are the days that should be the most
+    # sport-specific thing in the plan.
+    commitment_content = ""
+    if has_match or club_days:
+        commitment_content = (
+            "\nMATCH AND CLUB DAYS MUST HAVE REAL CONTENT.\n"
+            "These days already exist in this person's week, so you are not prescribing the "
+            "session itself. You ARE responsible for what surrounds it, and leaving these days "
+            "blank or as a bare 'Rest' entry is a failure.\n"
+        )
+        if has_match:
+            commitment_content += (
+                "- Match day: label it clearly as the match (e.g. \"Match day\"). Give a real "
+                "pre-match warm-up and activation sequence as workout entries, plus a fuelling "
+                "note tied to kick-off, and a post-match cooldown. Never a hard session.\n"
+                "- The day before a match: light and specific. Not the word 'light' on its own — "
+                "actual movements, actual durations.\n"
+                "- The day after a match: active recovery with real content, not an empty day.\n"
+            )
+        if club_days:
+            commitment_content += (
+                "- Club/squad days: label them clearly as club training. Say what that session "
+                "should cover and what to prioritise in it, give a short prep or activation "
+                "sequence beforehand, and state plainly what NOT to add on top of it.\n"
+            )
+        commitment_content += (
+            "- These days do NOT count towards the number of sessions they asked you for. "
+            "They are existing commitments. Count only the gym and conditioning sessions YOU "
+            "are prescribing.\n"
+        )
+
+    if facilities and not (len(facilities) == 1 and "Nothing else" in facilities):
+        access_note = {
+            "Any time": "They can get to these whenever they want, so use them freely.",
+            "Once or twice a week": (
+                "They can only get to these once or twice a week, so build at most that many "
+                "sessions around them and make sure the rest of the block stands on its own "
+                "without them."
+            ),
+            "Occasionally": (
+                "They can only get to these occasionally, so treat any session using them as a "
+                "bonus. The plan must work fully without them."
+            ),
+        }.get(facility_access, "")
+        facilities_line = (
+            f"- Facilities they can reach beyond their gym: {', '.join(facilities)}. {access_note} "
+            f"Use them where they genuinely improve the plan for this goal, and never prescribe a "
+            f"facility that is not on this list."
+        )
+    elif facilities:
+        facilities_line = (
+            "- Facilities: gym only. They have NO track, pitch, pool, bag, hills or open road "
+            "available. Every session must work indoors with the equipment listed above."
+        )
+    else:
+        facilities_line = ""
 
     # ── Derived plans ─────────────────────────────────────────────────────
     # A derived plan is a new block built from one the customer already owns,
@@ -931,7 +1282,8 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     club_days_line = (
         f"- Club/squad training days: {', '.join(club_days)}. These sessions already happen and "
         f"are NOT optional — do not schedule gym work that duplicates their load, and never place "
-        f"a heavy lower-body session on the day before one. Gym sessions must fit around them."
+        f"a heavy lower-body session on the day before one. Gym sessions must fit around them, "
+        f"and these days do not count towards their requested number of sessions."
         if club_days
         else ""
     )
@@ -966,14 +1318,18 @@ User Profile:
 - Age range: {age}
 - Sex: {sex}
 - Training Experience: {experience}
-- Availability: {days} days per week
+- Availability: {days} training sessions per week that YOU are prescribing. This number
+  covers gym and conditioning sessions only. Any club training or match listed below is
+  an existing commitment that sits on top of this number, not part of it.
 - Equipment: {equipment}
+{facilities_line}
 - Typical Session Length: {session}
 - Include Nutrition: {nutrition_pref}
 {diet_block}
 - Training context: {training_with}
 {club_days_line}
 {match_day_line}
+{commitment_content}
 - Injuries, allergies or other notes from the user: {notes}
 
 {stage_guidance}
@@ -1028,8 +1384,10 @@ deload by deleting exercises — reduce the sets.
 Return EVERY day of the week (Sun through Sat, in that exact order) for EVERY
 week — 7 day-entries x 4 weeks = 28 total. Days that are not a training day for
 this person must still appear, with a rest/active-recovery entry (e.g. a short
-mobility or walk session) rather than being omitted. Match the number of actual
-training days to "{days} days per week" — remaining days are rest/recovery days.
+mobility or walk session) rather than being omitted. The number of days on which
+you prescribe a real training session must be exactly {days} — count only the
+sessions you are prescribing, NOT any club training or match day, which are
+existing commitments. Remaining days are rest/recovery days.
 Every single day, including rest days, MUST have at least one entry in "workouts" —
 never return an empty workouts array.
 
@@ -1140,31 +1498,20 @@ Important:
     # Claude Sonnet 5 can include a "thinking" block ahead of the actual
     # answer for complex prompts like this one — don't assume content[0] is
     # the text block, find the one that actually is.
-    response_text = None
-    for block in message.content:
-        if getattr(block, "type", None) == "text":
-            response_text = block.text
-            break
-    if response_text is None:
-        raise Exception("Claude response contained no text block")
+    plan_data = _json_from_message(message)
 
-    # Be tolerant of how the model wraps its answer. On long generations it
-    # intermittently adds ```json fences or a line of preamble before the JSON,
-    # which made a raw json.loads fail with "line 1 column 1" — and every one of
-    # those failures triggered a full 2-3 minute retry. Stripping fences and
-    # slicing to the outermost braces removes that entire class of wasted retry.
-    cleaned = response_text.strip()
-    if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned).strip()
-    # Slice to the outermost { … } to shed any preamble OR trailing text the
-    # model added around the object. This removes the whole "line 1 column 1"
-    # / "extra data" class of parse failure, each of which cost a full retry.
-    first = cleaned.find("{")
-    last = cleaned.rfind("}")
-    if first != -1 and last != -1 and last > first:
-        cleaned = cleaned[first:last + 1]
-
-    plan_data = json.loads(cleaned)
+    # Occasionally the model returns a structurally valid object containing
+    # fewer than four weeks — one complete week, properly closed, and nothing
+    # after it. Regenerating the whole plan to recover three missing weeks
+    # throws away a perfectly good week 1 and costs another full 3 minutes, so
+    # ask for just the missing weeks instead.
+    weeks = plan_data.get("weeks")
+    if isinstance(weeks, list) and 0 < len(weeks) < 4:
+        logger.warning(
+            f"Plan came back with {len(weeks)} week(s) — requesting the missing weeks "
+            f"rather than regenerating the whole plan"
+        )
+        plan_data = await _complete_missing_weeks(plan_data, answers, prompt)
 
     plan_data["answers"] = answers
     plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -1182,6 +1529,12 @@ Important:
     # Quietly lighten week 4 if it came back too heavy, so a fixable deload
     # never costs a full regeneration.
     autofix_deload(plan_data)
+
+    # Same principle for session count: trim the surplus in place rather than
+    # spending another 3 minutes regenerating a plan that was only slightly
+    # over. Runs before the soft checks so the trimmed version is what gets
+    # validated.
+    autofix_training_days(plan_data, answers)
 
     # SOFT validation — coaching sense. Attach the outcome rather than raising,
     # so the caller can retry to improve the plan but still deliver THIS plan if
@@ -1824,7 +2177,10 @@ async def process_paid_order(order_id: str, order: dict) -> None:
         # top — they should never have to answer the questionnaire twice.
         answers = dict(source_plan.get("answers") or {})
         change = order.get("change_request") or {}
-        for key in ("days", "equipment", "session", "match_day", "club_days", "bar_access"):
+        for key in (
+            "days", "equipment", "session", "match_day", "club_days", "bar_access",
+            "facilities", "facility_access",
+        ):
             if change.get(key):
                 answers[key] = change[key]
         if change.get("detail"):
@@ -1915,7 +2271,7 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                 to=email,
                 subject="Your Planlete app is ready 🎉",
                 html=f"""
-                    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
+                    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
                         <h2 style="color: #111;">Hey {name},</h2>
                         <p>Your training app is ready{' — a 4-week programme built around your goal' if kind == 'ai' else ', built exactly the way you put it together'}.</p>
                         <p style="margin: 24px 0;">
@@ -1926,7 +2282,30 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                         </p>
                         <p style="color: #666; font-size: 13px;">
                             That link will show you exactly how to bookmark it on iPhone, Samsung,
-                            or Android so it feels like a real app on your home screen.
+                            or Android so it feels like a real app on your home screen. It's yours to
+                            keep — no subscription, nothing to cancel.
+                        </p>
+
+                        <div style="border: 1px solid #e5e5e5; padding: 16px; margin: 28px 0;">
+                            <p style="margin: 0 0 8px; font-weight: bold; font-size: 14px;">
+                                Want something changed? You have {EDIT_WINDOW_HOURS} hours.
+                            </p>
+                            <p style="margin: 0 0 8px; color: #444; font-size: 13px; line-height: 1.5;">
+                                If something in the plan doesn't fit — a day that clashes, an exercise you
+                                can't do, equipment we've got wrong — open your app and use
+                                <strong>Request a change</strong>. A real person reads every one.
+                            </p>
+                            <p style="margin: 0; color: #444; font-size: 13px; line-height: 1.5;">
+                                Two things close that window: {EDIT_WINDOW_HOURS} hours passing, or you
+                                logging your first session. Once you've started training the plan locks,
+                                even if you're still inside the {EDIT_WINDOW_HOURS} hours — so if
+                                anything looks off, tell us <em>before</em> your first session rather than after.
+                            </p>
+                        </div>
+
+                        <p style="color: #888; font-size: 12px;">
+                            Have a proper read through it first. That's the best five minutes you can spend
+                            on this.
                         </p>
                     </div>
                 """
