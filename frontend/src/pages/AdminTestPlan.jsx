@@ -175,6 +175,42 @@ export default function AdminTestPlan() {
                     </option>
                   ))}
                 </select>
+              ) : q.type === "multi" ? (
+                /* Multi-answer questions (facilities, club days) genuinely have
+                   more than one true answer — someone can have a track AND hills,
+                   and club nights on Tuesday AND Thursday. Without this branch
+                   they fell through to the plain text input below, which stored a
+                   raw string and gave no hint what to type. */
+                <div className="flex flex-wrap gap-2">
+                  {q.options.map((opt) => {
+                    const current = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+                    const picked = current.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => {
+                          let next;
+                          if (picked) {
+                            next = current.filter((x) => x !== opt);
+                          } else if (q.exclusive && opt === q.exclusive) {
+                            next = [opt];
+                          } else {
+                            next = [...current.filter((x) => x !== q.exclusive), opt];
+                          }
+                          set(q.id, next);
+                        }}
+                        className={`px-3 py-2 text-xs border transition-colors ${
+                          picked
+                            ? "border-[#D4FF00] bg-[#D4FF00]/10 text-[#D4FF00]"
+                            : "border-white/15 text-zinc-400 hover:border-white/30"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
               ) : q.type === "text" ? (
                 <textarea
                   className={inputClass}
