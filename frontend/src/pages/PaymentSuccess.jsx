@@ -165,6 +165,45 @@ export default function PaymentSuccess() {
     // not an animation reaching the end of itself.
     const pct = Math.min(92, ((activeIndex + 0.5) / STAGES.length) * 100);
     const slow = elapsed > 150;
+    // Past this point a QA check has almost certainly sent generation round
+    // again, so the honest thing is to stop asking them to watch a timer run
+    // past our own estimate and hand the job over to email. The pipeline is
+    // unchanged — this is only about which channel we point them at.
+    const handOver = elapsed > 210;
+
+    if (handOver) {
+      return (
+        <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
+          <div className="max-w-md w-full text-center">
+            <p className="text-overline text-[#D4FF00] mb-3">Payment confirmed</p>
+            <h2 className="font-display text-3xl mb-4">Still building</h2>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+              This one's taking longer than usual. A quality check flagged something and we're
+              rebuilding that part rather than sending you a plan we're not happy with.
+            </p>
+            <p className="text-zinc-500 text-sm leading-relaxed mb-10">
+              You don't need to wait here. We'll email your link the moment it's ready, to the
+              address you gave at checkout. If it hasn't arrived within 30 minutes, check your spam
+              folder, then contact us and we'll sort it straight away.
+            </p>
+
+            <div className="h-1 w-full bg-white/10 mb-10 overflow-hidden">
+              <div className="h-full bg-[#D4FF00] w-2/3 animate-pulse" />
+            </div>
+
+            <ContactSupportPanel
+              context="Generation running long — customer handed over to email"
+              orderId={orderInfo.orderId}
+              sessionId={orderInfo.sessionId}
+            />
+
+            <p className="text-zinc-700 text-xs mt-8">
+              {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} elapsed
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">

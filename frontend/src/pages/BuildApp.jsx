@@ -12,6 +12,19 @@ import { useSeo } from "@/lib/useSeo";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Goals where the person's training happens partly outside a gym, so questions
+// about facilities, club nights and match days are worth asking. A bodybuilder
+// never sees any of them.
+export const SPORT_GOALS = [
+  "Athlete performance",
+  "Football specific",
+  "Sprint / athletics",
+  "Boxing",
+  "Kickboxing / martial arts",
+  "Running / endurance",
+  "Hybrid athlete / HYROX",
+];
+
 export const BASE_QUESTIONS = [
   {
     id: "name",
@@ -81,13 +94,54 @@ export const BASE_QUESTIONS = [
     hint: "Hotel gyms vary — pick that and we'll build around dumbbells, a bench and a treadmill, with substitutions if it's more basic.",
   },
   {
+    id: "facilities",
+    label: "What else can you get to?",
+    type: "multi",
+    options: [
+      "Running track",
+      "Grass or astro pitch",
+      "Pool",
+      "Boxing gym or bag",
+      "Hills or stairs",
+      "Open road or trail",
+      "Nothing else",
+    ],
+    hint: "Separate from your gym. Tick anything you can actually reach — it changes what we can build.",
+    exclusive: "Nothing else",
+    goals: SPORT_GOALS,
+  },
+  {
+    id: "facility_access",
+    label: "How often can you get to them?",
+    type: "choice",
+    options: ["Any time", "Once or twice a week", "Occasionally"],
+    hint: "A track once a week and a track every day produce very different plans.",
+    goals: SPORT_GOALS,
+    showIf: (a) => {
+      const picked = Array.isArray(a.facilities) ? a.facilities : [];
+      return picked.length > 0 && !(picked.length === 1 && picked[0] === "Nothing else");
+    },
+  },
+  {
     id: "club_days",
     label: "Which days do you train with your club or squad?",
     type: "multi",
     options: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    hint: "So your gym sessions fit around them instead of stacking on top.",
-    showIf: (a) =>
-      /team|squad|club/i.test(a.training_with || ""),
+    hint: "Skip this if you don't train with a club. If you do, we fit your gym sessions around those nights instead of stacking on top.",
+    optional: true,
+    // Gated on the GOAL, not on who they lift with. This was previously keyed
+    // to training_with, which meant anyone who plays for a club but goes to the
+    // gym alone — most amateur players — answered "On my own" and never saw
+    // this question at all, so their plan had no idea their club nights existed.
+    goals: SPORT_GOALS,
+  },
+  {
+    id: "match_day",
+    label: "Which day do you usually play or compete?",
+    type: "choice",
+    options: ["Saturday", "Sunday", "Midweek", "Varies", "Not currently competing"],
+    hint: "So we never put a hard session on top of your match, and the days either side are built around it.",
+    goals: SPORT_GOALS,
   },
   {
     id: "bar_access",
@@ -132,20 +186,6 @@ export const BASE_QUESTIONS = [
     hint: "We'll keep these out of your nutrition entirely.",
     optional: true,
     showIf: (a) => (a.nutrition || "").toLowerCase().startsWith("yes"),
-  },
-  {
-    id: "match_day",
-    label: "Which day do you usually play or compete?",
-    type: "choice",
-    options: ["Saturday", "Sunday", "Midweek", "Varies", "Not currently competing"],
-    hint: "So we never put a hard session on top of your match.",
-    goals: [
-      "Football specific",
-      "Athlete performance",
-      "Sprint / athletics",
-      "Boxing",
-      "Kickboxing / martial arts",
-    ],
   },
   {
     id: "training_with",
@@ -310,9 +350,22 @@ function advisoryFor(goal) {
 }
 
 export function buildQuestions(goal) {
-  // Some questions only make sense for certain goals — a marathon runner has
-  // no match day. A question with a `goals` list is shown only for those.
-  const relevant = BASE_QUESTIONS.filter((q) => !q.goals || q.goals.includes(goal));
+  // Some questions only make sense for certain goals — a bodybuilder has no
+  // match day. A question with a `goals` list is shown only for those.
+  const relevant = BASE_QUESTIONS.filter((q) => !q.goals || q.goals.includes(goal))
+    // "How many days can you commit?" is ambiguous the moment someone also
+    // plays a sport: does 3 include their match and club night, or not? They
+    // know what they meant, the model doesn't, and the mismatch showed up as
+    // plans coming back with more sessions than asked for.
+    .map((q) =>
+      q.id === "days" && SPORT_GOALS.includes(goal)
+        ? {
+            ...q,
+            label: "How many gym or conditioning sessions do you want?",
+            hint: "Sessions we build for you. Don't count your club training or matches — we ask about those next and fit these around them.",
+          }
+        : q
+    );
 
   const stageConfig = STAGE_CONFIG[goal];
   if (!stageConfig) return relevant;
@@ -380,12 +433,19 @@ export default function BuildApp() {
   const toggleAnswer = (opt) =>
     setAnswers((a) => {
       const current = Array.isArray(a[q.id]) ? a[q.id] : [];
-      return {
-        ...a,
-        [q.id]: current.includes(opt)
-          ? current.filter((x) => x !== opt)
-          : [...current, opt],
-      };
+      const exclusive = q.exclusive;
+
+      let updated;
+      if (current.includes(opt)) {
+        updated = current.filter((x) => x !== opt);
+      } else if (exclusive && opt === exclusive) {
+        // "Nothing else" means nothing else — picking it clears the rest.
+        updated = [opt];
+      } else {
+        updated = [...current.filter((x) => x !== exclusive), opt];
+      }
+
+      return { ...a, [q.id]: updated };
     });
 
   const next = () => {
