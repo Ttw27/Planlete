@@ -959,6 +959,96 @@ def _summarise_plan_for_prompt(plan: dict, max_weeks: int = 2) -> str:
     return "\n".join(lines)
 
 
+def _repair_json(text: str) -> str:
+    """
+    Repair the malformed JSON the model occasionally produces on long plans.
+
+    A parse failure currently costs a full regeneration — 4-5 minutes — and the
+    damage is almost always trivial: one stray quote in a 40,000 character
+    document. Three of those in a row is 13 minutes of a customer watching a
+    progress bar, which is exactly what happened on 18 Aug.
+
+    Two malformations account for what we see in the logs, both reported by
+    Python as "Expecting ',' delimiter":
+
+    1. An unescaped double quote inside a string value. Overwhelmingly an inch
+       mark — "Step-up to 20" box" — which the umbrella-name rule made more
+       likely by asking for longer, more descriptive exercise names.
+    2. A missing comma between two objects in an array.
+
+    This walks the document character by character tracking string state, which
+    is the only reliable way to tell a quote that closes a string from a quote
+    that is part of one. A closing quote must be followed by whitespace and then
+    one of , : } ] or end of input; anything else means it was meant literally
+    and gets escaped.
+    """
+    out = []
+    in_string = False
+    escaped = False
+    i = 0
+    n = len(text)
+
+    while i < n:
+        ch = text[i]
+
+        if escaped:
+            out.append(ch)
+            escaped = False
+            i += 1
+            continue
+
+        if ch == "\\":
+            out.append(ch)
+            escaped = True
+            i += 1
+            continue
+
+        if ch == '"':
+            if not in_string:
+                in_string = True
+                out.append(ch)
+            else:
+                # Decide whether this quote really closes the string.
+                j = i + 1
+                while j < n and text[j] in " \t\r\n":
+                    j += 1
+                if j >= n or text[j] in ",:}]":
+                    in_string = False
+                    out.append(ch)
+                else:
+                    # A stray quote inside the value. Escape it and carry on.
+                    out.append('\\"')
+            i += 1
+            continue
+
+        if in_string and ch in "\n\r\t":
+            # Literal control characters are illegal inside a JSON string.
+            out.append({"\n": "\\n", "\r": "\\r", "\t": "\\t"}[ch])
+            i += 1
+            continue
+
+        if not in_string:
+            # Missing comma between array elements or object members.
+            if ch in "{[" and out:
+                k = len(out) - 1
+                while k >= 0 and out[k] in " \t\r\n":
+                    k -= 1
+                if k >= 0 and out[k] in "}]":
+                    out.append(",")
+            # Trailing comma before a closing bracket.
+            if ch in "}]":
+                k = len(out) - 1
+                while k >= 0 and out[k] in " \t\r\n":
+                    k -= 1
+                if k >= 0 and out[k] == ",":
+                    del out[k]
+
+        out.append(ch)
+        i += 1
+
+    return "".join(out)
+
+
 def _json_from_message(message) -> dict:
     """
     Pull the JSON object out of a Claude response.
@@ -987,7 +1077,21 @@ def _json_from_message(message) -> dict:
     if first != -1 and last != -1 and last > first:
         cleaned = cleaned[first:last + 1]
 
-    return json.loads(cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as first_error:
+        # Do not burn a 4-minute regeneration over one stray character.
+        repaired = _repair_json(cleaned)
+        try:
+            plan = json.loads(repaired)
+            logger.warning(
+                f"Recovered malformed JSON without a retry (original error: {first_error})"
+            )
+            return plan
+        except json.JSONDecodeError:
+            # Repair failed too — raise the ORIGINAL error so the logs describe
+            # what the model actually produced, not what our repair turned it into.
+            raise first_error
 
 
 async def _complete_missing_weeks(plan_data: dict, answers: dict) -> dict:
@@ -1503,6 +1607,11 @@ the contents out in the name:
 
 The same applies to anything vague: "core work", "accessories", "prehab". Name
 the movements. If you cannot name them, do not program them.
+
+NEVER use a double-quote character inside any string value. Write measurements
+in words: "20 inch box", not "20" box". Do not put quotation marks around words
+for emphasis. A single stray quote anywhere in the response invalidates the
+entire plan and it has to be built again from scratch.
 
 Every exercise MUST include a "demo" field: the best short search phrase for finding a
 demonstration video of that movement. For standard gym lifts this is just the plain
