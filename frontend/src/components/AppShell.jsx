@@ -1183,11 +1183,29 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
         >
           {checked && <Check size={11} className="text-black" />}
         </button>
-        <p className={`text-sm flex-1 truncate ${checked ? "text-zinc-600 line-through" : "text-white"}`}>
-          {w.name}
-        </p>
-        <p className="font-mono-display text-sm text-[var(--accent)] shrink-0">{w.sets}</p>
+        {/* A long "sets" value used to be laid out shrink-0 against a flex-1
+            truncating name, so it took the whole row and squeezed the name to
+            "A.." or to nothing at all. Anything longer than a normal volume
+            figure now drops onto its own line and the name keeps the width. */}
+        {String(w.sets || "").length > 14 ? (
+          <p className={`text-sm flex-1 min-w-0 break-words ${checked ? "text-zinc-600 line-through" : "text-white"}`}>
+            {w.name}
+          </p>
+        ) : (
+          <>
+            <p className={`text-sm flex-1 min-w-0 truncate ${checked ? "text-zinc-600 line-through" : "text-white"}`}>
+              {w.name}
+            </p>
+            <p className="font-mono-display text-sm text-[var(--accent)] shrink-0">{w.sets}</p>
+          </>
+        )}
       </div>
+
+      {String(w.sets || "").length > 14 && (
+        <p className="px-3 pt-1 pl-9 font-mono-display text-xs text-[var(--accent)] break-words">
+          {w.sets}
+        </p>
+      )}
 
       {/* Line 2: load/rest + icon buttons */}
       <div className="pl-9 pr-3 pb-3 pt-0.5 flex items-center justify-between gap-2">
