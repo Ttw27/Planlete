@@ -875,6 +875,62 @@ def autofix_training_days(plan_data: dict, answers: dict) -> None:
     plan_data["_days_autofixed"] = sorted(to_convert)
 
 
+def autofix_workout_fields(plan_data: dict) -> None:
+    """
+    Salvage entries where the model put the wrong thing in the wrong field.
+
+    Two shapes show up, both from asking for more descriptive exercise content:
+
+    1. "name" empty with the movements dumped into "sets" — the row renders with
+       no title at all, just an orange string running off the edge of the card.
+    2. "sets" holding a sentence rather than a volume figure. Because the row
+       lays out name as flexible and sets as fixed, a long sets value takes all
+       the width and squeezes the name down to "A..".
+
+    Both are repairable from the data we already have, so neither should cost a
+    four-minute regeneration.
+    """
+    fixed = 0
+    for w in plan_data.get("weeks", []):
+        for d in w.get("days", []):
+            for ex in d.get("workouts", []):
+                name = str(ex.get("name", "")).strip()
+                sets = str(ex.get("sets", "")).strip()
+
+                # Case 1: the content ended up in the wrong field entirely.
+                if not name and sets:
+                    ex["name"] = sets[:60].strip()
+                    ex["sets"] = "1 round"
+                    fixed += 1
+                    continue
+
+                # Case 2: sets is prose. Keep the meaning, free up the width.
+                if len(sets) > 20:
+                    lowered = sets.lower()
+                    volume = re.match(
+                        r"\s*(\d+\s*[xX]\s*\d+\s*(?:s|m|km|min|sec|secs|reps|kg)?)(?:\b|$)",
+                        sets,
+                    )
+                    if "coach" in lowered:
+                        ex["sets"] = "Coach-led"
+                    elif volume:
+                        # "1x10 circles each direction, 1x15 raises" -> "1x10"
+                        ex["sets"] = volume.group(1).strip()
+                    elif "round" in lowered:
+                        ex["sets"] = "Rounds"
+                    else:
+                        # Trim on a word boundary rather than mid-word.
+                        ex["sets"] = sets[:20].rsplit(" ", 1)[0].rstrip(" ,;:") or "As listed"
+                    # Don't lose the detail — it belongs with the explanation.
+                    reason = str(ex.get("reason", "")).strip()
+                    if sets not in reason:
+                        ex["reason"] = (f"{sets}. {reason}" if reason else sets)
+                    fixed += 1
+
+    if fixed:
+        plan_data["_workout_fields_autofixed"] = fixed
+
+
 def validate_plan(plan_data: dict) -> None:
     """
     Deterministic quality check on the plan Claude just generated. Raises a
@@ -1591,22 +1647,32 @@ existing commitments. Remaining days are rest/recovery days.
 Every single day, including rest days, MUST have at least one entry in "workouts" —
 never return an empty workouts array.
 
-EVERY EXERCISE ENTRY MUST BE SOMETHING THE PERSON CAN ACTUALLY DO.
+EVERY EXERCISE ENTRY MUST BE ONE MOVEMENT, NAMED SHORTLY.
 
-Never use an umbrella name that hides its contents. "Pre-Training Activation
-Circuit", "Core Finisher", "Mobility Flow", "Conditioning Block" and
-"Warm-up Routine" are all failures: the person is holding a phone in a gym and
-those tell them nothing, and there is no demo video for a circuit you invented.
+Never group several movements into one entry. "Pre-Training Activation Circuit",
+"Core Finisher", "Mobility Flow" and "Warm-up Routine" are all failures: the
+person cannot tell what to do and there is no demo video for a circuit you
+invented. Do NOT fix this by listing the movements inside the name either. These
+render in fixed-width rows on a phone, so a long name is cut off mid-word and the
+person sees less than they did before.
 
-Either give each movement its own entry, or, if it genuinely is a circuit, spell
-the contents out in the name:
+Give each movement its own entry:
 
-  BAD:  "Pre-Training Activation Circuit", sets "1x8min"
-  GOOD: "Activation circuit: glute bridge x10, banded lateral walk x10 each way,
-         leg swings x10 each leg", sets "2 rounds"
+  BAD:  name "Pre-Training Activation Circuit",  sets "1x8min"
+  BAD:  name "Activation: glute bridge x10, banded walk x10, leg swings x10"
+  GOOD: name "Glute Bridge",         sets "2x10"
+        name "Banded Lateral Walk",  sets "2x10 each way"
+        name "Leg Swings",           sets "1x10 each leg"
+
+Hard limits, because of that fixed-width layout:
+- "name" is the movement and nothing else. Maximum 40 characters. NEVER empty.
+- "sets" is a short volume figure: "4x6", "3x30s", "2 rounds". Maximum 20
+  characters. Never a sentence, never a list of movements, and never a phrase
+  like "As programmed by coach" — write "Coach-led" or a real figure instead.
+- Anything longer belongs in "reason", which has room for a full sentence.
 
 The same applies to anything vague: "core work", "accessories", "prehab". Name
-the movements. If you cannot name them, do not program them.
+the movement. If you cannot name it, do not program it.
 
 NEVER use a double-quote character inside any string value. Write measurements
 in words: "20 inch box", not "20" box". Do not put quotation marks around words
@@ -1756,6 +1822,10 @@ Important:
     # Quietly lighten week 4 if it came back too heavy, so a fixable deload
     # never costs a full regeneration.
     autofix_deload(plan_data)
+
+    # Repair misplaced name/sets content before validation, so a blank exercise
+    # name is fixed rather than either shipped or regenerated.
+    autofix_workout_fields(plan_data)
 
     # Same principle for session count: trim the surplus in place rather than
     # spending another 3 minutes regenerating a plan that was only slightly
