@@ -1071,6 +1071,19 @@ def _repair_json(text: str) -> str:
                 if j >= n or text[j] in ",:}]":
                     in_string = False
                     out.append(ch)
+                elif text[j] == '"':
+                    # Ambiguous: either a stray quote, or a missing comma
+                    # between two members ("load": "75%" "rest": "90s").
+                    # If what follows looks like a key, it is a missing comma —
+                    # escaping it here would corrupt the rest of the document
+                    # rather than fix it.
+                    rest = text[j:j + 80]
+                    if re.match(r'"[^"\\]{1,40}"\s*:', rest):
+                        in_string = False
+                        out.append(ch)
+                        out.append(",")
+                    else:
+                        out.append('\\"')
                 else:
                     # A stray quote inside the value. Escape it and carry on.
                     out.append('\\"')
@@ -1144,9 +1157,18 @@ def _json_from_message(message) -> dict:
                 f"Recovered malformed JSON without a retry (original error: {first_error})"
             )
             return plan
-        except json.JSONDecodeError:
-            # Repair failed too — raise the ORIGINAL error so the logs describe
-            # what the model actually produced, not what our repair turned it into.
+        except json.JSONDecodeError as second_error:
+            # Log the text around the break. Without this the failure is
+            # indistinguishable from the repair never having run at all, which
+            # is exactly the hole this hit on 19 Aug: the retry line in Railway
+            # looked identical whether the repair fired or not, so there was no
+            # way to tell a bad deploy from a repair that could not cope.
+            pos = getattr(first_error, "pos", 0) or 0
+            window = cleaned[max(0, pos - 140):pos + 140].replace("\n", "\\n")
+            logger.warning(
+                f"JSON repair attempted and FAILED. Original: {first_error}. "
+                f"After repair: {second_error}. Text around the break: ...{window}..."
+            )
             raise first_error
 
 
