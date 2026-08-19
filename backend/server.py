@@ -1071,6 +1071,19 @@ def _repair_json(text: str) -> str:
                 if j >= n or text[j] in ",:}]":
                     in_string = False
                     out.append(ch)
+                elif re.match(r'[A-Za-z_][A-Za-z0-9_]{0,30}"\s*:', text[j:j + 40]):
+                    # The real-world failure, seen on 19 Aug:
+                    #     "demo": "light jogging warm "reason": "Raises core..."
+                    # The model dropped BOTH the closing quote of the value and
+                    # the comma, so the single quote it did write has to serve as
+                    # the value's closing quote AND the next key's opening quote.
+                    # Escaping it (the old behaviour) swallowed the rest of the
+                    # document and made the plan unrecoverable.
+                    in_string = False
+                    out.append(ch)   # close the value
+                    out.append(",")  # the missing separator
+                    out.append('"')  # re-open for the key that follows
+                    in_string = True
                 elif text[j] == '"':
                     # Ambiguous: either a stray quote, or a missing comma
                     # between two members ("load": "75%" "rest": "90s").
