@@ -324,8 +324,9 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
     || data.days
     || (mode && data.modes?.[mode]?.days)
     || [];
-  const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;
-  const recovery = data.recovery;
+  // The note for whichever week is on screen, so it follows the week switcher.
+  const weekNote = (hasWeekBrowsing && !isOngoing && allWeeks[viewingWeek]?.note) || "";
+  const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;  const recovery = data.recovery;
   const morningRoutine = data.morningRoutine;
   const structureType = data.structureType || "days";
 
@@ -573,6 +574,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
             <HomeView
               data={data}
               days={days}
+              weekNote={weekNote}
               morningRoutine={morningRoutine}
               nutrition={nutrition}
               weekNumber={logWeek}
@@ -721,7 +723,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
+function HomeView({ data, days, weekNote = "", morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
   // Phases have no auto-detection (nobody knows "which phase" from a date
   // alone) — just default to the first one; day-based plans still pick
   // today's real weekday as before.
@@ -732,6 +734,14 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
   const todayDone = todayKeys.filter((k) => completed.has(k)).length;
 
   const heroLabel = structureType === "phases" ? `Current phase · ${today.day}` : `Today · ${today.day}`;
+
+
+  // Has the block run its course? Purely informational — nothing is withheld.
+  const blockComplete = (() => {
+    if (!data.block_ends_at) return false;
+    const ends = new Date(data.block_ends_at);
+    return !isNaN(ends) && ends < new Date();
+  })();
 
   return (
     <div className="flex flex-col">
@@ -762,6 +772,31 @@ function HomeView({ data, days, morningRoutine, nutrition, weekNumber, completed
             <h2 className="font-display text-3xl mt-2">{today.label}</h2>
             <p className="text-sm text-zinc-300 mt-1">{today.focus}</p>
           </div>
+        </div>
+      )}
+
+      {/* Block finished. Never locks anything — their logs and their plan stay
+          exactly as they are. It just stops a four-week block quietly looping
+          for months while every row tells them to add more weight. */}
+      {blockComplete && (
+        <div className="mx-5 mt-5 border border-[var(--accent)]/40 bg-[var(--accent)]/[0.06] px-4 py-4">
+          <p className="text-overline text-[var(--accent)]">Block complete</p>
+          <p className="text-sm text-white mt-2 leading-relaxed">
+            You've finished the {data.blockWeeks || 4} weeks. Keep training on this one if you
+            like, but a new block built from what you've actually logged will take you further.
+          </p>
+          <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
+            Carrying on? Stop following the weekly increases. Add a little only when a session
+            feels comfortably within reach, and hold the weight when it doesn't.
+          </p>
+        </div>
+      )}
+
+      {weekNote && !blockComplete && (
+        <div className="px-5 pt-5">
+          <p className="text-[11px] text-zinc-400 leading-relaxed border-l-2 border-[var(--accent)]/50 pl-3">
+            {weekNote}
+          </p>
         </div>
       )}
 
@@ -1290,13 +1325,53 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
         </div>
       )}
 
-      {/* Reason panel */}
+      {w.progressionNote && (
+        <div className="pl-9 pr-3 -mt-2 pb-2">
+          <p className="text-[10px] text-zinc-500 leading-relaxed">
+            <span className="text-[var(--accent)]">↗</span> {w.progressionNote}
+          </p>
+        </div>
+      )}
+
+      {/* Reason panel — now also carries the coaching detail the one-week
+          template freed up room for: how to do it, what people get wrong, and
+          what to do instead if they can't manage it yet. */}
       {panel === "reason" && hasReason && (
         <div className="px-3 pb-3 -mt-1">
-          <p className="text-[11px] text-zinc-400 leading-relaxed border-t border-white/5 pt-2">
-            <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">Why:</span>
-            {w.reason}
-          </p>
+          <div className="border-t border-white/5 pt-2 flex flex-col gap-2">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">Why:</span>
+              {w.reason}
+            </p>
+            {w.cues && (
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">How:</span>
+                {w.cues}
+              </p>
+            )}
+            {w.mistake && (
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                <span className="text-yellow-400 font-bold uppercase tracking-wide mr-1">Watch:</span>
+                {w.mistake}
+              </p>
+            )}
+            {(w.easier || w.harder) && (
+              <div className="flex flex-col gap-1 pt-1 border-t border-white/5">
+                {w.easier && (
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    <span className="text-zinc-400 font-bold uppercase tracking-wide mr-1">Easier:</span>
+                    {w.easier}
+                  </p>
+                )}
+                {w.harder && (
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    <span className="text-zinc-400 font-bold uppercase tracking-wide mr-1">Harder:</span>
+                    {w.harder}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
