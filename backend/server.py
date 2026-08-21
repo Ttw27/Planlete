@@ -998,7 +998,7 @@ def _cut_sets(sets_text: str, fraction: float = 0.35) -> str:
     return f"{reduced}x{m.group(2)}"
 
 
-def _progression_note(prog: dict, week: int, is_final: bool, deload: bool) -> str:
+def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets: str = "") -> str:
     """
     The line the customer reads on every exercise row. This is the most-read
     sentence in the whole plan, so it is deliberately conditional: telling
@@ -1031,6 +1031,11 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool) -> st
     if ptype == "distance":
         return f"Add {inc:g}{unit or 'km'} next week if you finished feeling strong."
     if ptype == "rounds":
+        # "3x20s each side" is sets, not rounds. Bumping the first number is
+        # still the right progression, but telling someone to add a round to a
+        # Copenhagen plank reads as though the plan doesn't know what it is.
+        if re.match(r"\s*\d+\s*[xX]", sets or ""):
+            return "Hit every rep this week? Add a set next week. Missed any? Repeat."
         return "Add a round next week if you completed every round at full effort."
     return ""
 
@@ -1115,7 +1120,7 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
     # "Deload week. Same movements, less volume" on all ten rows is noise that
     # buries the one line the person actually needs to read.
     if not deload and not is_final:
-        note = _progression_note(prog, week, is_final, deload)
+        note = _progression_note(prog, week, is_final, deload, str(out.get("sets", "")))
         if note:
             out["progressionNote"] = note
     return out
