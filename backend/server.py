@@ -697,7 +697,11 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
     # check would reject a textbook deload and force a pointless retry. It also
     # removed a perverse incentive, where padding week 3 with extra exercises
     # was the easiest way to leave room for a visible cut.
-    if len(weeks) == 4:
+    # Deload is now applied deterministically during expansion, and only for
+    # people with enough training history to need one. Checking for it on a
+    # beginner's block would reject a plan that is deliberately, correctly
+    # progressing straight through week 4.
+    if len(weeks) == 4 and str(answers.get("experience", "")).strip() in DELOAD_EXPERIENCE:
         def week_volume(w):
             total = 0
             for d in w.get("days", []):
@@ -931,6 +935,182 @@ def autofix_workout_fields(plan_data: dict) -> None:
         plan_data["_workout_fields_autofixed"] = fixed
 
 
+# --------------------------------------------------------------------------
+# Template expansion
+#
+# Claude now authors ONE week plus a progression rule per exercise, and this
+# builds the four weeks the app renders. That change exists because a 4-week
+# plan was ~45,000 characters in a single response, which is where every JSON
+# failure came from: stray quotes, missing quotes, missing commas, truncation.
+# One week is roughly a quarter of that.
+#
+# It is also better programming. Deterministic expansion cannot swap an exercise
+# in week 3, forget the deload, or quietly change the session count, which is
+# what most of the repair code in this file used to exist to catch.
+# --------------------------------------------------------------------------
+
+BLOCK_WEEKS = 4
+
+# Deload only for people with enough training history to accumulate the fatigue
+# that makes one useful. A beginner deloading in week 4 wastes a quarter of the
+# block, and week 4 is exactly where beginners lose momentum and stop.
+DELOAD_EXPERIENCE = {"3–5 years", "5+ years"}
+
+# Endurance progression has no natural stop signal. A failed squat tells you to
+# stop; adding five minutes a week to a run for six months just injures you
+# quietly. Load self-limits, duration does not, so it needs a ceiling.
+PROGRESSION_CEILINGS = {
+    "time": 45.0,      # minutes per session
+    "distance": 10.0,  # km per session
+}
+
+
+def _bump_numbers(text: str, add: float, unit: str = "", ceiling: Optional[float] = None) -> str:
+    """
+    Add to the first number in a volume string, respecting any ceiling.
+    "20min" + 5 -> "25min".  "3x8" + 1 -> "4x8" is wrong, so callers pick which
+    number to move; this always moves the first one it finds.
+    """
+    m = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not m:
+        return text
+    value = float(m.group(1)) + add
+    if ceiling is not None:
+        value = min(value, ceiling)
+    rendered = f"{value:g}"
+    return text[:m.start(1)] + rendered + text[m.end(1):]
+
+
+def _bump_reps(sets_text: str, add: int) -> str:
+    """Move the rep figure in "4x6", leaving the set count alone."""
+    m = re.match(r"\s*(\d+)\s*[xX]\s*(\d+)(.*)", sets_text)
+    if not m:
+        return _bump_numbers(sets_text, add)
+    return f"{m.group(1)}x{int(m.group(2)) + add}{m.group(3)}"
+
+
+def _cut_sets(sets_text: str, fraction: float = 0.35) -> str:
+    """Reduce the set count for a deload, never below one, keeping reps intact."""
+    m = re.match(r"\s*(\d+)\s*[xX]\s*(.*)", sets_text)
+    if not m:
+        return sets_text
+    reduced = max(1, round(int(m.group(1)) * (1 - fraction)))
+    return f"{reduced}x{m.group(2)}"
+
+
+def _progression_note(prog: dict, week: int, is_final: bool, deload: bool) -> str:
+    """
+    The line the customer reads on every exercise row. This is the most-read
+    sentence in the whole plan, so it is deliberately conditional: telling
+    somebody who missed their reps last week to add weight anyway is the one
+    instruction here that can actually hurt them.
+    """
+    ptype = (prog or {}).get("type", "none")
+    if ptype == "none":
+        return ""
+
+    if deload:
+        return "Deload week. Same movements, less volume — hold last week's weight."
+
+    if is_final:
+        # Never tell them to add more "next week": there is no next week in this
+        # block. This is where the block ends and a new one is due.
+        return "Final week of this block. Time for a new plan built on what you've logged."
+
+    inc = (prog or {}).get("increment")
+    unit = (prog or {}).get("unit", "")
+
+    if ptype == "load":
+        amount = f"{inc:g}{unit or 'kg'}" if inc else "a small amount"
+        return f"Hit every rep this week? Add {amount} next week. Missed any? Repeat this weight."
+    if ptype == "reps":
+        return "Hit every rep this week? Add one rep per set next week. Missed any? Repeat."
+    if ptype == "time":
+        return f"Add {inc:g} minutes next week if this felt controlled throughout."
+    if ptype == "distance":
+        return f"Add {inc:g}{unit or 'km'} next week if you finished feeling strong."
+    if ptype == "rounds":
+        return "Add a round next week if you completed every round at full effort."
+    return ""
+
+
+def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dict:
+    """Produce this exercise as it appears in a given week."""
+    out = dict(ex)
+    prog = ex.get("progression") or {}
+    ptype = prog.get("type", "none")
+    inc = prog.get("increment") or 0
+    steps = week - 1  # week 1 is the template as authored
+
+    if deload:
+        out["sets"] = _cut_sets(str(ex.get("sets", "")))
+        out["load"] = f"{ex.get('load', '')} — hold last week's weight".strip(" —")
+    elif ptype == "reps" and steps:
+        out["sets"] = _bump_reps(str(ex.get("sets", "")), int(inc) * steps)
+    elif ptype in ("time", "distance") and steps:
+        out["sets"] = _bump_numbers(
+            str(ex.get("sets", "")), inc * steps, prog.get("unit", ""),
+            ceiling=PROGRESSION_CEILINGS.get(ptype),
+        )
+    elif ptype == "rounds" and steps:
+        out["sets"] = _bump_numbers(str(ex.get("sets", "")), inc * steps)
+    elif ptype == "load" and steps:
+        # We never invent a kilo figure, because we do not know their 1RM. The
+        # instruction references what they actually lifted instead, and the app
+        # substitutes their logged weight when there is one.
+        amount = f"{inc * steps:g}{prog.get('unit', 'kg')}" if inc else "a little"
+        out["load"] = f"{ex.get('load', '')} — about {amount} up on week 1".strip(" —")
+
+    note = _progression_note(prog, week, is_final, deload)
+    if note:
+        out["progressionNote"] = note
+    return out
+
+
+def expand_template(plan_data: dict, answers: dict) -> None:
+    """
+    Turn the single authored week into the weeks[] array the app renders.
+
+    The output shape is identical to what AppShell already receives, so nothing
+    downstream changes: same weeks, same days, same workouts.
+    """
+    template = plan_data.get("template") or {}
+    days = template.get("days")
+    if not isinstance(days, list) or not days:
+        raise ValueError("Template is missing its days — cannot build the block")
+
+    experience = str(answers.get("experience", "")).strip()
+    deload_week = BLOCK_WEEKS if experience in DELOAD_EXPERIENCE else None
+
+    notes = plan_data.get("weekNotes") or []
+    themes = ["Foundation", "Build", "Peak", "Deload" if deload_week else "Push"]
+
+    weeks = []
+    for week in range(1, BLOCK_WEEKS + 1):
+        is_deload = week == deload_week
+        is_final = week == BLOCK_WEEKS and not is_deload
+        week_days = []
+        for d in days:
+            week_days.append({
+                **d,
+                "workouts": [
+                    _progress_exercise(ex, week, is_deload, is_final)
+                    for ex in d.get("workouts", [])
+                ],
+            })
+        weeks.append({
+            "weekNumber": week,
+            "theme": themes[week - 1],
+            "note": notes[week - 1] if week - 1 < len(notes) else "",
+            "days": week_days,
+        })
+
+    plan_data["weeks"] = weeks
+    plan_data["blockWeeks"] = BLOCK_WEEKS
+    plan_data.pop("template", None)
+    plan_data.pop("weekNotes", None)
+
+
 def validate_plan(plan_data: dict) -> None:
     """
     Deterministic quality check on the plan Claude just generated. Raises a
@@ -1131,6 +1311,83 @@ def _repair_json(text: str) -> str:
     return "".join(out)
 
 
+def _close_truncated_json(text: str) -> Optional[str]:
+    """
+    Rescue a response that was cut off mid-flight.
+
+    Seen on 19 Aug: the document simply stopped after week 4's later days, with
+    everything before that point perfectly well formed. The whole 4-minute
+    generation was discarded because the closing brackets were missing.
+
+    This walks the text tracking string state and bracket depth, rewinds to the
+    last point where a complete element had just closed, and shuts the remaining
+    brackets. The result is valid JSON containing everything the model managed to
+    produce. Any week left short of 7 days is dropped by the caller and rebuilt
+    by the continuation call, which is far cheaper than starting again.
+
+    Returns None when the text was not truncated, so a genuinely malformed
+    document is not quietly mangled into a shorter one.
+    """
+    stack = []
+    in_string = False
+    escaped = False
+    last_safe = None
+
+    for i, ch in enumerate(text):
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+            # Only a closed bracket is a safe rewind point. Rewinding to a
+            # closed STRING can land just after a key, leaving "day" with no
+            # value, which closes into invalid JSON.
+            if stack:
+                last_safe = i + 1
+
+    if not stack:
+        return None  # Balanced: this was not a truncation.
+    if last_safe is None:
+        return None  # Nothing complete to keep.
+
+    salvaged = text[:last_safe].rstrip().rstrip(",")
+
+    # Re-derive what is still open at the cut point and close it.
+    stack = []
+    in_string = False
+    escaped = False
+    for ch in salvaged:
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch in "{[":
+            stack.append(ch)
+        elif ch in "}]" and stack:
+            stack.pop()
+
+    closers = "".join("}" if b == "{" else "]" for b in reversed(stack))
+    return salvaged + closers
+
+
 def _json_from_message(message) -> dict:
     """
     Pull the JSON object out of a Claude response.
@@ -1171,6 +1428,21 @@ def _json_from_message(message) -> dict:
             )
             return plan
         except json.JSONDecodeError as second_error:
+            # Neither the raw text nor the repaired text parses. Before giving
+            # up a full generation, check whether it was simply cut off.
+            salvaged = _close_truncated_json(cleaned)
+            if salvaged:
+                try:
+                    plan = json.loads(salvaged)
+                    weeks = plan.get("weeks")
+                    logger.warning(
+                        f"Response was truncated — salvaged "
+                        f"{len(weeks) if isinstance(weeks, list) else 0} week(s) "
+                        f"instead of discarding the generation"
+                    )
+                    return plan
+                except json.JSONDecodeError:
+                    pass
             # Log the text around the break. Without this the failure is
             # indistinguishable from the repair never having run at all, which
             # is exactly the hole this hit on 19 Aug: the retry line in Railway
@@ -1654,33 +1926,47 @@ football/team sports should include change-of-direction and match-specific
 conditioning; rehab should prioritise safe, staged loading. Use your expertise
 in that specific discipline.
 
-This plan runs on a 4-week repeating cycle (a "mesocycle").
+YOU ARE WRITING ONE WEEK, NOT FOUR.
 
-KEEP THE CORE EXERCISES THE SAME across all four weeks. Progression comes from
-LOAD, REPS or INTENSITY — not from adding new movements. If Monday is Back
-Squat / Nordic Curl / Copenhagen Plank in week 1, it should still be those
-movements in weeks 2, 3 and 4, with the weight, reps or effort climbing. This
-matters for two reasons: it is how progress is actually measured, and the app
-tracks logged weights per exercise — a movement that appears one week and
-vanishes the next has no history to compare against, so the person never sees
-their own improvement. You may vary one accessory per session if genuinely
-useful, but never the main lifts.
+The app shows this person a 4-week block, but you only author week 1. The
+progression rules you attach to each exercise are what build weeks 2, 3 and 4
+automatically. This means you can spend real depth on each movement instead of
+writing the same exercise out four times — and that depth is the product.
 
-Weeks 1–3 should progressively increase load, reps or intensity on those same
-movements. Week 4 MUST be a DELOAD: the SAME exercises, but roughly 30–40%
-fewer total sets and noticeably lighter loads. For example, an exercise at 4x6
-in week 3 might become 2x6 at a lighter weight in week 4. Do not achieve the
-deload by deleting exercises — reduce the sets.
+Return all 7 days, Sun through Sat in that exact order. Days that are not a
+training day must still appear with a rest or active-recovery entry rather than
+being omitted, and every single day must have at least one entry in "workouts".
+The number of days on which you prescribe a real training session must be
+exactly {days} — count only the sessions YOU are prescribing, NOT any club
+training or match day, which are existing commitments.
 
-Return EVERY day of the week (Sun through Sat, in that exact order) for EVERY
-week — 7 day-entries x 4 weeks = 28 total. Days that are not a training day for
-this person must still appear, with a rest/active-recovery entry (e.g. a short
-mobility or walk session) rather than being omitted. The number of days on which
-you prescribe a real training session must be exactly {days} — count only the
-sessions you are prescribing, NOT any club training or match day, which are
-existing commitments. Remaining days are rest/recovery days.
-Every single day, including rest days, MUST have at least one entry in "workouts" —
-never return an empty workouts array.
+EVERY exercise needs a "progression" object saying how it moves week to week:
+
+  {{"type": "load",     "increment": 5,  "unit": "kg"}}   heavier each week
+  {{"type": "reps",     "increment": 1}}                  one more rep per set
+  {{"type": "time",     "increment": 5}}                  five more minutes
+  {{"type": "distance", "increment": 1,  "unit": "km"}}   further each week
+  {{"type": "rounds",   "increment": 1}}                  one more round
+  {{"type": "none"}}                                      does not progress
+
+Choosing the increment is a coaching decision, not a default. Size it to the
+movement: a lower-body compound might take 5kg a week, an upper-body compound
+2.5kg, an isolation exercise 1kg. 2.5kg on a squat is nothing; on a lateral
+raise it is a 25% jump. Warm-ups, mobility, rest-day walks, club sessions and
+match days are all "none".
+
+Because you are only writing one week, spend the room on quality. Every exercise
+also needs:
+- "cues": two or three short lines on how to do it well
+- "mistake": the single most common thing people get wrong on this movement
+- "easier": a regression for someone who cannot do it yet
+- "harder": a progression for someone finding it easy
+
+The "easier" field matters more than any of the others. Not being able to do a
+prescribed movement is the most common reason someone abandons a plan.
+
+Also return "weekNotes": four short lines, one per week, saying what changes and
+why. These are what stop the block reading as the same week repeated.
 
 EVERY EXERCISE ENTRY MUST BE ONE MOVEMENT, NAMED SHORTLY.
 
@@ -1732,29 +2018,6 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
 {{
   "brand": "{name}'s App",
   "tagline": "{goal}",
-  "weeks": [
-    {{
-      "weekNumber": 1,
-      "theme": "Foundation",
-      "days": [
-        {{"day": "Sun", "label": "Rest", "focus": "Recovery", "workouts": [
-          {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—", "reason": "Active recovery keeps blood flow up without adding fatigue before the training week starts."}}
-        ]}},
-        {{"day": "Mon", "label": "Lower Body", "focus": "Strength", "workouts": [
-          {{"name": "Back Squat", "sets": "4x6", "load": "70% est. 1RM", "rest": "2min", "demo": "back squat", "reason": "Builds the foundational lower-body strength this goal depends on most, loaded conservatively in week 1 to groove technique."}},
-          {{"name": "Romanian Deadlift", "sets": "3x8", "load": "Moderate", "rest": "90s", "demo": "romanian deadlift", "reason": "Targets the posterior chain and hamstrings, which support the squat and protect the lower back."}}
-        ]}},
-        {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
-        {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
-        {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
-        {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}},
-        {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}} ]}}
-      ]
-    }},
-    {{ "weekNumber": 2, "theme": "Build", "days": [ ...same 7-day shape, slightly progressed... ] }},
-    {{ "weekNumber": 3, "theme": "Peak", "days": [ ...same 7-day shape, further progressed... ] }},
-    {{ "weekNumber": 4, "theme": "Deload", "days": [ ...same 7-day shape, reduced volume/intensity... ] }}
-  ],
   "nutrition": {{
     "calories": 2400,
     "protein": 160,
@@ -1783,7 +2046,39 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
     {{"name": "Hip flexor stretch", "sets": "2x30s each side", "load": "Bodyweight", "rest": "—", "reason": "Loosens hip flexors that tighten overnight, before any training session."}},
     {{"name": "Cat-cow stretch", "sets": "1x10 reps", "load": "Bodyweight", "rest": "—", "reason": "..."}},
     {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}}
-  ]
+  ],
+  "weekNotes": [
+    "Week 1: learn the movements and find your working weights. Don't chase numbers yet.",
+    "Week 2: same session, a little more. This is where progress starts showing.",
+    "Week 3: the heaviest week of the block. You should feel it by Thursday.",
+    "Week 4: last week of the block, then it's time for a new one."
+  ],
+  "template": {{
+    "days": [
+      {{"day": "Sun", "label": "Rest", "focus": "Recovery", "workouts": [
+        {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—", "demo": "brisk walking",
+          "reason": "Keeps blood flow up without adding fatigue before the training week.",
+          "cues": "Keep it conversational. If you're out of breath it's too fast.",
+          "mistake": "Turning a recovery walk into a workout.",
+          "easier": "15 minutes is fine.", "harder": "Add a gentle incline.",
+          "progression": {{"type": "none"}}}}
+      ]}},
+      {{"day": "Mon", "label": "Lower Body", "focus": "Strength", "workouts": [
+        {{"name": "Back Squat", "sets": "4x6", "load": "Moderate, around 7/10 effort", "rest": "2min",
+          "demo": "back squat form",
+          "reason": "The foundational lower-body strength this goal depends on most.",
+          "cues": "Brace before you unrack. Knees track over toes. Drive the floor away.",
+          "mistake": "Letting the hips shoot up first, which turns it into a good morning.",
+          "easier": "Goblet squat with a dumbbell.", "harder": "Pause two seconds at the bottom.",
+          "progression": {{"type": "load", "increment": 5, "unit": "kg"}}}}
+      ]}},
+      {{"day": "Tue", "label": "...", "focus": "...", "workouts": [ ...same shape... ]}},
+      {{"day": "Wed", "label": "...", "focus": "...", "workouts": [ ...same shape... ]}},
+      {{"day": "Thu", "label": "...", "focus": "...", "workouts": [ ...same shape... ]}},
+      {{"day": "Fri", "label": "...", "focus": "...", "workouts": [ ...same shape... ]}},
+      {{"day": "Sat", "label": "...", "focus": "...", "workouts": [ ...same shape... ]}}
+    ]
+  }}
 }}
 
 Important:
@@ -1823,6 +2118,19 @@ Important:
     ) as stream:
         message = stream.get_final_message()
 
+    # Why the model stopped is the single most useful fact when a plan comes
+    # back incomplete, and we were not recording it. "max_tokens" means the
+    # response was cut off, and the fix is a bigger budget or a smaller payload.
+    # "end_turn" means the model decided it had finished early, which is a
+    # prompt problem instead. The two are indistinguishable without this line.
+    stop_reason = getattr(message, "stop_reason", None)
+    usage = getattr(message, "usage", None)
+    if stop_reason and stop_reason != "end_turn":
+        logger.warning(
+            f"Plan generation stop_reason={stop_reason} "
+            f"(output tokens: {getattr(usage, 'output_tokens', '?')})"
+        )
+
     # Claude Sonnet 5 can include a "thinking" block ahead of the actual
     # answer for complex prompts like this one — don't assume content[0] is
     # the text block, find the one that actually is.
@@ -1834,6 +2142,18 @@ Important:
     # throws away a perfectly good week 1 and costs another full 3 minutes, so
     # ask for just the missing weeks instead.
     weeks = plan_data.get("weeks")
+    if isinstance(weeks, list):
+        # A salvaged truncation can leave a final week with fewer than 7 days.
+        # Drop it rather than shipping a stump — the continuation below rebuilds
+        # it in full, which costs far less than regenerating the whole plan.
+        complete = [w for w in weeks if isinstance(w.get("days"), list) and len(w["days"]) == 7]
+        if len(complete) != len(weeks):
+            logger.warning(
+                f"Dropped {len(weeks) - len(complete)} incomplete week(s) before continuation"
+            )
+            plan_data["weeks"] = complete
+            weeks = complete
+
     if isinstance(weeks, list) and 0 < len(weeks) < 4:
         logger.warning(
             f"Plan came back with {len(weeks)} week(s) — requesting the missing weeks "
@@ -1847,6 +2167,13 @@ Important:
     tagline_default = f"{goal} — {stage}" if stage and "no specific" not in stage.lower() and "general training" not in stage.lower() else goal
     plan_data.setdefault("tagline", tagline_default)
 
+    # Repair misplaced name/sets content on the authored week BEFORE it gets
+    # expanded, so one bad row does not get copied into all four weeks.
+    autofix_workout_fields({"weeks": [{"days": (plan_data.get("template") or {}).get("days", [])}]})
+
+    # Build the four weeks the app renders from the single authored week.
+    expand_template(plan_data, answers)
+
     # HARD validation — structural. A plan missing a day or an exercise is
     # genuinely broken and will error in the customer's app, so this must pass.
     validate_plan(plan_data)
@@ -1854,19 +2181,12 @@ Important:
     plan_data["plan_version"] = PLAN_PROMPT_VERSION
     plan_data["activity_family"] = family
 
-    # Quietly lighten week 4 if it came back too heavy, so a fixable deload
-    # never costs a full regeneration.
-    autofix_deload(plan_data)
-
-    # Repair misplaced name/sets content before validation, so a blank exercise
-    # name is fixed rather than either shipped or regenerated.
-    autofix_workout_fields(plan_data)
-
-    # Same principle for session count: trim the surplus in place rather than
-    # spending another 3 minutes regenerating a plan that was only slightly
-    # over. Runs before the soft checks so the trimmed version is what gets
-    # validated.
-    autofix_training_days(plan_data, answers)
+    # A block that has run its course should say so rather than looping in
+    # silence. This drives the block-complete state in the app and the reminder
+    # email a week before it lands.
+    plan_data["block_ends_at"] = (
+        datetime.now(timezone.utc) + timedelta(weeks=BLOCK_WEEKS)
+    ).isoformat()
 
     # SOFT validation — coaching sense. Attach the outcome rather than raising,
     # so the caller can retry to improve the plan but still deliver THIS plan if
