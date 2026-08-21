@@ -1221,8 +1221,10 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
         {/* A long "sets" value used to be laid out shrink-0 against a flex-1
             truncating name, so it took the whole row and squeezed the name to
             "A.." or to nothing at all. Anything longer than a normal volume
-            figure now drops onto its own line and the name keeps the width. */}
-        {String(w.sets || "").length > 14 ? (
+            figure now drops onto its own line and the name keeps the width.
+            Threshold is 16 rather than 14: "3x20s each side" is 15 characters,
+            fits inline perfectly well, and was being wrapped for no reason. */}
+        {String(w.sets || "").length > 16 ? (
           <p className={`text-sm flex-1 min-w-0 break-words ${checked ? "text-zinc-600 line-through" : "text-white"}`}>
             {w.name}
           </p>
@@ -1236,7 +1238,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
         )}
       </div>
 
-      {String(w.sets || "").length > 14 && (
+      {String(w.sets || "").length > 16 && (
         <p className="px-3 pt-1 pl-9 font-mono-display text-xs text-[var(--accent)] break-words">
           {w.sets}
         </p>
