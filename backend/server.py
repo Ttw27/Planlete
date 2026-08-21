@@ -1132,6 +1132,14 @@ def expand_template(plan_data: dict, answers: dict) -> None:
     days = template.get("days")
     if not isinstance(days, list) or not days:
         raise ValueError("Template is missing its days — cannot build the block")
+    if len(days) != 7:
+        # A salvaged truncation can leave a partial week. Say so plainly rather
+        # than expanding five days into four weeks and letting the structural
+        # check report it as a mysterious "expected 7 days, got 5".
+        raise ValueError(
+            f"Template has {len(days)} of 7 days — the response was cut short, "
+            f"so the block cannot be built from it"
+        )
 
     experience = str(answers.get("experience", "")).strip()
     deload_week = BLOCK_WEEKS if experience in DELOAD_EXPERIENCE else None
@@ -1500,11 +1508,14 @@ def _json_from_message(message) -> dict:
             if salvaged:
                 try:
                     plan = json.loads(salvaged)
-                    weeks = plan.get("weeks")
+                    # Report against the shape we actually ask for now. Looking
+                    # for "weeks" here reported "salvaged 0 week(s)" on a
+                    # truncation that had in fact recovered five usable days,
+                    # which made a working salvage look like a broken one.
+                    recovered = (plan.get("template") or {}).get("days") or []
                     logger.warning(
-                        f"Response was truncated — salvaged "
-                        f"{len(weeks) if isinstance(weeks, list) else 0} week(s) "
-                        f"instead of discarding the generation"
+                        f"Response was truncated — salvaged {len(recovered)}/7 day(s) "
+                        f"of the template instead of discarding the generation"
                     )
                     return plan
                 except json.JSONDecodeError:
@@ -2179,12 +2190,22 @@ Important:
     # continuous flow of chunks vs. one blocking reply) — it changes nothing
     # about the customer experience, since generation already happens in the
     # background. What it does buy us is removing the ~21,333 token ceiling
-    # that applies to non-streamed requests, so a big, detailed plan (thinking
-    # + a full 4-week JSON) has real room to complete rather than risk being
-    # cut off mid-response.
+    # that applies to non-streamed requests.
+    #
+    # Budget raised from 32,000 to 64,000 on 21 Aug. Railway logged
+    # stop_reason=max_tokens with output_tokens exactly 32000, which is the
+    # ceiling being hit rather than approached — the model was still writing
+    # when we cut it off, and the response died five days into week 1.
+    #
+    # The JSON itself is nowhere near that size. A one-week template runs
+    # roughly 7,000 tokens even with cues, mistakes and variations on every
+    # exercise. The rest is the model's own reasoning, which shares this budget
+    # and varies enormously run to run: the 20:53 generation finished
+    # comfortably, the 21:49 one did not. Headroom is far cheaper than a retry,
+    # because unused budget costs nothing while a truncation costs four minutes.
     with client.messages.stream(
         model="claude-sonnet-5",
-        max_tokens=32000,
+        max_tokens=64000,
         messages=[
             {
                 "role": "user",
