@@ -1026,7 +1026,8 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool) -> st
     if ptype == "reps":
         return "Hit every rep this week? Add one rep per set next week. Missed any? Repeat."
     if ptype == "time":
-        return f"Add {inc:g} minutes next week if this felt controlled throughout."
+        unit_word = "minute" if inc == 1 else "minutes"
+        return f"Add {inc:g} {unit_word} next week if this felt controlled throughout."
     if ptype == "distance":
         return f"Add {inc:g}{unit or 'km'} next week if you finished feeling strong."
     if ptype == "rounds":
@@ -1034,13 +1035,60 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool) -> st
     return ""
 
 
+def _sanitise_progression(ex: dict) -> dict:
+    """
+    Reject progression types that make no sense for how the volume is written.
+
+    Seen in testing: a Copenhagen Plank at "3x20s each side" came back typed as
+    time with a 5 minute increment. Two things wrong with that. The customer
+    reads "Add 5 minutes next week", which is not a thing anyone does to a side
+    plank. And because "3x20s" starts with the SET count, the arithmetic would
+    have turned it into 8x20s in week 2 and 13x20s in week 3.
+
+    A sets-by-something entry only progresses by reps, load or rounds. Time and
+    distance belong to continuous single-figure entries like "20min" or "5km".
+    Anything mismatched is dropped to "none", which holds it steady rather than
+    printing an instruction nobody should follow.
+    """
+    prog = dict(ex.get("progression") or {})
+    ptype = prog.get("type", "none")
+    sets = str(ex.get("sets", ""))
+    is_sets_format = bool(re.match(r"\s*\d+\s*[xX]", sets))
+
+    if ptype in ("time", "distance") and is_sets_format:
+        prog = {"type": "none"}
+    elif ptype in ("reps", "load") and not is_sets_format:
+        # "20min" cannot gain a rep. Move it to the matching continuous type if
+        # the units make that obvious, otherwise hold it steady.
+        lowered = sets.lower()
+        if ptype == "reps":
+            if "min" in lowered:
+                prog = {"type": "time", "increment": prog.get("increment") or 5}
+            elif "km" in lowered or "mile" in lowered:
+                prog = {"type": "distance", "increment": prog.get("increment") or 1, "unit": "km"}
+            else:
+                prog = {"type": "none"}
+
+    out = dict(ex)
+    out["progression"] = prog
+    return out
+
+
 def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dict:
     """Produce this exercise as it appears in a given week."""
+    ex = _sanitise_progression(ex)
     out = dict(ex)
     prog = ex.get("progression") or {}
     ptype = prog.get("type", "none")
     inc = prog.get("increment") or 0
     steps = week - 1  # week 1 is the template as authored
+
+    # A warm-up, a mobility drill or a rest-day walk does not deload, because it
+    # was never loaded. Telling someone to "hold last week's weight" on a band
+    # pull-apart or a 5 minute rowing warm-up is nonsense and undermines the
+    # instructions that do matter.
+    if ptype == "none":
+        return out
 
     if deload:
         out["sets"] = _cut_sets(str(ex.get("sets", "")))
@@ -1061,9 +1109,15 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
         amount = f"{inc * steps:g}{prog.get('unit', 'kg')}" if inc else "a little"
         out["load"] = f"{ex.get('load', '')} — about {amount} up on week 1".strip(" —")
 
-    note = _progression_note(prog, week, is_final, deload)
-    if note:
-        out["progressionNote"] = note
+    # Only per-exercise instructions belong on the row, because they genuinely
+    # differ between exercises ("add 5kg" vs "add one rep"). Anything that is
+    # true of the whole week is set once at week level instead — repeating
+    # "Deload week. Same movements, less volume" on all ten rows is noise that
+    # buries the one line the person actually needs to read.
+    if not deload and not is_final:
+        note = _progression_note(prog, week, is_final, deload)
+        if note:
+            out["progressionNote"] = note
     return out
 
 
@@ -1098,10 +1152,22 @@ def expand_template(plan_data: dict, answers: dict) -> None:
                     for ex in d.get("workouts", [])
                 ],
             })
+        note = notes[week - 1] if week - 1 < len(notes) else ""
+        if is_deload:
+            note = (
+                "Deload week. Same movements, roughly a third less volume, and hold the weights "
+                "you used last week. This is where the previous three weeks turn into progress."
+            )
+        elif is_final:
+            note = (
+                "Last week of this block. Finish it properly, then build a new one from what "
+                "you've actually logged."
+            ) if not note else note
+
         weeks.append({
             "weekNumber": week,
             "theme": themes[week - 1],
-            "note": notes[week - 1] if week - 1 < len(notes) else "",
+            "note": note,
             "days": week_days,
         })
 
@@ -1954,6 +2020,16 @@ movement: a lower-body compound might take 5kg a week, an upper-body compound
 2.5kg, an isolation exercise 1kg. 2.5kg on a squat is nothing; on a lateral
 raise it is a 25% jump. Warm-ups, mobility, rest-day walks, club sessions and
 match days are all "none".
+
+MATCH THE TYPE TO HOW YOU WROTE "sets":
+- "sets" written as NxM ("4x6", "3x20s each side", "2x10 each leg") can only use
+  "load", "reps", "rounds" or "none". NEVER "time" or "distance" — a 3x20s side
+  plank does not gain 5 minutes, and the first number in "3x20s" is the SET
+  count, so the arithmetic would give you 8x20s.
+- "time" and "distance" are for continuous single-figure entries only: "20min",
+  "5km", "45min easy".
+- If you are unsure, use "none". A movement held steady for four weeks is fine;
+  an instruction the person should not follow is not.
 
 Because you are only writing one week, spend the room on quality. Every exercise
 also needs:
