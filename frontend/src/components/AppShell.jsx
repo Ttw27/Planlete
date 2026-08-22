@@ -129,7 +129,7 @@ function getProgressSummary(history, logs) {
  * on day 29, and gives the case for a fresh block somewhere the person has
  * chosen to look.
  */
-function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = false }) {
+function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = false, weekOneDays = [] }) {
   const { sessionsLogged, improvements } = getProgressSummary(history, logs);
   const weeksDone = cycleNumber > 1 ? (cycleNumber - 1) * (totalWeeks || 4) : 0;
 
@@ -140,9 +140,9 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
         It doesn't stop. It goes round again, heavier.
       </h2>
       <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-        Week {(totalWeeks || 4) + 1} starts the block over — same sessions, same structure. What
-        changes is what you're chasing: every target comes from what you actually logged last time
-        round, so each cycle asks more of you than the one before.
+        Week {(totalWeeks || 4) + 1} starts the block over — the same sessions below, in the same
+        order. Stop following the weekly increases and go by feel instead: add a little when a
+        session is comfortably within reach, hold the weight when it isn't.
       </p>
 
       <div className="border-t border-white/10 pt-4 mb-6">
@@ -154,7 +154,8 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
           </p>
         ) : sessionsLogged === 0 ? (
           <p className="text-sm text-zinc-600 leading-relaxed">
-            Nothing logged yet — log your sets and each cycle sets targets from your own numbers.
+            Nothing logged yet. Once you start logging sets, your numbers show up here so you can
+            see what's moved.
           </p>
         ) : (
           <>
@@ -200,6 +201,44 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
           </p>
         )}
       </div>
+
+      {/* The sessions themselves, not a description of them. This used to be
+          prose explaining that week 5 repeats week 1, which left the person
+          reading about their plan rather than looking at it. */}
+      {weekOneDays.length > 0 && (
+        <div className="border-t border-white/10 pt-4 mt-6">
+          <p className="text-overline text-zinc-500 mb-1">What week {(totalWeeks || 4) + 1} looks like</p>
+          <p className="text-xs text-zinc-600 leading-relaxed mb-4">
+            The same week you started on. Numbers are where week 1 had them — go by feel from here.
+          </p>
+          <div className="flex flex-col gap-2">
+            {weekOneDays.map((d) => {
+              const items = d.workouts || [];
+              const isRest = /rest|recovery|off/i.test(d.label || "");
+              return (
+                <div key={d.day} className="border border-white/10 px-3 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-overline text-[var(--accent)] shrink-0">{d.day}</p>
+                    <p className="text-sm text-white text-right leading-snug">{d.label}</p>
+                  </div>
+                  {!isRest && items.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1">
+                      {items.map((w, i) => (
+                        <div key={i} className="flex items-baseline justify-between gap-3">
+                          <span className="text-[11px] text-zinc-400 truncate">{w.name}</span>
+                          <span className="font-mono-display text-[11px] text-zinc-500 shrink-0">
+                            {w.sets}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -565,6 +604,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               sampleMode={sampleMode}
               history={history}
               logs={logs}
+              weekOneDays={allWeeks?.[0]?.days || []}
               totalWeeks={totalWeeks || (allWeeks ? allWeeks.length : 4)}
               cycleNumber={cycleNumber}
               experience={experience}
@@ -1173,6 +1213,35 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
   const [logInput, setLogInput] = useState("");
   const [logRpe, setLogRpe] = useState(null); // "easy" | "right" | "hard"
   const [timerChoice, setTimerChoice] = useState(null); // "hold" | "rest" — set on open
+  // Some rows are not things you "did" at an intensity. A fuelling note, a
+  // stretch, a coach-led club session — offering a weight field and asking how
+  // hard it felt reads as though the app has not understood its own content.
+  const isLoggable = (w.progression?.type || "none") !== "none";
+
+  // What to log depends on what the movement is. Asking for "80kg or 12 reps"
+  // on a 4x20m sprint, or on a pre-match fuelling note, tells the person the
+  // app has not understood what it just prescribed.
+  const logPrompt = (() => {
+    const type = w.progression?.type || "none";
+    if (type === "measure") {
+      return { label: "Log your time or distance — this one is about the number",
+               placeholder: "e.g. 3.4s, or 2.15m" };
+    }
+    if (type === "time") {
+      return { label: "Log how long you went for", placeholder: "e.g. 24min" };
+    }
+    if (type === "distance") {
+      return { label: "Log the distance you covered", placeholder: "e.g. 5.2km" };
+    }
+    if (type === "reps") {
+      return { label: "Log the reps you managed", placeholder: "e.g. 3x8" };
+    }
+    if (type === "rounds") {
+      return { label: "Log the rounds you completed", placeholder: "e.g. 4 rounds" };
+    }
+    return { label: "Log what you lifted", placeholder: "e.g. 80kg x 6" };
+  })();
+
   const hasReason = Boolean(w.reason);
   const restSeconds = parseDurationSeconds(w.rest);
   // Isometric/hold exercises (Plank, wall sits, dead hangs) put the actual
@@ -1295,7 +1364,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
               <Clock size={13} />
             </button>
           )}
-          {canLog && (
+          {canLog && isLoggable && (
             <button
               onClick={() => toggle("log")}
               aria-label="Log what you did"
@@ -1437,9 +1506,9 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
       )}
 
       {/* Log panel */}
-      {panel === "log" && canLog && (
+      {panel === "log" && canLog && isLoggable && (
         <div className="px-3 pb-3 -mt-1 border-t border-white/5 pt-2">
-          <p className="text-[11px] text-zinc-500 mb-2">Log what you did — weight, reps, whatever's useful</p>
+          <p className="text-[11px] text-zinc-500 mb-2">{logPrompt.label}</p>
           {(() => {
             const suggested = getSuggestedValue(exerciseHistory, w);
             return suggested ? (
@@ -1457,7 +1526,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
               value={logInput}
               onChange={(e) => setLogInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submitLog()}
-              placeholder="e.g. 80kg or 12 reps"
+              placeholder={logPrompt.placeholder}
               autoFocus
               className="flex-1 bg-black/40 border border-white/15 focus:border-[var(--accent)] outline-none text-white px-3 py-2 placeholder:text-white/20"
               style={{ fontSize: "16px" }}
