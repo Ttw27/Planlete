@@ -1020,8 +1020,26 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
     inc = (prog or {}).get("increment")
     unit = (prog or {}).get("unit", "")
 
+    if ptype == "measure":
+        return (
+            "This one is a test, not a lift. Same volume every week — log your time or "
+            "distance and chase a better number, not more reps."
+        )
+
     if ptype == "load":
         amount = f"{inc:g}{unit or 'kg'}" if inc else "a small amount"
+        steps = max(0, week - 1)
+        if steps and inc:
+            # Both figures now sit in one sentence, each labelled. Previously the
+            # cumulative total was appended to the load line and the next step
+            # appeared underneath, so week 3 read "about 5kg up on week 1" and
+            # "Add 2.5kg next week" — two numbers a line apart with nothing
+            # saying which meant since-the-start and which meant next-time.
+            total = f"{inc * steps:g}{unit or 'kg'}"
+            return (
+                f"You should be around {total} up on week 1 by now. Hit every rep this week? "
+                f"Add {amount} next week. Missed any? Repeat this weight."
+            )
         return f"Hit every rep this week? Add {amount} next week. Missed any? Repeat this weight."
     if ptype == "reps":
         return "Hit every rep this week? Add one rep per set next week. Missed any? Repeat."
@@ -1038,6 +1056,28 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
             return "Hit every rep this week? Add a set next week. Missed any? Repeat."
         return "Add a round next week if you completed every round at full effort."
     return ""
+
+
+# Movements that are a TEST, not a lift. You do not progress a sprint by adding
+# reps to it — you run it, log the time, and try to beat the number. The thing
+# that actually gets progressively overloaded is the gym work underneath it: the
+# trap bar, the squat, the Nordic curl. Those build the engine; these measure it.
+#
+# Adding a set a week to max-effort shuttles is not progression, it is how a
+# footballer picks up a hamstring strain in week 3. The model kept reaching for
+# it because the prompt made progression the default, so this is the backstop
+# that holds regardless of what comes back.
+MEASURED_TERMS = [
+    "sprint", "shuttle", "dash", "flying", "acceleration", "max velocity",
+    "bound", "hop", "jump", "leap", "throw", "toss", "plyo", "depth drop",
+    "drop and stick", "drop-and-stick", "broad", "vertical",
+    "time trial", "rep max", "1rm", "test",
+]
+
+
+def _is_measured(name: str) -> bool:
+    lowered = str(name or "").lower()
+    return any(term in lowered for term in MEASURED_TERMS)
 
 
 def _sanitise_progression(ex: dict) -> dict:
@@ -1059,6 +1099,16 @@ def _sanitise_progression(ex: dict) -> dict:
     ptype = prog.get("type", "none")
     sets = str(ex.get("sets", ""))
     is_sets_format = bool(re.match(r"\s*\d+\s*[xX]", sets))
+
+    # A sprint, a bound or a med ball throw is measured, never loaded up. This
+    # overrides whatever the model chose, because the prompt alone has not held.
+    if _is_measured(ex.get("name", "")):
+        out = dict(ex)
+        out["progression"] = {"type": "measure"}
+        # "4x4 reps" — the format already says reps, so the word is noise. Every
+        # other row reads "4x6", so this one looked like a mistake.
+        out["sets"] = re.sub(r"^(\s*\d+\s*[xX]\s*\d+)\s*reps?\s*$", r"\1", sets)
+        return out
 
     if ptype in ("time", "distance") and is_sets_format:
         prog = {"type": "none"}
@@ -1095,6 +1145,15 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
     if ptype == "none":
         return out
 
+    # A measured movement holds the same volume in every week, including the
+    # deload. Cutting a sprint session's sets makes the weekly time
+    # incomparable, which defeats the point of measuring it at all.
+    if ptype == "measure":
+        note = _progression_note(prog, week, is_final, deload, str(out.get("sets", "")))
+        if note and not is_final:
+            out["progressionNote"] = note
+        return out
+
     if deload:
         out["sets"] = _cut_sets(str(ex.get("sets", "")))
         out["load"] = f"{ex.get('load', '')} — hold last week's weight".strip(" —")
@@ -1108,11 +1167,12 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
     elif ptype == "rounds" and steps:
         out["sets"] = _bump_numbers(str(ex.get("sets", "")), inc * steps)
     elif ptype == "load" and steps:
-        # We never invent a kilo figure, because we do not know their 1RM. The
-        # instruction references what they actually lifted instead, and the app
-        # substitutes their logged weight when there is one.
-        amount = f"{inc * steps:g}{prog.get('unit', 'kg')}" if inc else "a little"
-        out["load"] = f"{ex.get('load', '')} — about {amount} up on week 1".strip(" —")
+        # The cumulative figure used to be appended here, which produced
+        # "Moderate, 7/10 effort — about 5kg up on week 1 · rest 2min" on the
+        # load line, and then "Add 2.5kg next week" underneath. Two numbers, one
+        # line apart, neither saying whether it meant since the start or next
+        # time. Both now live in the progression note, labelled.
+        pass
 
     # Only per-exercise instructions belong on the row, because they genuinely
     # differ between exercises ("add 5kg" vs "add one rep"). Anything that is
@@ -1124,6 +1184,43 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
         if note:
             out["progressionNote"] = note
     return out
+
+
+def _hold_duplicate_movements(days: list) -> None:
+    """
+    When the same movement appears more than once in a week, only the heaviest
+    instance progresses. The rest hold.
+
+    Nordic Hamstring Curl came back on both Monday (3x5) and Wednesday (3x6),
+    each adding a rep a week. Read either row on its own and it looks sensible.
+    Add them up and the weekly total for a brutal eccentric exercise climbs at
+    twice the rate either row implies, which is invisible to the person doing
+    it and is exactly how a hamstring gets hurt.
+    """
+    seen = {}
+    for day in days:
+        for ex in day.get("workouts", []):
+            key = re.sub(r"[^a-z]", "", str(ex.get("name", "")).lower())
+            if not key:
+                continue
+            seen.setdefault(key, []).append(ex)
+
+    for key, instances in seen.items():
+        if len(instances) < 2:
+            continue
+        progressing = [e for e in instances
+                       if (e.get("progression") or {}).get("type", "none") not in ("none", "measure")]
+        if len(progressing) < 2:
+            continue
+
+        def volume(e):
+            m = re.match(r"\s*(\d+)\s*[xX]\s*(\d+)", str(e.get("sets", "")))
+            return int(m.group(1)) * int(m.group(2)) if m else 0
+
+        progressing.sort(key=volume, reverse=True)
+        for extra in progressing[1:]:
+            extra["progression"] = {"type": "none"}
+            extra["_heldDuplicate"] = True
 
 
 def expand_template(plan_data: dict, answers: dict) -> None:
@@ -1148,6 +1245,10 @@ def expand_template(plan_data: dict, answers: dict) -> None:
 
     experience = str(answers.get("experience", "")).strip()
     deload_week = BLOCK_WEEKS if experience in DELOAD_EXPERIENCE else None
+
+    # Decide duplicates once, on the template, so the same instance holds in
+    # every week rather than the choice drifting week to week.
+    _hold_duplicate_movements(days)
 
     notes = plan_data.get("weekNotes") or []
     themes = ["Foundation", "Build", "Peak", "Deload" if deload_week else "Push"]
@@ -2022,30 +2123,54 @@ The number of days on which you prescribe a real training session must be
 exactly {days} — count only the sessions YOU are prescribing, NOT any club
 training or match day, which are existing commitments.
 
-EVERY exercise needs a "progression" object saying how it moves week to week:
+EVERY exercise needs a "progression" object. DEFAULT TO "none" AND ONLY PROGRESS
+WHAT SHOULD GENUINELY BE PROGRESSED:
 
+  {{"type": "none"}}                                      does not progress
+  {{"type": "measure"}}                                   a test — logged, not loaded
   {{"type": "load",     "increment": 5,  "unit": "kg"}}   heavier each week
   {{"type": "reps",     "increment": 1}}                  one more rep per set
   {{"type": "time",     "increment": 5}}                  five more minutes
   {{"type": "distance", "increment": 1,  "unit": "km"}}   further each week
   {{"type": "rounds",   "increment": 1}}                  one more round
-  {{"type": "none"}}                                      does not progress
 
-Choosing the increment is a coaching decision, not a default. Size it to the
-movement: a lower-body compound might take 5kg a week, an upper-body compound
+THE ENGINE PROGRESSES. THE TEST GETS MEASURED.
+
+Gym work builds the engine: trap bar deadlift, squat, bench, Nordic curl, rows.
+These take "load" or "reps" and climb week to week. That is where progressive
+overload belongs.
+
+Sprints, shuttles, bounds, hops, jumps and med ball throws are TESTS of what
+that engine produces. Mark every one of them "measure". They keep identical
+volume all four weeks — the person runs them, logs the time or distance, and
+tries to beat their own number. Progress there is a faster 10m or a longer
+bound, NOT more reps.
+
+Adding a set a week to max-effort shuttle sprints is not progression. It is a
+50% jump in high-intensity volume over a month on top of matches, and it is how
+a footballer tears a hamstring in week 3.
+
+Also "none": warm-ups, mobility, stretches, rest-day walks, foam rolling, club
+sessions, match days, and anything that is an instruction rather than an
+exercise (fuelling notes, "as directed by coach").
+
+For the ones that DO progress, sizing the increment is a coaching decision, not
+a default. A lower-body compound might take 5kg a week, an upper-body compound
 2.5kg, an isolation exercise 1kg. 2.5kg on a squat is nothing; on a lateral
-raise it is a 25% jump. Warm-ups, mobility, rest-day walks, club sessions and
-match days are all "none".
+raise it is a 25% jump.
 
 MATCH THE TYPE TO HOW YOU WROTE "sets":
-- "sets" written as NxM ("4x6", "3x20s each side", "2x10 each leg") can only use
-  "load", "reps", "rounds" or "none". NEVER "time" or "distance" — a 3x20s side
-  plank does not gain 5 minutes, and the first number in "3x20s" is the SET
-  count, so the arithmetic would give you 8x20s.
+- "sets" written as NxM ("4x6", "3x20s each side") can only use "load", "reps",
+  "rounds", "measure" or "none". NEVER "time" or "distance" — the first number
+  in "3x20s" is the SET count, so the arithmetic would give you 8x20s.
 - "time" and "distance" are for continuous single-figure entries only: "20min",
   "5km", "45min easy".
-- If you are unsure, use "none". A movement held steady for four weeks is fine;
-  an instruction the person should not follow is not.
+- Write "4x6", never "4x6 reps". The format already says reps.
+- Do NOT put the same exercise on two different days and progress both. The
+  weekly total then climbs at twice the rate either row shows.
+
+If you are unsure, use "none". A movement held steady for four weeks is fine;
+an instruction the person should not follow is not.
 
 Because you are only writing one week, spend the room on quality. Every exercise
 also needs:
