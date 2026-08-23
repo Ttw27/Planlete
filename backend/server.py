@@ -697,40 +697,36 @@ def validate_plan_semantics(plan_data: dict, answers: dict) -> None:
     # check would reject a textbook deload and force a pointless retry. It also
     # removed a perverse incentive, where padding week 3 with extra exercises
     # was the easiest way to leave room for a visible cut.
-    # Deload is now applied deterministically during expansion, and only for
-    # people with enough training history to need one. Checking for it on a
-    # beginner's block would reject a plan that is deliberately, correctly
-    # progressing straight through week 4.
-    if len(weeks) == 4 and str(answers.get("experience", "")).strip() in DELOAD_EXPERIENCE:
-        def week_volume(w):
-            total = 0
-            for d in w.get("days", []):
-                if "rest" in str(d.get("label", "")).lower():
-                    continue
-                for ex in d.get("workouts", []):
-                    m = re.match(r"\s*(\d+)\s*[xX]", str(ex.get("sets", "")))
-                    # Fall back to 1 for time-based entries like "20min"
-                    total += int(m.group(1)) if m else 1
-            return total
-
-        w3, w4 = week_volume(weeks[2]), week_volume(weeks[3])
-        if w3 and w4 > w3 * 0.85:
-            raise ValueError(
-                f"Week 4 must be a deload but has {w4} total sets vs week 3's {w3}. "
-                f"Keep the same exercises but cut roughly 30-40% of the sets."
-            )
+    # The deload check has been REMOVED, not disabled.
+    #
+    # It existed when Claude authored all four weeks longhand and could forget
+    # to lighten the last one. Week 4 is now built by _cut_sets during expansion,
+    # so it is correct by construction and this check can only produce false
+    # positives — which it did, on 22 Aug: "Week 4 must be a deload but has 73
+    # total sets vs week 3's 79", on a plan whose deload was perfectly applied.
+    #
+    # The reason the totals looked close is that the check counted every set in
+    # the week, while only progressing exercises deload. Sprints hold their
+    # volume by design (they are measured, not loaded) and warm-ups were never
+    # loaded at all, so a correct 35% cut to the lifts shows up as a ~8% cut to
+    # the week. Re-counting only the progressing exercises would fix the maths,
+    # but it would still be a test that cannot fail for any real reason, and
+    # every false positive costs a full regeneration.
 
 
 def autofix_deload(plan_data: dict) -> None:
     """
-    If week 4 came back too heavy to be a real deload, lighten it in place so it
-    can never trigger a full regeneration.
+    NO LONGER CALLED. Kept for reference only.
 
-    Trims SETS rather than removing exercises. Keeping the same movements across
-    the block is deliberate — it's how progression is actually tracked (the app
-    compares logged weights per exercise name, so a movement that disappears
-    breaks its own progress history) and it's how a real deload works: same
-    lifts, less volume.
+    This repaired a deload that Claude had authored too heavy, back when all four
+    weeks were written longhand. Week 4 is now produced by _cut_sets during
+    template expansion, so there is nothing left to repair. Do not wire this back
+    in without checking expand_template first — running both would deload twice.
+
+    What it did: trimmed SETS rather than removing exercises, because keeping the
+    same movements across the block is how progression is tracked (the app
+    compares logged weights per exercise name) and how a real deload works —
+    same lifts, less volume.
     """
     weeks = plan_data.get("weeks", [])
     if len(weeks) != 4:
