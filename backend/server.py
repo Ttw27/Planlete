@@ -977,11 +977,21 @@ def _bump_numbers(text: str, add: float, unit: str = "", ceiling: Optional[float
     return text[:m.start(1)] + rendered + text[m.end(1):]
 
 
+def _is_timed_hold(sets_text: str) -> bool:
+    """True for "3x20s each side" — a hold, where the second number is seconds."""
+    return bool(re.match(r"\s*\d+\s*[xX]\s*\d+\s*(s|sec|secs|seconds)\b", str(sets_text)))
+
+
 def _bump_reps(sets_text: str, add: int) -> str:
     """Move the rep figure in "4x6", leaving the set count alone."""
     m = re.match(r"\s*(\d+)\s*[xX]\s*(\d+)(.*)", sets_text)
     if not m:
         return _bump_numbers(sets_text, add)
+    # A timed hold progresses in seconds. Adding "one rep" to a 20 second
+    # Copenhagen plank produced 21s, which is not a progression anybody would
+    # notice or follow. Five seconds a week is what a coach would actually write.
+    if _is_timed_hold(sets_text):
+        add = add * 5
     return f"{m.group(1)}x{int(m.group(2)) + add}{m.group(3)}"
 
 
@@ -1038,6 +1048,8 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
             )
         return f"Hit every rep this week? Add {amount} next week. Missed any? Repeat this weight."
     if ptype == "reps":
+        if _is_timed_hold(sets):
+            return "Held it for every set? Add 5 seconds to each hold next week. Struggled? Repeat."
         return "Hit every rep this week? Add one rep per set next week. Missed any? Repeat."
     if ptype == "time":
         unit_word = "minute" if inc == 1 else "minutes"
@@ -1104,6 +1116,18 @@ def _sanitise_progression(ex: dict) -> dict:
         # "4x4 reps" — the format already says reps, so the word is noise. Every
         # other row reads "4x6", so this one looked like a mistake.
         out["sets"] = re.sub(r"^(\s*\d+\s*[xX]\s*\d+)\s*reps?\s*$", r"\1", sets)
+        return out
+
+    # A bodyweight movement cannot take a load increment. "Copenhagen Plank,
+    # Bodyweight — Add 1kg next week" is the third different wrong progression
+    # the model has attached to that one exercise (time, then rounds, now load),
+    # which is a good sign it will keep finding new ones. Reps is the honest
+    # progression for a bodyweight hold or press; if the format cannot take
+    # reps either, it holds.
+    load_text = str(ex.get("load", "")).lower()
+    if ptype == "load" and any(t in load_text for t in ("bodyweight", "body weight", "bw only")):
+        out = dict(ex)
+        out["progression"] = {"type": "reps", "increment": 1} if is_sets_format else {"type": "none"}
         return out
 
     if ptype in ("time", "distance") and is_sets_format:
@@ -2162,6 +2186,9 @@ MATCH THE TYPE TO HOW YOU WROTE "sets":
 - "time" and "distance" are for continuous single-figure entries only: "20min",
   "5km", "45min easy".
 - Write "4x6", never "4x6 reps". The format already says reps.
+- NEVER give "load" progression to a bodyweight exercise. If "load" says
+  Bodyweight, the progression is "reps" or "none" — you cannot add 1kg to a
+  Copenhagen plank.
 - Do NOT put the same exercise on two different days and progress both. The
   weekly total then climbs at twice the rate either row shows.
 
