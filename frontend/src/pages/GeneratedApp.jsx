@@ -100,11 +100,15 @@ export default function GeneratedApp() {
   let weekIndex = 0;
   let cycleNumber = 1;
   if (weeks.length > 1) {
-    const createdAt = plan.created_at ? new Date(plan.created_at) : new Date();
-    const daysElapsed = Math.max(
-      0,
-      Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
-    );
+    // The clock runs from when they STARTED TRAINING, not from when the plan
+    // was generated. Someone who buys on Monday and doesn't open the app for a
+    // week used to be shown week 2 having done nothing at all, and someone who
+    // left it a month came back to a finished block. With no started_at they
+    // sit on week 1 indefinitely, which is exactly right.
+    const startedAt = plan.started_at ? new Date(plan.started_at) : null;
+    const daysElapsed = startedAt
+      ? Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
     const weeksElapsed = Math.floor(daysElapsed / 7);
     weekIndex = weeksElapsed % weeks.length;
     // Which time through the block they are on. Past the first cycle the plan
@@ -131,6 +135,12 @@ export default function GeneratedApp() {
     nutrition: plan.nutrition,
     recovery: plan.recovery,
     morningRoutine: plan.morningRoutine,
+    // AppShell needs these to work out whether the block has finished. Without
+    // them the Ongoing tab could never appear, because every check silently
+    // read undefined and returned false.
+    started_at: plan.started_at || null,
+    block_ends_at: plan.block_ends_at || null,
+    blockWeeks: plan.blockWeeks || weeks.length || 4,
   };
 
   // absoluteWeek keeps climbing across cycles (5, 6, 7...) so logged-weight
