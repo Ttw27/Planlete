@@ -105,6 +105,24 @@ function getSuggestedValue(exerciseHistory, workout) {
  * their plan is stale, show them their own numbers moving and let the case
  * make itself.
  */
+/**
+ * The most recent value logged for an exercise, whichever week it came from.
+ *
+ * Logs are keyed by week, so jumping from week 1 to week 3 used to show an
+ * empty box on a trap bar deadlift they had already loaded twice. What a lifter
+ * needs is "what did I do last time on this movement", not "what did I do in
+ * this particular week", so this falls back to their history when the week on
+ * screen has nothing.
+ */
+function lastLoggedFor(logs, history, weekNumber, day, name) {
+  const exact = logs[`${weekNumber || 0}-${day}-${name}`];
+  if (exact) return { value: exact, fromWeek: null };
+  const entries = history?.[name] || [];
+  if (!entries.length) return { value: undefined, fromWeek: null };
+  const latest = entries[entries.length - 1];
+  return { value: latest.value, fromWeek: latest.weekNumber };
+}
+
 function getProgressSummary(history, logs) {
   const sessionsLogged = Object.keys(logs || {}).length;
   const improvements = [];
@@ -128,6 +146,14 @@ function getProgressSummary(history, logs) {
  * never answer — what happens when week 4 is done — from day one rather than
  * on day 29, and gives the case for a fresh block somewhere the person has
  * chosen to look.
+ */
+/**
+ * NO LONGER RENDERED. Kept only so the progress-summary helpers above have a
+ * reference implementation to point at.
+ *
+ * This was a screen of prose explaining what week 5 would look like, shown
+ * instead of week 5. It is now a real, loggable week with a short banner above
+ * it, which is what people expected every time they tapped the tab.
  */
 function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = false, weekOneDays = [] }) {
   const { sessionsLogged, improvements } = getProgressSummary(history, logs);
@@ -324,6 +350,9 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   const hasWeekBrowsing = Array.isArray(allWeeks) && allWeeks.length > 1;
   const isOngoing = viewingWeek === "ongoing";
   const isPreviewWeek = hasWeekBrowsing && !isOngoing && viewingWeek !== activeWeekIndex;
+  // Ongoing weeks keep counting up (5, 6, 7...) purely as a log key, so each
+  // session builds a real timeline instead of overwriting week 1's entries.
+  const ongoingWeekNumber = (absoluteWeek || weekNumber || (totalWeeks || 4)) + 1;
 
   const ongoingSeenKey = `planlete_ongoing_seen_${planId || "sample"}`;
   const [ongoingSeen, setOngoingSeen] = useState(() => {
@@ -342,12 +371,12 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // changes what's rendered.
   const isLockedWeek = sampleMode && !isOngoing && viewingWeek !== 0;
 
-  // Tapping a bottom tab drops out of the Week 4+ panel back to the live week,
-  // otherwise the nav looks dead while the panel is open.
-  const setView = (next) => {
-    setRawView(next);
-    if (isOngoing) setViewingWeek(activeWeekIndex);
-  };
+  // The bottom nav used to drop you out of the Week 4+ panel, because that panel
+  // had no Train or Fuel view of its own and the nav would otherwise look dead.
+  // Ongoing is now a real week with all the normal views, so switching tabs must
+  // keep you in it — otherwise tapping Train mid-session throws you back to the
+  // block you have already finished.
+  const setView = (next) => setRawView(next);
   const navigate = useNavigate();
 
   // Logs and checklist ticks key off the ABSOLUTE week, which keeps climbing
@@ -355,17 +384,48 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // so nothing already stored is orphaned — but it stops cycle 2's "week 1"
   // overwriting cycle 1's, which would have broken every progress comparison
   // at exactly the point they start mattering.
-  const logWeek = absoluteWeek || weekNumber;
+  const logWeek = isOngoing ? ongoingWeekNumber : (absoluteWeek || weekNumber);
   const experience = data?.answers?.experience || null;
 
   // When browsing another week, show that week's days instead of the live one.
-  const days = (hasWeekBrowsing && !isOngoing && allWeeks[viewingWeek]?.days)
+  // Once the block has run its course the plan doesn't stop, it carries on with
+  // the same week. Progression stops being scheduled and becomes autoregulated,
+  // which is why the notes are suppressed rather than left saying "add 5kg".
+  const blockFinished = (() => {
+    // Derived from when they STARTED, not when the plan was generated. A stored
+    // block_ends_at set at generation would expire a block that was never
+    // opened, so it is only the fallback for plans made before started_at
+    // existed. No start means no finish: they are still on week 1.
+    if (data.started_at) {
+      const ends = new Date(data.started_at);
+      if (isNaN(ends)) return false;
+      ends.setDate(ends.getDate() + (data.blockWeeks || 4) * 7);
+      return ends < new Date();
+    }
+    if (!data.block_ends_at) return false;
+    const ends = new Date(data.block_ends_at);
+    return !isNaN(ends) && ends < new Date();
+  })();
+
+  const rawDays = (isOngoing && allWeeks?.[0]?.days)
+    || (hasWeekBrowsing && !isOngoing && allWeeks[viewingWeek]?.days)
     || data.days
     || (mode && data.modes?.[mode]?.days)
     || [];
   // The note for whichever week is on screen, so it follows the week switcher.
   const weekNote = (hasWeekBrowsing && !isOngoing && allWeeks[viewingWeek]?.note) || "";
-  const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;  const recovery = data.recovery;
+  // Strip the scheduled progression notes once the block is over. "Add 5kg next
+  // week" is a promise the plan can no longer keep — there is no next week in
+  // the block — and the banner above says what to do instead.
+  const days = isOngoing
+    ? rawDays.map((d) => ({
+        ...d,
+        workouts: (d.workouts || []).map(({ progressionNote, ...w }) => w),
+      }))
+    : rawDays;
+
+  const nutrition = data.nutrition || data.modes?.[mode]?.nutrition;
+  const recovery = data.recovery;
   const morningRoutine = data.morningRoutine;
   const structureType = data.structureType || "days";
 
@@ -440,6 +500,23 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
       alive = false;
     };
   }, [planId]);
+
+  const [movingWeek, setMovingWeek] = useState(false);
+
+  const moveToWeek = async (week) => {
+    if (!planId) return;
+    setMovingWeek(true);
+    try {
+      await axios.post(`${API}/plans/${planId}/set-current-week`, { week });
+      toast.success(`You're on week ${week} now`);
+      // Reload so every week-derived value agrees, rather than patching some
+      // of them here and leaving the rest reading from the old timestamp.
+      window.location.reload();
+    } catch {
+      toast.error("Couldn't move you to that week — check your connection.");
+      setMovingWeek(false);
+    }
+  };
 
   const saveLog = async (day, exerciseName, value, rpe = null) => {
     const key = `${logWeek || 0}-${day}-${exerciseName}`;
@@ -540,36 +617,54 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
                   {!sampleMode && i === activeWeekIndex ? " · now" : ""}
                 </button>
               ))}
-              <button
-                onClick={() => {
-                  setViewingWeek("ongoing");
-                  setOngoingSeen(true);
-                  try {
-                    localStorage.setItem(ongoingSeenKey, "1");
-                  } catch {
-                    /* dismissal isn't worth failing over */
-                  }
-                }}
-                className={`shrink-0 relative px-3 py-1.5 border text-xs uppercase tracking-wider transition-colors ${
-                  isOngoing
-                    ? "border-[var(--accent)] text-[var(--accent)]"
-                    : "border-white/10 text-zinc-500 hover:border-white/30 hover:text-white"
-                }`}
-              >
-                Week {(totalWeeks || allWeeks.length)}+
-                {/* On day 29 the app rolls back to week 1, which can read as
-                    being sent to the start. A single dot points at the tab
-                    that explains it, without hijacking the screen. */}
-                {showOngoingDot && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
-                )}
-              </button>
+              {/* Past the block, this is just the week carrying on: the same
+                  sessions, fully loggable, progressed by feel rather than by a
+                  schedule that has run out. It used to be a panel explaining
+                  what week 5 WOULD look like instead of simply being it. */}
+              {blockFinished && (
+                <button
+                  onClick={() => {
+                    setViewingWeek("ongoing");
+                    setOngoingSeen(true);
+                    try {
+                      localStorage.setItem(ongoingSeenKey, "1");
+                    } catch {
+                      /* dismissal isn't worth failing over */
+                    }
+                  }}
+                  className={`shrink-0 relative px-3 py-1.5 border text-xs uppercase tracking-wider transition-colors ${
+                    isOngoing
+                      ? "border-[var(--accent)] text-[var(--accent)]"
+                      : "border-white/10 text-zinc-500 hover:border-white/30 hover:text-white"
+                  }`}
+                >
+                  Ongoing
+                  {showOngoingDot && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
+                  )}
+                </button>
+              )}
             </div>
             {isPreviewWeek && (
-              <p className="px-5 pb-3 text-xs text-zinc-500">
-                Previewing week {viewingWeek + 1} — you're currently in week {activeWeekIndex + 1}.
-                Ticking and logging stay on your current week.
-              </p>
+              <div className="px-5 pb-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-zinc-500">
+                  Viewing week {viewingWeek + 1} — you're on week {activeWeekIndex + 1}.
+                  Ticking and logging stay on your current week.
+                </p>
+                {/* Training isn't a calendar. People miss a week, repeat one, or
+                    come back after a fortnight wanting to pick up where they
+                    left off rather than where the clock says. This moves them,
+                    by shifting the single timestamp everything derives from. */}
+                {!sampleMode && planId && (
+                  <button
+                    onClick={() => moveToWeek(viewingWeek + 1)}
+                    disabled={movingWeek}
+                    className="shrink-0 border border-[var(--accent)]/50 text-[var(--accent)] text-[10px] uppercase tracking-wider px-3 py-1.5 hover:bg-[var(--accent)]/10 transition-colors disabled:opacity-40"
+                  >
+                    {movingWeek ? "Moving..." : "I'm on this week"}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -599,18 +694,31 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               </a>
             </div>
           )}
-          {!isLockedWeek && isOngoing && (
-            <OngoingPanel
-              sampleMode={sampleMode}
-              history={history}
-              logs={logs}
-              weekOneDays={allWeeks?.[0]?.days || []}
-              totalWeeks={totalWeeks || (allWeeks ? allWeeks.length : 4)}
-              cycleNumber={cycleNumber}
-              experience={experience}
-            />
+          {/* A short banner, then the actual week. This replaced a full screen of
+              prose describing what week 5 would look like — the sessions are
+              right underneath now, and they're loggable. */}
+          {isOngoing && !isLockedWeek && (
+            <div className="mx-5 mt-5 border border-[var(--accent)]/40 bg-[var(--accent)]/[0.06] px-4 py-4">
+              <p className="text-overline text-[var(--accent)]">Carrying on</p>
+              <p className="text-sm text-white mt-2 leading-relaxed">
+                Your block is done, so the weekly increases stop here. Same sessions, logged the
+                same way — add a little when one feels comfortably within reach, and hold when it
+                doesn't.
+              </p>
+              <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
+                This works for a few weeks. After that you're stronger than the person who filled
+                in the questionnaire, and a new block built from what you've logged will take you
+                further.
+              </p>
+              <a
+                href="/build"
+                className="mt-3 inline-block bg-[var(--accent)] text-black font-bold uppercase tracking-wider text-xs px-6 py-2.5 hover:bg-white transition-colors"
+              >
+                Build my next block
+              </a>
+            </div>
           )}
-          {!isOngoing && !isLockedWeek && view === "home" && (
+          {!isLockedWeek && view === "home" && (
             <HomeView
               data={data}
               days={days}
@@ -632,7 +740,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               structureType={structureType}
             />
           )}
-          {!isOngoing && !isLockedWeek && view === "training" && (
+          {!isLockedWeek && view === "training" && (
             <TrainingView
               days={days}
               weekNumber={logWeek}
@@ -649,7 +757,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               structureType={structureType}
             />
           )}
-          {!isOngoing && !isLockedWeek && view === "morning" && (
+          {!isLockedWeek && view === "morning" && (
             <MorningView
               morningRoutine={morningRoutine}
               completed={completed}
@@ -664,10 +772,10 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               weekNumber={logWeek}
             />
           )}
-          {!isOngoing && !isLockedWeek && view === "nutrition" && nutrition && (
+          {!isLockedWeek && view === "nutrition" && nutrition && (
             <NutritionView nutrition={nutrition} />
           )}
-          {!isOngoing && !isLockedWeek && view === "recovery" && (
+          {!isLockedWeek && view === "recovery" && (
             <RecoveryView recovery={recovery} />
           )}
         </div>
@@ -776,12 +884,6 @@ function HomeView({ data, days, weekNote = "", morningRoutine, nutrition, weekNu
   const heroLabel = structureType === "phases" ? `Current phase · ${today.day}` : `Today · ${today.day}`;
 
 
-  // Has the block run its course? Purely informational — nothing is withheld.
-  const blockComplete = (() => {
-    if (!data.block_ends_at) return false;
-    const ends = new Date(data.block_ends_at);
-    return !isNaN(ends) && ends < new Date();
-  })();
 
   return (
     <div className="flex flex-col">
@@ -815,24 +917,10 @@ function HomeView({ data, days, weekNote = "", morningRoutine, nutrition, weekNu
         </div>
       )}
 
-      {/* Block finished. Never locks anything — their logs and their plan stay
-          exactly as they are. It just stops a four-week block quietly looping
-          for months while every row tells them to add more weight. */}
-      {blockComplete && (
-        <div className="mx-5 mt-5 border border-[var(--accent)]/40 bg-[var(--accent)]/[0.06] px-4 py-4">
-          <p className="text-overline text-[var(--accent)]">Block complete</p>
-          <p className="text-sm text-white mt-2 leading-relaxed">
-            You've finished the {data.blockWeeks || 4} weeks. Keep training on this one if you
-            like, but a new block built from what you've actually logged will take you further.
-          </p>
-          <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-            Carrying on? Stop following the weekly increases. Add a little only when a session
-            feels comfortably within reach, and hold the weight when it doesn't.
-          </p>
-        </div>
-      )}
-
-      {weekNote && !blockComplete && (
+      {/* The block-complete message used to live here too. It now lives in one
+          place only — the Ongoing week — so the same thing isn't said three
+          times on one screen. */}
+      {weekNote && (
         <div className="px-5 pt-5">
           <p className="text-[11px] text-zinc-400 leading-relaxed border-l-2 border-[var(--accent)]/50 pl-3">
             {weekNote}
@@ -855,7 +943,8 @@ function HomeView({ data, days, weekNote = "", morningRoutine, nutrition, weekNu
               w={w}
               checked={completed.has(`${weekNumber || 0}-${today.day}-${i}`)}
               onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${today.day}-${i}`)}
-              loggedValue={logs[`${weekNumber || 0}-${today.day}-${w.name}`]}
+              loggedValue={lastLoggedFor(logs, history, weekNumber, today.day, w.name).value}
+              loggedFromWeek={lastLoggedFor(logs, history, weekNumber, today.day, w.name).fromWeek}
               exerciseHistory={history?.[w.name]}
               currentWeek={weekNumber}
               totalWeeks={totalWeeks}
@@ -975,7 +1064,8 @@ function MorningView({ morningRoutine, completed, onToggleDone, logs, history, o
                   w={w}
                   checked={completed.has(key)}
                   onToggleChecked={() => onToggleDone(key)}
-                  loggedValue={logs[`${weekNumber || 0}-Morning-${w.name}`]}
+                  loggedValue={lastLoggedFor(logs, history, weekNumber, "Morning", w.name).value}
+                  loggedFromWeek={lastLoggedFor(logs, history, weekNumber, "Morning", w.name).fromWeek}
                   exerciseHistory={history?.[w.name]}
                   onSaveLog={(value, rpe) => onSaveLog("Morning", w.name, value, rpe)}
                   canLog={canLog}
@@ -1061,7 +1151,8 @@ function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history
               w={w}
               checked={completed.has(`${weekNumber || 0}-${d.day}-${j}`)}
               onToggleChecked={() => onToggleDone(`${weekNumber || 0}-${d.day}-${j}`)}
-              loggedValue={logs[`${weekNumber || 0}-${d.day}-${w.name}`]}
+              loggedValue={lastLoggedFor(logs, history, weekNumber, d.day, w.name).value}
+              loggedFromWeek={lastLoggedFor(logs, history, weekNumber, d.day, w.name).fromWeek}
               exerciseHistory={history?.[w.name]}
               currentWeek={weekNumber}
               totalWeeks={totalWeeks}
@@ -1208,7 +1299,7 @@ function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber, e
   };
 }
 
-function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exerciseHistory, currentWeek, totalWeeks = null, cycleNumber = 1, experience = null, onSaveLog, canLog = false }) {
+function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, loggedFromWeek = null, exerciseHistory, currentWeek, totalWeeks = null, cycleNumber = 1, experience = null, onSaveLog, canLog = false }) {
   const [panel, setPanel] = useState(null); // null | "reason" | "lookup" | "timer" | "log"
   const [logInput, setLogInput] = useState("");
   const [logRpe, setLogRpe] = useState(null); // "easy" | "right" | "hard"
@@ -1382,7 +1473,12 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, exercise
 
       {loggedValue && panel !== "log" && (
         <div className="pl-9 pr-3 -mt-2 pb-2">
-          <p className="text-[10px] text-zinc-600">Last logged: <span className="text-zinc-400">{loggedValue}</span></p>
+          <p className="text-[10px] text-zinc-600">
+            Last logged: <span className="text-zinc-400">{loggedValue}</span>
+            {/* Say which week it came from when it isn't this one, so jumping
+                weeks shows real context rather than a number with no origin. */}
+            {loggedFromWeek ? <span className="text-zinc-600"> · week {loggedFromWeek}</span> : null}
+          </p>
           {nudge && (
             <p className={`text-[10px] mt-1 font-bold ${
               nudge.tone === "up" ? "text-[var(--accent)]"
