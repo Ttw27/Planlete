@@ -982,16 +982,18 @@ def _is_timed_hold(sets_text: str) -> bool:
     return bool(re.match(r"\s*\d+\s*[xX]\s*\d+\s*(s|sec|secs|seconds)\b", str(sets_text)))
 
 
-def _bump_reps(sets_text: str, add: int) -> str:
+def _bump_reps(sets_text: str, add: int, steps: int = 1) -> str:
     """Move the rep figure in "4x6", leaving the set count alone."""
     m = re.match(r"\s*(\d+)\s*[xX]\s*(\d+)(.*)", sets_text)
     if not m:
         return _bump_numbers(sets_text, add)
-    # A timed hold progresses in seconds. Adding "one rep" to a 20 second
-    # Copenhagen plank produced 21s, which is not a progression anybody would
-    # notice or follow. Five seconds a week is what a coach would actually write.
+    # A timed hold progresses in seconds, always five a week, whatever increment
+    # the model asked for. Scaling its number instead produced a Copenhagen
+    # plank running 20s, 45s, 70s across the block: the model meant "5 seconds",
+    # the code read it as "5 reps" and multiplied by five again. A flat five a
+    # week is what a coach would write and cannot be double-counted.
     if _is_timed_hold(sets_text):
-        add = add * 5
+        return f"{m.group(1)}x{int(m.group(2)) + 5 * max(0, steps)}{m.group(3)}"
     return f"{m.group(1)}x{int(m.group(2)) + add}{m.group(3)}"
 
 
@@ -1015,6 +1017,12 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
     if ptype == "none":
         return ""
 
+    if ptype == "measure":
+        return (
+            "This one is a test, not a lift. Same volume every week — log your time or "
+            "distance and chase a better number, not more reps."
+        )
+
     if deload:
         return "Deload week. Same movements, less volume — hold last week's weight."
 
@@ -1025,12 +1033,6 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
 
     inc = (prog or {}).get("increment")
     unit = (prog or {}).get("unit", "")
-
-    if ptype == "measure":
-        return (
-            "This one is a test, not a lift. Same volume every week — log your time or "
-            "distance and chase a better number, not more reps."
-        )
 
     if ptype == "load":
         amount = f"{inc:g}{unit or 'kg'}" if inc else "a small amount"
@@ -1105,7 +1107,11 @@ def _sanitise_progression(ex: dict) -> dict:
     """
     prog = dict(ex.get("progression") or {})
     ptype = prog.get("type", "none")
-    sets = str(ex.get("sets", ""))
+    # "1x10 reps" — the NxM format already says reps, so the word is noise, and
+    # every other row reads "4x6". This used to run only on measured movements,
+    # which is why "Cat-cow stretch, 1x10 reps" survived into a real plan.
+    sets = re.sub(r"^(\s*\d+\s*[xX]\s*\d+)\s*reps?\s*$", r"\1", str(ex.get("sets", "")))
+    ex = {**ex, "sets": sets}
     is_sets_format = bool(re.match(r"\s*\d+\s*[xX]", sets))
 
     # A sprint, a bound or a med ball throw is measured, never loaded up. This
@@ -1113,9 +1119,6 @@ def _sanitise_progression(ex: dict) -> dict:
     if _is_measured(ex.get("name", "")):
         out = dict(ex)
         out["progression"] = {"type": "measure"}
-        # "4x4 reps" — the format already says reps, so the word is noise. Every
-        # other row reads "4x6", so this one looked like a mistake.
-        out["sets"] = re.sub(r"^(\s*\d+\s*[xX]\s*\d+)\s*reps?\s*$", r"\1", sets)
         return out
 
     # A bodyweight movement cannot take a load increment. "Copenhagen Plank,
@@ -1178,7 +1181,7 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
         out["sets"] = _cut_sets(str(ex.get("sets", "")))
         out["load"] = f"{ex.get('load', '')} — hold last week's weight".strip(" —")
     elif ptype == "reps" and steps:
-        out["sets"] = _bump_reps(str(ex.get("sets", "")), int(inc) * steps)
+        out["sets"] = _bump_reps(str(ex.get("sets", "")), int(inc) * steps, steps)
     elif ptype in ("time", "distance") and steps:
         out["sets"] = _bump_numbers(
             str(ex.get("sets", "")), inc * steps, prog.get("unit", ""),
@@ -1307,6 +1310,17 @@ def expand_template(plan_data: dict, answers: dict) -> None:
 
     plan_data["weeks"] = weeks
     plan_data["blockWeeks"] = BLOCK_WEEKS
+
+    # The morning routine never went through expansion, so none of the tidying
+    # above reached it. That is how "Cat-cow stretch, 1x10 reps" shipped. It has
+    # no weeks to progress through, so it only needs the formatting pass.
+    routine = plan_data.get("morningRoutine")
+    if isinstance(routine, list):
+        plan_data["morningRoutine"] = [
+            _sanitise_progression(item) if isinstance(item, dict) else item
+            for item in routine
+        ]
+
     plan_data.pop("template", None)
     plan_data.pop("weekNotes", None)
 
@@ -2571,6 +2585,10 @@ class Plan(BaseModel):
     answers: Dict[str, Any] = {}
     status: str = "draft"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # When they actually began TRAINING, set on the first logged session or when
+    # they tap "I'm on this week". Every week calculation derives from this
+    # rather than created_at, so a plan nobody opens never advances past week 1.
+    started_at: Optional[str] = None
     brand: Optional[str] = None
     tagline: Optional[str] = None
     weeks: Optional[List[Dict[str, Any]]] = None
@@ -3406,7 +3424,44 @@ async def admin_list_orders(_: bool = Depends(require_admin)):
 async def create_weight_log(payload: WeightLogCreate):
     log = WeightLog(**payload.model_dump())
     await db.weight_logs.insert_one(log.model_dump())
+
+    # The block clock starts when they start TRAINING, not when the plan was
+    # generated. Previously a customer who bought on Monday and didn't open the
+    # app for a week was shown week 2, having done nothing — and someone who
+    # left it a month came back to a block that had already finished. Only the
+    # first log sets this; later ones leave it alone.
+    await db.plans.update_one(
+        {"id": log.plan_id, "started_at": {"$in": [None, ""]}},
+        {"$set": {"started_at": datetime.now(timezone.utc).isoformat()}},
+    )
     return log
+
+
+@api_router.post("/plans/{plan_id}/set-current-week")
+async def set_current_week(plan_id: str, payload: dict):
+    """
+    Move somebody to the week they say they're on.
+
+    Real training isn't a calendar. People miss a week, repeat one, or come back
+    after a fortnight and want to pick up where they left off rather than where
+    the clock says they should be. Rather than pause logic and "am I paused"
+    state, this just moves the single timestamp everything is derived from:
+    to be on week N from today, started_at becomes today minus (N-1) weeks.
+    """
+    week = payload.get("week")
+    if not isinstance(week, int) or week < 1 or week > 52:
+        raise HTTPException(status_code=400, detail="week must be between 1 and 52")
+
+    plan = await db.plans.find_one({"id": plan_id}, {"_id": 0, "id": 1})
+    if not plan:
+        raise HTTPException(status_code=404, detail="No plan with that ID")
+
+    started = datetime.now(timezone.utc) - timedelta(weeks=week - 1)
+    await db.plans.update_one(
+        {"id": plan_id}, {"$set": {"started_at": started.isoformat()}}
+    )
+    logger.info(f"Plan {plan_id} moved to week {week}")
+    return {"ok": True, "week": week, "started_at": started.isoformat()}
 
 
 @api_router.get("/logs/{plan_id}", response_model=List[WeightLog])
