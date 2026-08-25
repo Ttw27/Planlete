@@ -165,13 +165,16 @@ export default function PaymentSuccess() {
     // not an animation reaching the end of itself.
     const pct = Math.min(92, ((activeIndex + 0.5) / STAGES.length) * 100);
     const slow = elapsed > 150;
-    // A clean run measured 3m21 on 21 Aug, so 210s was flipping on successful
+    // Clean runs measured 5m12 and 5m48 once cues, common mistakes and easier/
+    // harder variations were added to every exercise. 240s was flipping on
+    // successful generations and making them look like something had gone wrong.
+    // Past 420s
     // generations and making them look like something had gone wrong. Past 240s
     // a retry has almost certainly happened, and
     // again, so the honest thing is to stop asking them to watch a timer run
     // past our own estimate and hand the job over to email. The pipeline is
     // unchanged — this is only about which channel we point them at.
-    const handOver = elapsed > 240;
+    const handOver = elapsed > 420;
 
     if (handOver) {
       return (

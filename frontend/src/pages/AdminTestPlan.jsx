@@ -34,6 +34,7 @@ export default function AdminTestPlan() {
   const [result, setResult] = useState(null);
   const [recent, setRecent] = useState([]);
   const [error, setError] = useState(null);
+  const [status, setStatus] = useState(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -85,19 +86,60 @@ export default function AdminTestPlan() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  /**
+   * Look for a test plan created after we started generating.
+   *
+   * Generation now takes 5-6 minutes, which is past the proxy's request
+   * timeout, so the connection gets cut while the backend carries on and saves
+   * the plan perfectly well. That showed up here as "Generation failed" on a
+   * run that had in fact succeeded (25 Aug, plan e6dfff3c). Rather than trust
+   * the dropped request, ask the database whether the plan actually landed.
+   */
+  const findPlanCreatedAfter = async (startedAt) => {
+    try {
+      const res = await axios.get(`${API}/admin/plans/recent?test_only=true&limit=5`, {
+        headers: { "X-Admin-Token": token },
+      });
+      const match = (res.data?.plans || []).find(
+        (p) => p.created_at && new Date(p.created_at).getTime() >= startedAt - 5000
+      );
+      return match || null;
+    } catch {
+      return null;
+    }
+  };
+
   const generate = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
+    const startedAt = Date.now();
     try {
       const res = await axios.post(
         `${API}/plans/generate`,
         { answers },
-        { headers: { "X-Admin-Token": token } }
+        { headers: { "X-Admin-Token": token }, timeout: 15 * 60 * 1000 }
       );
       setResult(res.data);
       loadRecent();
     } catch (err) {
+      // A dropped connection is not the same as a failed generation. Poll for
+      // the plan for a few minutes before declaring anything broken.
+      setStatus("Connection dropped — checking whether the plan saved anyway...");
+      for (let i = 0; i < 40; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 10000));
+        // eslint-disable-next-line no-await-in-loop
+        const found = await findPlanCreatedAfter(startedAt);
+        if (found) {
+          setStatus(null);
+          setResult({ plan_id: found.id, link: `/plan/${found.id}` });
+          loadRecent();
+          setLoading(false);
+          return;
+        }
+      }
+      setStatus(null);
       setError(
         err.response?.data?.detail ||
           "Generation failed — check Railway logs for the actual error."
@@ -248,6 +290,16 @@ export default function AdminTestPlan() {
         <FlaskConical size={14} />
         {loading ? "Generating… (2–3 minutes — leave this tab open)" : "Generate test plan"}
       </button>
+
+      {status && (
+        <div className="mt-6 border border-white/15 bg-white/[0.03] p-4 max-w-2xl">
+          <p className="text-sm text-zinc-300">{status}</p>
+          <p className="text-xs text-zinc-500 mt-1">
+            Generation runs 5-6 minutes, which is longer than the request is allowed to stay
+            open. The plan usually saves fine — this is just waiting for it to appear.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="mt-6 border border-red-500/30 bg-red-500/5 p-4 max-w-2xl">
