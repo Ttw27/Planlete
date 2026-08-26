@@ -28,6 +28,7 @@ import AdminLeads from "@/pages/AdminLeads";
 import AdminSupport from "@/pages/AdminSupport";
 import AdminOrders from "@/pages/AdminOrders";
 import AdminTestPlan from "@/pages/AdminTestPlan";
+import AdminPlanJson from "@/pages/AdminPlanJson";
 import CoachAuth from "@/pages/CoachAuth";
 import CoachDashboard from "@/pages/CoachDashboard";
 import CoachPlanBuilder from "@/pages/CoachPlanBuilder";
@@ -75,6 +76,7 @@ function App() {
             <Route path="/admin/funnel" element={<AdminFunnel />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/test-plan" element={<AdminTestPlan />} />
+            <Route path="/admin/plan-json" element={<AdminPlanJson />} />
             <Route path="/for-coaches" element={<ForCoaches />} />
             <Route path="/coach" element={<CoachAuth />} />
             <Route path="/coach/dashboard" element={<CoachDashboard />} />
