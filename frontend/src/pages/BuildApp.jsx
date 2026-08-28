@@ -173,7 +173,10 @@ export const BASE_QUESTIONS = [
     label: "Roughly what do you weigh?",
     type: "text",
     placeholder: "e.g. 82kg, or 13 stone",
-    hint: "Protein and calorie targets are calculated from this. Without it we're guessing.",
+    // Somebody answered "85cm" in testing — the height question sits right
+    // underneath, and the boxes look identical. Naming the units in the hint is
+    // the cheapest guard; the backend rejects length units regardless.
+    hint: "In kg, stone or pounds — not cm. Protein and calorie targets are calculated from this.",
     showIf: (a) => (a.nutrition || "").toLowerCase().startsWith("yes"),
   },
   {
