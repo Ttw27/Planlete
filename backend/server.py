@@ -541,6 +541,51 @@ PARTNER_TERMS = [
 ]
 
 
+def _parse_bodyweight_kg(raw: str) -> Optional[float]:
+    """
+    Read a bodyweight in kg, or return None if it doesn't look like one.
+
+    A real answer was "85cm". The model quietly assumed 85kg and produced a
+    confident "protein set from your bodyweight (85kg)" — right by luck. Someone
+    typing "12" meaning stone would have been given a target for a toddler, and
+    nothing in the plan would have looked wrong.
+
+    Handles kg, stone (including "12st 4"), and pounds. Anything outside a
+    plausible adult range is treated as unusable rather than guessed at.
+    """
+    if not raw:
+        return None
+    text = str(raw).strip().lower().replace(",", ".")
+
+    # An explicit length unit means they answered the wrong question.
+    if re.search(r"\b(cm|mm|ft|feet|inch|inches|\")\b", text) or text.endswith("cm"):
+        return None
+
+    stone = re.search(r"(\d+(?:\.\d+)?)\s*(?:st|stone)\s*(\d+(?:\.\d+)?)?", text)
+    if stone:
+        kg = float(stone.group(1)) * 6.35029
+        if stone.group(2):
+            kg += float(stone.group(2)) * 0.453592
+        return round(kg, 1)
+
+    pounds = re.search(r"(\d+(?:\.\d+)?)\s*(?:lb|lbs|pound|pounds)", text)
+    if pounds:
+        return round(float(pounds.group(1)) * 0.453592, 1)
+
+    # Search rather than match, so "about 80kg" and "roughly 82" still work.
+    # Length units were already rejected above, so a stray number here is safe.
+    number = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not number:
+        return None
+    value = float(number.group(1))
+
+    # Bare numbers are assumed kg, which is right for a UK audience typing "82".
+    # Outside 35-250kg it is far more likely a mistake than a real bodyweight.
+    if 35 <= value <= 250:
+        return round(value, 1)
+    return None
+
+
 def _parse_minutes(text: str) -> Optional[int]:
     """Pull a minute figure out of strings like '45 min', '60-75 minutes', '1 hour'."""
     if not text:
@@ -1148,7 +1193,10 @@ def _sanitise_progression(ex: dict) -> dict:
                 prog = {"type": "none"}
 
     out = dict(ex)
-    out["progression"] = prog
+    # Normalise to an explicit type. The morning routine was shipping
+    # "progression": {} because it has no weeks to progress through, which reads
+    # as an oversight rather than a decision.
+    out["progression"] = prog if prog.get("type") else {"type": "none"}
     return out
 
 
@@ -1859,14 +1907,21 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
         )
     else:
         profile_bits = []
-        if bodyweight:
-            profile_bits.append(f"bodyweight {bodyweight}")
+        weight_kg = _parse_bodyweight_kg(bodyweight)
+        if weight_kg:
+            profile_bits.append(f"bodyweight {weight_kg:g}kg")
         if height:
             profile_bits.append(f"height {height}")
         if daily_activity:
             profile_bits.append(f"activity outside training: {daily_activity.lower()}")
 
-        if profile_bits:
+        # An answer of "85cm" reached production and the model quietly assumed
+        # 85kg — right by luck. "12" meaning stone would have produced a target
+        # for a toddler with nothing in the plan looking wrong.
+        if bodyweight and not weight_kg:
+            logger.warning(f"Unusable bodyweight answer: {bodyweight!r} — treating as not given")
+
+        if profile_bits and weight_kg:
             nutrition_brief = (
                 f"\nNUTRITION MUST BE CALCULATED FROM THEIR ACTUAL BODY DATA: "
                 f"{', '.join(profile_bits)}.\n"
@@ -1882,8 +1937,10 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
             )
         else:
             nutrition_brief = (
-                "\nNo bodyweight was given, so calorie and macro figures are estimates only. Say so "
-                "briefly in \"note\" rather than presenting them as precise targets.\n"
+                "\nNo usable bodyweight was given, so calorie and macro figures are estimates only. "
+                "Say so plainly in \"note\" rather than presenting them as precise targets, and do "
+                "NOT state a bodyweight figure — you do not have one. Invite them to request a "
+                "correction with their weight so the targets can be set properly.\n"
             )
 
     notes = notes or "None provided"
@@ -2153,9 +2210,18 @@ writing the same exercise out four times — and that depth is the product.
 Return all 7 days, Sun through Sat in that exact order. Days that are not a
 training day must still appear with a rest or active-recovery entry rather than
 being omitted, and every single day must have at least one entry in "workouts".
-The number of days on which you prescribe a real training session must be
-exactly {days} — count only the sessions YOU are prescribing, NOT any club
-training or match day, which are existing commitments.
+The number of days on which you prescribe a real training session should be
+{days} — count only the sessions YOU are prescribing, NOT any club training or
+match day, which are existing commitments.
+
+Prescribe FEWER than {days} only when hitting it would put them on seven days a
+week once club sessions and matches are counted. Six days on with one recovery
+day is the ceiling in-season. If you do go lower, add ONE short sentence to the
+END of the first entry in "weekNotes" saying so — for example: "You asked for 4
+— with your club nights and match, three well-placed sessions serve you better
+than four crammed in." Keep it to one sentence and do not show your working;
+they already know what is in their own week. Never go lower silently: someone
+who asked for four and counts three will assume the plan is broken.
 
 EVERY exercise needs a "progression" object. DEFAULT TO "none" AND ONLY PROGRESS
 WHAT SHOULD GENUINELY BE PROGRESSED:
