@@ -354,6 +354,29 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // session builds a real timeline instead of overwriting week 1's entries.
   const ongoingWeekNumber = (absoluteWeek || weekNumber || (totalWeeks || 4)) + 1;
 
+  // The week note earns its place the first time it's read and becomes wallpaper
+  // by day five. Collapsible rather than dismissible: the coaching is still
+  // worth a glance later, so it folds to a line instead of disappearing.
+  const noteKey = `planlete_note_collapsed_${planId || "sample"}`;
+  const [noteCollapsed, setNoteCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(noteKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleNote = () => {
+    setNoteCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(noteKey, next ? "1" : "0");
+      } catch {
+        /* a collapsed note isn't worth failing over */
+      }
+      return next;
+    });
+  };
+
   const ongoingSeenKey = `planlete_ongoing_seen_${planId || "sample"}`;
   const [ongoingSeen, setOngoingSeen] = useState(() => {
     try {
@@ -392,19 +415,15 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
   // the same week. Progression stops being scheduled and becomes autoregulated,
   // which is why the notes are suppressed rather than left saying "add 5kg".
   const blockFinished = (() => {
-    // Derived from when they STARTED, not when the plan was generated. A stored
-    // block_ends_at set at generation would expire a block that was never
-    // opened, so it is only the fallback for plans made before started_at
-    // existed. No start means no finish: they are still on week 1.
-    if (data.started_at) {
-      const ends = new Date(data.started_at);
-      if (isNaN(ends)) return false;
-      ends.setDate(ends.getDate() + (data.blockWeeks || 4) * 7);
-      return ends < new Date();
-    }
-    if (!data.block_ends_at) return false;
-    const ends = new Date(data.block_ends_at);
-    return !isNaN(ends) && ends < new Date();
+    // Derived from when they STARTED, not when the plan was generated.
+    // No start means no finish. block_ends_at is written at generation time, so
+    // trusting it here would expire a block that was never opened — the same
+    // bug the week counter had, and it survived in this one check.
+    if (!data.started_at) return false;
+    const ends = new Date(data.started_at);
+    if (isNaN(ends)) return false;
+    ends.setDate(ends.getDate() + (data.blockWeeks || 4) * 7);
+    return ends < new Date();
   })();
 
   const rawDays = (isOngoing && allWeeks?.[0]?.days)
@@ -723,6 +742,8 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               data={data}
               days={days}
               weekNote={weekNote}
+              noteCollapsed={noteCollapsed}
+              onToggleNote={toggleNote}
               morningRoutine={morningRoutine}
               nutrition={nutrition}
               weekNumber={logWeek}
@@ -871,7 +892,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, weekNote = "", morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
+function HomeView({ data, days, weekNote = "", noteCollapsed = false, onToggleNote = () => {}, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
   // Phases have no auto-detection (nobody knows "which phase" from a date
   // alone) — just default to the first one; day-based plans still pick
   // today's real weekday as before.
@@ -922,9 +943,20 @@ function HomeView({ data, days, weekNote = "", morningRoutine, nutrition, weekNu
           times on one screen. */}
       {weekNote && (
         <div className="px-5 pt-5">
-          <p className="text-[11px] text-zinc-400 leading-relaxed border-l-2 border-[var(--accent)]/50 pl-3">
-            {weekNote}
-          </p>
+          <div className="border-l-2 border-[var(--accent)]/50 pl-3">
+            <button
+              onClick={onToggleNote}
+              aria-expanded={!noteCollapsed}
+              className="w-full text-left flex items-start justify-between gap-3 group"
+            >
+              <p className={`text-[11px] text-zinc-400 leading-relaxed ${noteCollapsed ? "truncate" : ""}`}>
+                {weekNote}
+              </p>
+              <span className="shrink-0 text-[10px] text-zinc-600 group-hover:text-zinc-400 transition-colors mt-0.5">
+                {noteCollapsed ? "more" : "less"}
+              </span>
+            </button>
+          </div>
         </div>
       )}
 
