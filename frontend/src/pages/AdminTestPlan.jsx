@@ -133,7 +133,10 @@ export default function AdminTestPlan() {
         const found = await findPlanCreatedAfter(startedAt);
         if (found) {
           setStatus(null);
-          setResult({ plan_id: found.id, link: `/plan/${found.id}` });
+          // The route is /app/u/:id — see App.js. An invented /plan/:id path
+          // here produced a working "Plan generated" box whose Open plan button
+          // led straight to a 404.
+          setResult({ plan_id: found.id, link: `/app/u/${found.id}` });
           loadRecent();
           setLoading(false);
           return;
