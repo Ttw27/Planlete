@@ -1072,9 +1072,8 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
         return "Deload week. Same movements, less volume — hold last week's weight."
 
     if is_final:
-        # Never tell them to add more "next week": there is no next week in this
-        # block. This is where the block ends and a new one is due.
-        return "Final week of this block. Time for a new plan built on what you've logged."
+        # Never "add X next week" — there is no next week in this block.
+        return "Last week of the block — this is the top of your progression. Log it and finish strong."
 
     inc = (prog or {}).get("increment")
     unit = (prog or {}).get("unit", "")
@@ -1131,8 +1130,12 @@ MEASURED_TERMS = [
 
 
 def _is_measured(name: str) -> bool:
+    """
+    Substring matching put "World's Greatest Stretch" in the measured bucket,
+    because grea-TEST-retch contains "test". Word boundaries only from here.
+    """
     lowered = str(name or "").lower()
-    return any(term in lowered for term in MEASURED_TERMS)
+    return any(re.search(rf"\b{re.escape(term)}\b", lowered) for term in MEASURED_TERMS)
 
 
 def _sanitise_progression(ex: dict) -> dict:
@@ -1250,7 +1253,10 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
     # true of the whole week is set once at week level instead — repeating
     # "Deload week. Same movements, less volume" on all ten rows is noise that
     # buries the one line the person actually needs to read.
-    if not deload and not is_final:
+    # Deload weeks say it once at week level. The final week keeps its row note,
+    # because on a beginner's block the numbers genuinely still climb there and
+    # silence left them unexplained.
+    if not deload:
         note = _progression_note(prog, week, is_final, deload, str(out.get("sets", "")))
         if note:
             out["progressionNote"] = note
@@ -1344,10 +1350,15 @@ def expand_template(plan_data: dict, answers: dict) -> None:
                 "you used last week. This is where the previous three weeks turn into progress."
             )
         elif is_final:
+            # ALWAYS replace, never defer to what the model wrote. Whether week 4
+            # deloads depends on training experience, which is decided here and
+            # the model never sees. Left to its own devices it wrote "Week 4:
+            # deload — sets and intensity drop back" onto a beginner's block
+            # where the reps actually went UP, so the plan contradicted itself.
             note = (
-                "Last week of this block. Finish it properly, then build a new one from what "
-                "you've actually logged."
-            ) if not note else note
+                "Last week of this block. Keep progressing as you have been, finish it properly, "
+                "then build a new one from what you've logged."
+            )
 
         weeks.append({
             "weekNumber": week,
@@ -1364,8 +1375,13 @@ def expand_template(plan_data: dict, answers: dict) -> None:
     # no weeks to progress through, so it only needs the formatting pass.
     routine = plan_data.get("morningRoutine")
     if isinstance(routine, list):
+        # Always "none". These are mobility drills done before the day starts,
+        # not sessions — the model typed World's Greatest Stretch as a measured
+        # test, which would put a log button and a "chase a better number" note
+        # on a morning stretch.
         plan_data["morningRoutine"] = [
-            _sanitise_progression(item) if isinstance(item, dict) else item
+            {**_sanitise_progression(item), "progression": {"type": "none"}}
+            if isinstance(item, dict) else item
             for item in routine
         ]
 
@@ -1932,6 +1948,12 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
                 "State the resulting protein target in grams and make sure it is consistent with "
                 "the bodyweight given. A target that ignores their actual size is the most "
                 "obvious possible sign the plan was not built for them.\n"
+                "ONLY build a calorie deficit if their stated GOAL is fat loss. For any other "
+                "goal — sport performance, strength, muscle, general health — set calories at "
+                "maintenance. Do not decide on their behalf that they would benefit from losing "
+                "weight, and never put an in-season athlete into a deficit: underfuelling someone "
+                "playing competitive fixtures costs them sprint speed and recovery in exchange for "
+                "a body-composition change they did not ask for.\n"
                 "Never prescribe an aggressive deficit. Fat loss should be a moderate deficit they "
                 "can sustain alongside this training load, not the fastest possible route.\n"
             )
@@ -2287,6 +2309,11 @@ prescribed movement is the most common reason someone abandons a plan.
 
 Also return "weekNotes": four short lines, one per week, saying what changes and
 why. These are what stop the block reading as the same week repeated.
+
+Do NOT describe week 4 as a deload, a taper or a recovery week. Whether this
+person deloads depends on their training history and is decided after you
+respond — write week 4's note as a normal progression week and it will be
+replaced automatically if a deload applies.
 
 EVERY EXERCISE ENTRY MUST BE ONE MOVEMENT, NAMED SHORTLY.
 
