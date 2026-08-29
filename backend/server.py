@@ -1229,8 +1229,29 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
         return out
 
     if deload:
-        out["sets"] = _cut_sets(str(ex.get("sets", "")))
-        out["load"] = f"{ex.get('load', '')} — hold last week's weight".strip(" —")
+        # Deload from where they actually GOT TO, not from the week 1 template.
+        # Resetting reps to base and then cutting sets on top took a calf raise
+        # from 3x19 down to 2x15 — a 47% cut, when the week note promises about
+        # a third. A real deload holds the reps and drops the sets.
+        peak_steps = max(0, BLOCK_WEEKS - 2)
+        peak_sets = str(ex.get("sets", ""))
+        if ptype == "reps" and peak_steps:
+            peak_sets = _bump_reps(peak_sets, int(inc) * peak_steps, peak_steps)
+        elif ptype in ("time", "distance") and peak_steps:
+            peak_sets = _bump_numbers(
+                peak_sets, inc * peak_steps, prog.get("unit", ""),
+                ceiling=PROGRESSION_CEILINGS.get(ptype),
+            )
+        elif ptype == "rounds" and peak_steps:
+            peak_sets = _bump_numbers(peak_sets, inc * peak_steps)
+        out["sets"] = _cut_sets(peak_sets)
+
+        # Only a LOADED exercise has a weight to hold. This suffix was being
+        # appended to everything, producing "Bodyweight — hold last week's
+        # weight" on a plank and "Hard, RPE 7 — hold last week's weight" on a
+        # rowing interval.
+        if ptype == "load":
+            out["load"] = f"{ex.get('load', '')} — hold last week's weight".strip(" —")
     elif ptype == "reps" and steps:
         out["sets"] = _bump_reps(str(ex.get("sets", "")), int(inc) * steps, steps)
     elif ptype in ("time", "distance") and steps:
