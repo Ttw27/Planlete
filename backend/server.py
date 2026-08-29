@@ -3090,38 +3090,64 @@ async def waitlist_count():
     return {"count": await db.waitlist.count_documents({})}
 
 
+async def _run_admin_generation(plan_id: str, answers: dict) -> None:
+    """Generate in the background and write the result onto the placeholder."""
+    try:
+        plan_data = await generate_plan_with_claude(answers)
+        plan_data["id"] = plan_id
+        plan_data["status"] = "ready"
+        await db.plans.replace_one({"id": plan_id}, plan_data, upsert=True)
+        logger.info(f"Plan generated (admin test): {plan_id}")
+    except Exception as e:
+        logger.error(f"Plan generation error ({plan_id}): {e}")
+        await db.plans.update_one(
+            {"id": plan_id},
+            {"$set": {"status": "failed", "error": str(e)[:400]}},
+        )
+
+
 @api_router.post("/plans/generate")
-async def generate_plan(payload: PlanGenerateRequest, _: bool = Depends(require_admin)):
+async def generate_plan(
+    payload: PlanGenerateRequest,
+    background_tasks: BackgroundTasks,
+    _: bool = Depends(require_admin),
+):
     """
     ADMIN-ONLY: generate a plan directly without payment, for testing.
     Real customers go through /checkout/create-session -> Stripe -> /checkout/confirm,
     which is what actually charges them before a plan is generated.
+
+    Returns IMMEDIATELY with a plan id and generates in the background. Holding
+    the request open for the 5-6 minutes generation now takes meant the proxy
+    cut the connection every time, so every successful run reported itself as a
+    failure and had to be recovered by polling. The paid path has always worked
+    this way; this brings the admin path into line.
     """
-    try:
-        # Generate plan with Claude
-        plan_data = await generate_plan_with_claude(payload.answers)
-        
-        # Generate unique ID
-        plan_id = str(uuid.uuid4())
-        plan_data["id"] = plan_id
-        
-        # Store in MongoDB
-        await db.plans.insert_one(plan_data)
-        
-        logger.info(f"Plan generated (admin test): {plan_id}")
-        
-        return {
-            "id": plan_id,
-            "message": "Plan generated successfully",
-            "link": f"/app/u/{plan_id}"
-        }
-        
-    except Exception as e:
-        logger.error(f"Plan generation error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to generate plan. Please try again."
-        )
+    plan_id = str(uuid.uuid4())
+    await db.plans.insert_one({
+        "id": plan_id,
+        "status": "generating",
+        "test_only": True,
+        "answers": payload.answers,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    background_tasks.add_task(_run_admin_generation, plan_id, payload.answers)
+    return {
+        "id": plan_id,
+        "status": "generating",
+        "message": "Generating — poll /api/plans/{id}/status",
+        "link": f"/app/u/{plan_id}",
+    }
+
+
+@api_router.get("/plans/{plan_id}/status")
+async def plan_status(plan_id: str):
+    """Where a background generation has got to."""
+    doc = await db.plans.find_one({"id": plan_id}, {"_id": 0, "status": 1, "error": 1, "weeks": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="No plan with that ID")
+    status = doc.get("status") or ("ready" if doc.get("weeks") else "generating")
+    return {"id": plan_id, "status": status, "error": doc.get("error")}
 
 
 @api_router.get("/plans/{plan_id}", response_model=Plan)
