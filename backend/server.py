@@ -1134,16 +1134,23 @@ MEASURED_TERMS = [
     "bound", "hop", "jump", "leap", "throw", "toss", "plyo", "depth drop",
     "drop and stick", "drop-and-stick", "broad", "vertical",
     "time trial", "rep max", "1rm", "test",
+    # Deceleration and balance drills are judged on quality, not volume. The
+    # model usually types these correctly, but a guard beats relying on it.
+    "deceleration", "y-balance", "stick landing",
 ]
 
 
 def _is_measured(name: str) -> bool:
     """
     Substring matching put "World's Greatest Stretch" in the measured bucket,
-    because grea-TEST-retch contains "test". Word boundaries only from here.
+    because grea-TEST-retch contains "test". Word boundaries fixed that but
+    introduced the opposite hole: "Pogo Hops" and "Box Jumps" stopped matching,
+    because \\bhop\\b does not match "hops". Optional plural closes it.
     """
     lowered = str(name or "").lower()
-    return any(re.search(rf"\b{re.escape(term)}\b", lowered) for term in MEASURED_TERMS)
+    return any(
+        re.search(rf"\b{re.escape(term)}(s|es)?\b", lowered) for term in MEASURED_TERMS
+    )
 
 
 def _sanitise_progression(ex: dict) -> dict:
@@ -1396,9 +1403,11 @@ def expand_template(plan_data: dict, answers: dict) -> None:
         words = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven"}
         got = words.get(prescribed, str(prescribed))
         want = words.get(requested, str(requested))
+        # "one well-placed sessions" — singular needs the verb to agree too.
+        noun = "session serves" if prescribed == 1 else "sessions serve"
         shortfall_note = (
             f" You asked for {want} — with everything else already in your week, "
-            f"{got} well-placed sessions serve you better than {want} crammed in."
+            f"{got} well-placed {noun} you better than {want} crammed in."
         )
 
     weeks = []
