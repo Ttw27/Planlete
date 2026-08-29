@@ -86,66 +86,55 @@ export default function AdminTestPlan() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  /**
-   * Look for a test plan created after we started generating.
-   *
-   * Generation now takes 5-6 minutes, which is past the proxy's request
-   * timeout, so the connection gets cut while the backend carries on and saves
-   * the plan perfectly well. That showed up here as "Generation failed" on a
-   * run that had in fact succeeded (25 Aug, plan e6dfff3c). Rather than trust
-   * the dropped request, ask the database whether the plan actually landed.
-   */
-  const findPlanCreatedAfter = async (startedAt) => {
-    try {
-      const res = await axios.get(`${API}/admin/plans/recent?test_only=true&limit=5`, {
-        headers: { "X-Admin-Token": token },
-      });
-      const match = (res.data?.plans || []).find(
-        (p) => p.created_at && new Date(p.created_at).getTime() >= startedAt - 5000
-      );
-      return match || null;
-    } catch {
-      return null;
-    }
-  };
-
   const generate = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
-    const startedAt = Date.now();
+    setStatus("Starting generation...");
     try {
+      // Returns immediately with an id — generation runs in the background, so
+      // the request is no longer held open for 5-6 minutes and cannot be cut
+      // off by the proxy. This is how the paid path has always worked.
       const res = await axios.post(
         `${API}/plans/generate`,
         { answers },
-        { headers: { "X-Admin-Token": token }, timeout: 15 * 60 * 1000 }
+        { headers: { "X-Admin-Token": token } }
       );
-      setResult(res.data);
-      loadRecent();
-    } catch (err) {
-      // A dropped connection is not the same as a failed generation. Poll for
-      // the plan for a few minutes before declaring anything broken.
-      setStatus("Connection dropped — checking whether the plan saved anyway...");
-      for (let i = 0; i < 40; i++) {
+      const planId = res.data?.id;
+      if (!planId) throw new Error("no plan id returned");
+
+      for (let i = 0; i < 90; i++) {
+        setStatus(`Generating… ${Math.floor((i * 10) / 60)}m ${(i * 10) % 60}s elapsed`);
         // eslint-disable-next-line no-await-in-loop
         await new Promise((r) => setTimeout(r, 10000));
-        // eslint-disable-next-line no-await-in-loop
-        const found = await findPlanCreatedAfter(startedAt);
-        if (found) {
+        let s;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          s = await axios.get(`${API}/plans/${planId}/status`);
+        } catch {
+          continue; // a blip in polling is not a failed generation
+        }
+        if (s.data?.status === "ready") {
           setStatus(null);
-          // The route is /app/u/:id — see App.js. An invented /plan/:id path
-          // here produced a working "Plan generated" box whose Open plan button
-          // led straight to a 404.
-          setResult({ plan_id: found.id, link: `/app/u/${found.id}` });
+          setResult({ id: planId, link: `/app/u/${planId}` });
           loadRecent();
+          setLoading(false);
+          return;
+        }
+        if (s.data?.status === "failed") {
+          setStatus(null);
+          setError(s.data?.error || "Generation failed — check Railway logs.");
           setLoading(false);
           return;
         }
       }
       setStatus(null);
+      setError("Still generating after 15 minutes — check Railway logs.");
+    } catch (err) {
+      setStatus(null);
       setError(
         err.response?.data?.detail ||
-          "Generation failed — check Railway logs for the actual error."
+          "Couldn't start generation — check Railway logs for the actual error."
       );
     } finally {
       setLoading(false);
@@ -298,8 +287,8 @@ export default function AdminTestPlan() {
         <div className="mt-6 border border-white/15 bg-white/[0.03] p-4 max-w-2xl">
           <p className="text-sm text-zinc-300">{status}</p>
           <p className="text-xs text-zinc-500 mt-1">
-            Generation runs 5-6 minutes, which is longer than the request is allowed to stay
-            open. The plan usually saves fine — this is just waiting for it to appear.
+            Generation runs in the background, so you can leave this page and pick the plan
+            up from the list below. Usually 5-6 minutes.
           </p>
         </div>
       )}
