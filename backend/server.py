@@ -527,6 +527,14 @@ COMMITMENT_DAY_TERMS = [
 def _is_commitment_day(day: dict, club_days: list) -> bool:
     label = str(day.get("label", "")).lower()
     focus = str(day.get("focus", "")).lower()
+
+    # "Light Match Prep" and "Pre-Match Activation" are sessions WE prescribe,
+    # not the fixture. Matching bare "match" swallowed them, so a football week
+    # with a Friday prep session counted two prescribed days instead of three
+    # and then told the customer so.
+    if re.search(r"prep|pre-?match|activation|sharpen|warm", label):
+        return False
+
     if any(term in label or term in focus for term in COMMITMENT_DAY_TERMS):
         return True
     return str(day.get("day", "")).strip() in set(club_days or [])
@@ -1321,6 +1329,29 @@ def _hold_duplicate_movements(days: list) -> None:
             extra["_heldDuplicate"] = True
 
 
+def _count_prescribed_sessions(days: list, club_days: list) -> int:
+    """
+    How many real training sessions this week actually prescribes.
+
+    Mirrors the counting in validate_plan_semantics: club nights, match days,
+    rest and active-recovery days are all excluded, because none of them are
+    sessions we are asking them to add.
+    """
+    count = 0
+    for d in days:
+        if _is_commitment_day(d, club_days):
+            continue
+        label = str(d.get("label", "")).lower()
+        focus = str(d.get("focus", "")).lower()
+        if any(t in label for t in ("rest", "recovery", "mobility", "off")) or "rest" in focus:
+            continue
+        workouts = d.get("workouts", [])
+        if len(workouts) <= 1 and _estimate_session_minutes(workouts) <= 25:
+            continue
+        count += 1
+    return count
+
+
 def expand_template(plan_data: dict, answers: dict) -> None:
     """
     Turn the single authored week into the weeks[] array the app renders.
@@ -1351,6 +1382,25 @@ def expand_template(plan_data: dict, answers: dict) -> None:
     notes = plan_data.get("weekNotes") or []
     themes = ["Foundation", "Build", "Peak", "Deload" if deload_week else "Push"]
 
+    # If it prescribed fewer sessions than asked, say so from the ACTUAL count.
+    # Asked to write this sentence itself, the model produced "four well-placed
+    # sessions" on a plan containing three — it cannot reliably count its own
+    # output, and a wrong number is worse than no explanation at all.
+    club = answers.get("club_days") or []
+    if isinstance(club, str):
+        club = [c.strip() for c in club.split(",") if c.strip()]
+    requested = _parse_minutes(str(answers.get("days", "")))
+    prescribed = _count_prescribed_sessions(days, club)
+    shortfall_note = ""
+    if requested and prescribed and prescribed < requested:
+        words = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven"}
+        got = words.get(prescribed, str(prescribed))
+        want = words.get(requested, str(requested))
+        shortfall_note = (
+            f" You asked for {want} — with everything else already in your week, "
+            f"{got} well-placed sessions serve you better than {want} crammed in."
+        )
+
     weeks = []
     for week in range(1, BLOCK_WEEKS + 1):
         is_deload = week == deload_week
@@ -1380,6 +1430,10 @@ def expand_template(plan_data: dict, answers: dict) -> None:
                 "Last week of this block. Keep progressing as you have been, finish it properly, "
                 "then build a new one from what you've logged."
             )
+
+        # Only week 1, and only when it genuinely prescribed fewer.
+        if week == 1 and shortfall_note:
+            note = f"{note}{shortfall_note}" if note else shortfall_note.strip()
 
         weeks.append({
             "weekNumber": week,
@@ -2259,12 +2313,12 @@ match day, which are existing commitments.
 
 Prescribe FEWER than {days} only when hitting it would put them on seven days a
 week once club sessions and matches are counted. Six days on with one recovery
-day is the ceiling in-season. If you do go lower, add ONE short sentence to the
-END of the first entry in "weekNotes" saying so — for example: "You asked for 4
-— with your club nights and match, three well-placed sessions serve you better
-than four crammed in." Keep it to one sentence and do not show your working;
-they already know what is in their own week. Never go lower silently: someone
-who asked for four and counts three will assume the plan is broken.
+day is the ceiling in-season.
+
+Do NOT mention the session count in "weekNotes". If you prescribe fewer than
+asked, that is explained automatically afterwards using the actual number of
+sessions in your plan. Asked to write it yourself you will miscount — a real
+plan carried "four well-placed sessions" on a week containing three.
 
 EVERY exercise needs a "progression" object. DEFAULT TO "none" AND ONLY PROGRESS
 WHAT SHOULD GENUINELY BE PROGRESSED:
