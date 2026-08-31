@@ -23,8 +23,21 @@ export default function TermsConditions() {
               By using this site or purchasing a plan, you agree to these terms.
             </p>
             <p className="mt-3">
-              You must be 18 or over to purchase a plan or create a coach account. Planlete
-              is not intended for use by children.
+              You must be 18 or over to purchase a plan or create a coach account. Only an
+              adult can enter into this agreement with us, and only an adult can pay.
+            </p>
+            <p className="mt-3">
+              A plan may be built <em>for</em> someone under 18, but only where a parent or
+              legal guardian buys it, accepts these terms on the young person's behalf, and
+              supervises their training. If you are buying for someone under 18 you confirm
+              that you are their parent or legal guardian and that you accept these terms for
+              them. Plans built for under-18s deliberately contain no calorie targets, no
+              macronutrient targets and no weight-loss guidance: specific nutritional targets
+              at that age should be set with a GP or a registered dietitian, not by an app.
+            </p>
+            <p className="mt-3">
+              If you are under 18, please do not buy a plan or create an account yourself.
+              Ask a parent or guardian to do it with you.
             </p>
           </section>
 

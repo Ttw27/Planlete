@@ -62,6 +62,21 @@ export const BASE_QUESTIONS = [
     options: ["Under 18", "18–24", "25–34", "35–44", "45–54", "55+"],
   },
   {
+    // The Terms say a plan for someone under 18 must be bought and accepted by
+    // a parent or guardian. That has to be something the product actually asks,
+    // not just a paragraph nobody reads — otherwise the document describes a
+    // process that never happens.
+    id: "guardian_consent",
+    label: "Are you the parent or guardian buying this?",
+    type: "choice",
+    options: [
+      "Yes — I'm the parent or guardian and I accept the terms on their behalf",
+      "No — I'm under 18 myself",
+    ],
+    hint: "Under-18 plans have to be bought and supervised by an adult. They never include calorie or weight-loss targets.",
+    showIf: (a) => a.age === "Under 18",
+  },
+  {
     id: "sex",
     label: "What's your sex?",
     type: "choice",
@@ -430,6 +445,30 @@ export default function BuildApp() {
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Promo code. Checked as they type so they know before committing, and
+  // re-checked server-side on redeem — the client's opinion is never trusted.
+  const [promo, setPromo] = useState("");
+  const [promoValid, setPromoValid] = useState(false);
+  const [promoMsg, setPromoMsg] = useState(null);
+
+  const checkPromo = async (value) => {
+    setPromo(value);
+    setPromoValid(false);
+    setPromoMsg(null);
+    if (value.trim().length < 3) return;
+    try {
+      const res = await axios.post(`${API}/promo/check`, { code: value.trim() });
+      setPromoValid(Boolean(res.data?.valid));
+      setPromoMsg(
+        res.data?.valid
+          ? `Free plan applied — ${res.data.remaining} place${res.data.remaining === 1 ? "" : "s"} left`
+          : res.data?.reason || "That code isn't recognised."
+      );
+    } catch {
+      setPromoMsg("Couldn't check that code — try again.");
+    }
+  };
+
   useEffect(() => {
     if (searchParams.get("cancelled") === "1") {
       toast.info("No problem — checkout was cancelled. Pick up where you left off whenever you're ready.");
@@ -494,6 +533,12 @@ export default function BuildApp() {
       toast.error("Enter a valid email");
       return;
     }
+    // A consent question you can answer "no" to and carry on regardless is
+    // decoration. Only an adult can buy, so this is where it stops.
+    if (q.id === "guardian_consent" && String(answers[q.id]).startsWith("No")) {
+      toast.error("A parent or guardian needs to buy this one — ask them to build it with you.");
+      return;
+    }
     if (safeStep < questions.length - 1) {
       setStep(safeStep + 1);
     } else {
@@ -510,6 +555,19 @@ export default function BuildApp() {
     setSubmitting(true);
     track("builder_completed", { goal: answers.goal });
     try {
+      // A promo code skips Stripe entirely: a 100% discount cannot go through
+      // Checkout in payment mode, since a zero amount is rejected. The plan
+      // built is identical, only the payment is missing.
+      if (promoValid && promo.trim()) {
+        const redeemed = await axios.post(`${API}/promo/redeem`, {
+          code: promo.trim(),
+          answers,
+        });
+        track("promo_redeemed", { kind: "ai" });
+        window.location.href = redeemed.data.redirect;
+        return;
+      }
+
       const res = await axios.post(`${API}/checkout/create-session`, { answers });
       track("checkout_opened", { kind: "ai" });
       // Send them to Stripe's hosted checkout — the plan is generated only
@@ -700,6 +758,28 @@ export default function BuildApp() {
           </div>
         )}
 
+        {/* Promo code — only on the final step, where payment happens. */}
+        {safeStep === questions.length - 1 && (
+          <div className="mt-8 max-w-sm">
+            <label className="text-overline text-zinc-500 block mb-2">
+              Got a code?
+            </label>
+            <input
+              value={promo}
+              onChange={(e) => checkPromo(e.target.value.toUpperCase())}
+              placeholder="Enter code"
+              className={`w-full bg-black border px-3 py-3 text-sm text-white placeholder-zinc-700 focus:outline-none transition-colors ${
+                promoValid ? "border-[#D4FF00]" : "border-white/15 focus:border-white/40"
+              }`}
+            />
+            {promoMsg && (
+              <p className={`text-xs mt-2 ${promoValid ? "text-[#D4FF00]" : "text-zinc-500"}`}>
+                {promoMsg}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="mt-12 flex items-center justify-between">
           <button
@@ -716,9 +796,9 @@ export default function BuildApp() {
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-sm px-7 py-4 hover:bg-white transition-colors disabled:opacity-50 active:scale-[0.98]"
           >
             {submitting
-              ? "Taking you to checkout…"
+              ? (promoValid ? "Building your plan…" : "Taking you to checkout…")
               : safeStep === questions.length - 1
-              ? `Continue to payment — ${plan}`
+              ? (promoValid ? "Get my free plan" : `Continue to payment — ${plan}`)
               : q.optional && !answers[q.id]
               ? "Skip"
               : "Continue"}

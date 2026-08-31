@@ -24,9 +24,9 @@ export default function RefundPolicy() {
               would be for any instantly-delivered digital product. By completing your
               purchase and providing your questionnaire answers, you acknowledge and agree
               that generation begins promptly and that your cancellation right ends once your
-              plan has been delivered. This section covers one-off plan purchases (the AI
-              questionnaire and self-serve builder); coach subscriptions and client plans are
-              covered separately below.
+              plan has been delivered. This covers every plan we sell — the AI questionnaire,
+              the self-serve builder, and plans built for you by a coach. There is no
+              subscription and no recurring billing: you pay once, per plan.
             </p>
           </section>
 
@@ -68,26 +68,12 @@ export default function RefundPolicy() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">Coach subscriptions</h2>
-            <p>
-              Coach subscriptions are billed on a recurring basis and can be cancelled at any
-              time from your dashboard, or by contacting us — cancellation takes effect at the
-              end of your current billing period, and you keep access until then. We don't
-              provide refunds for the current billing period once it's begun, but you won't be
-              charged again after cancelling. If you're charged in error (for example, a
-              duplicate charge or a charge after you'd already cancelled), contact us and we'll
-              refund it.
-            </p>
-          </section>
-
-          <section>
             <h2 className="text-white font-display text-xl mb-3">Client-pays plans (via a coach)</h2>
             <p>
-              If your coach doesn't have an active subscription, you may be asked to pay a
-              one-off fee to unlock the plan they've built for you. The same right-to-cancel
-              position as our one-off plan purchases applies — once the plan is unlocked and
-              delivered, the 14-day cancellation right ends, since it's an instantly-delivered
-              digital product.
+              Where a coach or physio has built a plan for you, you may be asked to pay a
+              one-off fee to unlock it. The same position applies as for any other plan: once
+              it's unlocked and delivered, the 14-day cancellation right ends, since it's an
+              instantly-delivered digital product. There is nothing recurring to cancel.
             </p>
           </section>
 
