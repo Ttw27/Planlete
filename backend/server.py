@@ -3213,6 +3213,98 @@ async def create_manual_plan(payload: ManualPlanCreate, _: bool = Depends(requir
 
 
 # ===== Stripe checkout (real payment flow) =====
+class PromoRedeemRequest(BaseModel):
+    code: str
+    answers: Optional[Dict[str, Any]] = None
+    manual_plan: Optional[Dict[str, Any]] = None
+    derived_from: Optional[str] = None
+
+
+@api_router.post("/promo/check")
+async def check_promo(payload: dict):
+    """Is this code usable? Called as they type, before they commit to anything."""
+    code = str(payload.get("code", "")).strip().upper()
+    if not code:
+        return {"valid": False, "reason": "Enter a code."}
+    promo = await db.promo_codes.find_one({"code": code}, {"_id": 0})
+    if not promo or not promo.get("active", True):
+        return {"valid": False, "reason": "That code isn't recognised."}
+    if promo.get("uses", 0) >= promo.get("max_uses", 0):
+        return {"valid": False, "reason": "That code has been fully claimed."}
+    remaining = promo["max_uses"] - promo.get("uses", 0)
+    return {"valid": True, "remaining": remaining, "free": True}
+
+
+@api_router.post("/promo/redeem")
+async def redeem_promo(payload: PromoRedeemRequest, background_tasks: BackgroundTasks):
+    """
+    Claim a free plan with a promo code, skipping Stripe entirely.
+
+    A 100% discount cannot go through Stripe Checkout in payment mode — a zero
+    amount is rejected — so this creates the order, marks it paid and generates,
+    exactly as a real payment does. The plan itself is identical; only the money
+    is missing.
+
+    The use count is incremented ATOMICALLY as part of the lookup. Fifty people
+    hitting a fifty-use code at the same moment cannot all pass a "have we run
+    out?" check and then all increment past the cap.
+    """
+    code = str(payload.code or "").strip().upper()
+    if bool(payload.answers) == bool(payload.manual_plan) and not payload.derived_from:
+        raise HTTPException(status_code=400, detail="Provide exactly one of answers or manual_plan.")
+
+    promo = await db.promo_codes.find_one_and_update(
+        {"code": code, "active": True, "$expr": {"$lt": ["$uses", "$max_uses"]}},
+        {"$inc": {"uses": 1}},
+    )
+    if not promo:
+        raise HTTPException(
+            status_code=400,
+            detail="That code isn't valid, or all the free places have gone.",
+        )
+
+    order_id = str(uuid.uuid4())
+    order = {
+        "id": order_id,
+        "kind": "derived" if payload.derived_from else ("ai" if payload.answers else "manual"),
+        "answers": payload.answers,
+        "manual_plan": payload.manual_plan,
+        "derived_from": payload.derived_from,
+        "change_request": None,
+        "status": "paid",
+        "promo_code": code,
+        "amount_pence": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.pending_orders.insert_one(order)
+    background_tasks.add_task(process_paid_order, order_id, order)
+    logger.info(f"Promo redeemed: {code} (use {promo.get('uses', 0) + 1}/{promo['max_uses']}) order {order_id}")
+    return {"order_id": order_id, "redirect": f"/build/success?order_id={order_id}"}
+
+
+@api_router.post("/admin/promo")
+async def create_promo(payload: dict, _: bool = Depends(require_admin)):
+    """Create or update a promo code."""
+    code = str(payload.get("code", "")).strip().upper()
+    max_uses = int(payload.get("max_uses", 50))
+    if not code:
+        raise HTTPException(status_code=400, detail="A code is required.")
+    await db.promo_codes.update_one(
+        {"code": code},
+        {"$set": {"code": code, "max_uses": max_uses, "active": bool(payload.get("active", True))},
+         "$setOnInsert": {"uses": 0, "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    doc = await db.promo_codes.find_one({"code": code}, {"_id": 0})
+    return doc
+
+
+@api_router.get("/admin/promo")
+async def list_promos(_: bool = Depends(require_admin)):
+    codes = await db.promo_codes.find({}, {"_id": 0}).to_list(100)
+    return {"codes": codes}
+
+
 @api_router.post("/checkout/create-session", response_model=CheckoutSessionResponse)
 async def create_checkout_session(payload: CheckoutSessionRequest):
     """
