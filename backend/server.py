@@ -1538,6 +1538,62 @@ def validate_plan(plan_data: dict) -> None:
         raise ValueError("Missing morningRoutine section")
 
 
+def _summarise_logs_for_prompt(logs: list) -> str:
+    """
+    Turn raw log rows into the per-exercise picture a coach would actually look
+    at before writing the next block.
+
+    Not the raw entries: forty rows of "82.5kg" would bloat the prompt and bury
+    the point. What matters is where each lift ended up, whether it moved, how
+    often they showed up, and how it felt — which is exactly the evidence block
+    two should be built from, and the thing that makes it worth paying for.
+    """
+    if not logs:
+        return ""
+
+    by_ex = {}
+    for row in logs:
+        name = str(row.get("exercise_name", "")).strip()
+        if not name:
+            continue
+        by_ex.setdefault(name, []).append(row)
+
+    def weight_of(row):
+        m = re.search(r"(\d+(?:\.\d+)?)\s*kg", str(row.get("value", "")), re.I)
+        return float(m.group(1)) if m else None
+
+    lines = []
+    for name, rows in by_ex.items():
+        rows.sort(key=lambda r: (r.get("week_number") or 0, r.get("logged_at") or ""))
+        weights = [w for w in (weight_of(r) for r in rows) if w is not None]
+        latest = rows[-1]
+        parts = [f"logged {len(rows)}x"]
+        if weights:
+            parts.append(f"last {weights[-1]:g}kg")
+            if max(weights) != weights[-1]:
+                parts.append(f"best {max(weights):g}kg")
+            if len(weights) > 1:
+                moved = weights[-1] - weights[0]
+                parts.append(
+                    f"{'up' if moved > 0 else 'down' if moved < 0 else 'flat'} "
+                    f"{abs(moved):g}kg across the block" if moved else "no change across the block"
+                )
+        else:
+            parts.append(f"last '{str(latest.get('value',''))[:24]}'")
+        rpes = [r.get("rpe") for r in rows if r.get("rpe")]
+        if rpes:
+            common = max(set(rpes), key=rpes.count)
+            parts.append(f"mostly felt '{common}'")
+        lines.append(f"  - {name}: {', '.join(parts)}")
+
+    weeks = {r.get("week_number") for r in logs if r.get("week_number")}
+    header = (
+        f"WHAT THEY ACTUALLY DID ({len(logs)} logged sets across "
+        f"{len(weeks) or 1} week(s)):"
+    )
+    return header + "\n" + "\n".join(sorted(lines))
+
+
 def _summarise_plan_for_prompt(plan: dict, max_weeks: int = 2) -> str:
     """
     Compress a stored plan into something small enough to sit inside another
@@ -2218,6 +2274,7 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     derived_guidance = ""
     if previous_plan:
         prev_summary = _summarise_plan_for_prompt(previous_plan)
+        log_summary = _summarise_logs_for_prompt(answers.get("_previous_logs") or [])
         reasons = change_request.get("reasons") or []
         detail = (change_request.get("detail") or "").strip()
         keep = (change_request.get("keep") or "").strip()
@@ -2229,6 +2286,18 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
             f"WHAT HAS CHANGED: {'; '.join(reasons) if reasons else 'not specified'}\n"
             + (f"IN THEIR WORDS: {detail}\n" if detail else "")
             + (f"WHAT THEY WANT KEPT: {keep}\n" if keep else "")
+            + (f"\n{log_summary}\n" if log_summary else "")
+            + (
+                "\nThey logged little or nothing, so you have no numbers to work from. Do not "
+                "invent progress they may not have made — carry the structure forward and set "
+                "loads by effort and rep target rather than by kilos.\n"
+                if not log_summary else
+                "\nUSE THOSE NUMBERS. They are the whole point of a second block: start each lift "
+                "from what they actually finished on, not from where the last plan began. A lift "
+                "that went up gets a harder starting point; one that stayed flat or felt hard "
+                "every week needs a different approach, not simply more weight. An exercise they "
+                "never logged was probably skipped — consider replacing it.\n"
+            )
             + "\nRules for a follow-on block:\n"
             "- Carry forward the movements and structure that were working, unless the change "
             "makes them unsuitable. Familiarity is a feature; they liked this plan.\n"
@@ -3220,6 +3289,85 @@ class PromoRedeemRequest(BaseModel):
     derived_from: Optional[str] = None
 
 
+@api_router.post("/jobs/block-ending")
+async def send_block_ending_emails(_: bool = Depends(require_admin)):
+    """
+    Email anyone whose block ends in the next 7 days. Idempotent.
+
+    Built as an endpoint rather than a loop inside the app so it can be driven
+    by a scheduler (Railway cron, or anything that can make an authenticated
+    POST once a day). Nothing here depends on being run at a particular time —
+    it looks at dates, so a missed day is caught the next day.
+
+    Only plans that have actually STARTED are considered. block_ends_at is only
+    written when someone begins training, so a plan bought and never opened has
+    no end date and is correctly ignored rather than being chased.
+    """
+    now = datetime.now(timezone.utc)
+    window_end = (now + timedelta(days=7)).isoformat()
+
+    candidates = await db.plans.find({
+        "block_ends_at": {"$ne": None, "$lte": window_end, "$gte": now.isoformat()},
+        "block_ending_email_sent": {"$in": [None, False]},
+    }, {"_id": 0, "id": 1, "answers": 1, "block_ends_at": 1, "brand": 1}).to_list(200)
+
+    sent = 0
+    for plan in candidates:
+        answers = plan.get("answers") or {}
+        email = answers.get("email")
+        if not email:
+            continue
+        name = answers.get("name") or "there"
+        plan_id = plan["id"]
+        ends = plan.get("block_ends_at", "")[:10]
+
+        # Claim it BEFORE sending. If the send fails we would rather miss one
+        # email than send the same person the same reminder every day until it
+        # succeeds — a scheduler that retries is the usual way people end up
+        # spamming their own customers.
+        claimed = await db.plans.update_one(
+            {"id": plan_id, "block_ending_email_sent": {"$in": [None, False]}},
+            {"$set": {"block_ending_email_sent": True,
+                      "block_ending_email_at": now.isoformat()}},
+        )
+        if not claimed.modified_count:
+            continue
+
+        send_email(
+            to=email,
+            subject="Your block finishes next week",
+            html=f"""
+                <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
+                    <h2 style="color: #111;">Hey {name},</h2>
+                    <p>Your four-week block wraps up on {ends}. Nice work getting through it.</p>
+                    <p style="color: #444; line-height: 1.6;">
+                        You can carry on training with it as long as you like — nothing switches off,
+                        and everything you've logged stays put. But the plan was built around the
+                        answers you gave four weeks ago, and you're not that person any more.
+                    </p>
+                    <p style="color: #444; line-height: 1.6;">
+                        Your next block starts from what you actually lifted, not from a
+                        questionnaire.
+                    </p>
+                    <p style="margin: 24px 0;">
+                        <a href="{FRONTEND_URL}/app/u/{plan_id}/next?from=block-end"
+                           style="background: #D4FF00; color: #000; font-weight: bold;
+                           text-decoration: none; padding: 14px 24px; display: inline-block;">
+                           Build my next block
+                        </a>
+                    </p>
+                    <p style="color: #888; font-size: 12px;">
+                        Not ready yet? Ignore this — your plan keeps working either way.
+                    </p>
+                </div>
+            """,
+        )
+        sent += 1
+
+    logger.info(f"Block-ending emails: {sent} sent from {len(candidates)} candidate(s)")
+    return {"checked": len(candidates), "sent": sent}
+
+
 @api_router.post("/promo/check")
 async def check_promo(payload: dict):
     """Is this code usable? Called as they type, before they commit to anything."""
@@ -3419,8 +3567,21 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                 answers[key] = change[key]
         if change.get("detail"):
             answers["notes"] = ((answers.get("notes") or "") + "\n" + change["detail"]).strip()
+        if change.get("current_lifts"):
+            # What they say they are lifting now, for the many people who never
+            # log a set. Better evidence than the questionnaire they filled in a
+            # month ago, even if it is rougher than real logs.
+            answers["notes"] = (
+                (answers.get("notes") or "") + "\nCurrently lifting: " + change["current_lifts"]
+            ).strip()
         answers["_previous_plan"] = source_plan
         answers["_change_request"] = change
+        # The evidence. Everything they logged on the previous block, so the
+        # next one starts from what they actually lifted rather than from the
+        # questionnaire they filled in a month ago.
+        answers["_previous_logs"] = await db.weight_logs.find(
+            {"plan_id": source_plan.get("id")}, {"_id": 0}
+        ).sort("logged_at", 1).to_list(2000)
 
     email = (
         manual_plan.get("client_email") if kind == "manual" else answers.get("email")
@@ -4485,6 +4646,14 @@ async def confirm_client_plan_checkout(client_id: str, session_id: str):
 
 
 # ===== Coach subscription (B2B — unlimited clients while active) =====
+# UNREACHABLE FROM THE UI. Nothing in the frontend calls this, and the coach
+# dashboard tells coaches there is no subscription. It also refuses to run
+# unless COACH_SUBSCRIPTION_PRICE_ID is set, which it is not.
+#
+# Deliberately NOT deleted: subscription_status is read by the Stripe webhook
+# handler and by the coach client-pays gate, so unpicking it is a refactor of
+# the payment path rather than a tidy-up. Not worth the risk while advertising
+# is going live. Revisit when there is time to do it properly.
 @api_router.post("/coach/subscribe/create-session")
 async def create_coach_subscription_session(coach: dict = Depends(get_current_coach)):
     if not STRIPE_SECRET_KEY:
