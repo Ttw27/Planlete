@@ -33,12 +33,29 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function RebuildPlan() {
   const { id } = useParams();
+  // Arriving from the block-end email means they've simply finished, so don't
+  // make them tell us that. Preselect it; they can change it.
+  const cameFromBlockEnd =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("from") === "block-end";
   const { plan: planPrice } = usePricing();
   const [plan, setPlan] = useState(null);
   const [error, setError] = useState(null);
-  const [reasons, setReasons] = useState([]);
+  const [reasons, setReasons] = useState(cameFromBlockEnd ? ["finished"] : []);
   const [detail, setDetail] = useState("");
   const [keep, setKeep] = useState("");
+  // Most people tick boxes and never type a weight. Without numbers the next
+  // block can only guess, so ask them directly rather than pretending we know.
+  const [hasLogs, setHasLogs] = useState(null);
+  const [currentLifts, setCurrentLifts] = useState("");
+
+  useEffect(() => {
+    if (!id) return;
+    axios
+      .get(`${API}/logs/${id}`)
+      .then((r) => setHasLogs((r.data?.logs || r.data || []).length > 0))
+      .catch(() => setHasLogs(false));
+  }, [id]);
   const [days, setDays] = useState("");
   const [clubDays, setClubDays] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +88,7 @@ export default function RebuildPlan() {
           reasons: reasons.map((r) => REASONS.find((x) => x.id === r)?.label || r),
           detail: detail.trim(),
           keep: keep.trim(),
+          ...(currentLifts.trim() ? { current_lifts: currentLifts.trim() } : {}),
           ...(days ? { days } : {}),
           ...(clubDays.length ? { club_days: clubDays } : {}),
         },
@@ -222,6 +240,25 @@ export default function RebuildPlan() {
             className={inputClass}
           />
         </div>
+
+        {hasLogs === false && (
+          <div className="mb-10">
+            <p className="text-overline text-zinc-500 mb-3">
+              What are you lifting now? <span className="text-zinc-600">(optional)</span>
+            </p>
+            <textarea
+              rows={2}
+              value={currentLifts}
+              onChange={(e) => setCurrentLifts(e.target.value)}
+              placeholder="e.g. squat 100kg x 5, bench 80kg x 6"
+              className={inputClass}
+            />
+            <p className="text-xs text-zinc-600 mt-2 leading-relaxed">
+              You haven't logged much, so we've no numbers to build from. A rough idea of
+              your main lifts makes the next block a lot sharper.
+            </p>
+          </div>
+        )}
 
         <div className="border-t border-white/10 pt-8">
           <p className="text-sm text-zinc-400 mb-5 leading-relaxed">
