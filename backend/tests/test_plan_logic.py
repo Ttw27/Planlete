@@ -47,6 +47,7 @@ WANTED = [
     "_parse_minutes", "_parse_bodyweight_kg", "_estimate_session_minutes",
     "validate_plan", "validate_plan_semantics", "_repair_json",
     "_close_truncated_json", "_json_from_message", "autofix_workout_fields",
+    "_summarise_logs_for_prompt",
 ]
 
 
@@ -435,6 +436,25 @@ def test_equipment_and_solo_rules_still_apply_off_commitment_days():
         raise AssertionError("partner drill on a solo gym day should be flagged")
     except ValueError:
         pass
+
+
+def test_log_summary_gives_the_next_block_real_evidence():
+    """Block two is only worth paying for if it starts from what they actually
+    lifted. Raw rows would bloat the prompt, so this is the per-exercise picture
+    a coach would look at: where it ended, whether it moved, how it felt."""
+    logs = []
+    for wk, w in enumerate([100, 102.5, 105, 105], start=1):
+        logs.append({"exercise_name": "Bench Press", "week_number": wk,
+                     "value": f"{w}kg x 6", "rpe": "right", "logged_at": f"2026-08-0{wk}"})
+    for wk in range(1, 5):
+        logs.append({"exercise_name": "Trap Bar Deadlift", "week_number": wk,
+                     "value": "140kg x 5", "rpe": "hard", "logged_at": f"2026-08-0{wk}"})
+    out = S["_summarise_logs_for_prompt"](logs)
+
+    assert "last 105kg" in out and "up 5kg" in out, out          # the lift that moved
+    assert "no change across the block" in out, out               # the one that stalled
+    assert "mostly felt 'hard'" in out, out                       # and how it felt
+    assert S["_summarise_logs_for_prompt"]([]) == ""              # nothing logged, say nothing
 
 
 # ---------------------------------------------------------------- runner
