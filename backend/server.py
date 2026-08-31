@@ -1008,10 +1008,22 @@ DELOAD_EXPERIENCE = {"3–5 years", "5+ years"}
 # Endurance progression has no natural stop signal. A failed squat tells you to
 # stop; adding five minutes a week to a run for six months just injures you
 # quietly. Load self-limits, duration does not, so it needs a ceiling.
-PROGRESSION_CEILINGS = {
-    "time": 45.0,      # minutes per session
-    "distance": 10.0,  # km per session
-}
+# Endurance has no natural stop signal — a failed squat tells you to stop, five
+# more minutes a week for six months just injures you quietly. But a FIXED
+# ceiling is wrong: a 5k/10k plan's long run started at 45min and every
+# increment was clamped away, so the one session that must get longer sat
+# frozen for four weeks while the row still said "add 4 minutes next week".
+#
+# The cap is relative instead: a session may grow by at most this fraction of
+# where it started over the whole block. A 20min run can reach 35; a 45min long
+# run can reach roughly 79. Both are sane, neither runs away.
+PROGRESSION_GROWTH_CAP = 0.75
+
+
+def _growth_ceiling(sets_text: str) -> Optional[float]:
+    """Cap growth relative to where the session STARTED, not at a fixed number."""
+    m = re.search(r"(\d+(?:\.\d+)?)", str(sets_text))
+    return float(m.group(1)) * (1 + PROGRESSION_GROWTH_CAP) if m else None
 
 
 def _bump_numbers(text: str, add: float, unit: str = "", ceiling: Optional[float] = None) -> str:
@@ -1255,11 +1267,18 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
         elif ptype in ("time", "distance") and peak_steps:
             peak_sets = _bump_numbers(
                 peak_sets, inc * peak_steps, prog.get("unit", ""),
-                ceiling=PROGRESSION_CEILINGS.get(ptype),
+                ceiling=_growth_ceiling(peak_sets),
             )
         elif ptype == "rounds" and peak_steps:
             peak_sets = _bump_numbers(peak_sets, inc * peak_steps)
-        out["sets"] = _cut_sets(peak_sets)
+        if ptype in ("time", "distance"):
+            # A continuous session has no sets to cut, so _cut_sets left it
+            # untouched and week 4 simply repeated week 3: an "Easy Run" ran
+            # 30, 33, 36, 36 in a block whose theme was Deload. Cut the
+            # DURATION back to roughly the week 1 figure instead.
+            out["sets"] = _bump_numbers(peak_sets, -(inc * peak_steps))
+        else:
+            out["sets"] = _cut_sets(peak_sets)
 
         # Only a LOADED exercise has a weight to hold. This suffix was being
         # appended to everything, producing "Bodyweight — hold last week's
@@ -1272,7 +1291,7 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
     elif ptype in ("time", "distance") and steps:
         out["sets"] = _bump_numbers(
             str(ex.get("sets", "")), inc * steps, prog.get("unit", ""),
-            ceiling=PROGRESSION_CEILINGS.get(ptype),
+            ceiling=_growth_ceiling(str(ex.get("sets", ""))),
         )
     elif ptype == "rounds" and steps:
         out["sets"] = _bump_numbers(str(ex.get("sets", "")), inc * steps)
