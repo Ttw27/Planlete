@@ -2641,12 +2641,12 @@ Important:
     plan_data["plan_version"] = PLAN_PROMPT_VERSION
     plan_data["activity_family"] = family
 
-    # A block that has run its course should say so rather than looping in
-    # silence. This drives the block-complete state in the app and the reminder
-    # email a week before it lands.
-    plan_data["block_ends_at"] = (
-        datetime.now(timezone.utc) + timedelta(weeks=BLOCK_WEEKS)
-    ).isoformat()
+    # Deliberately NOT set here. A block ends four weeks after they START
+    # TRAINING, not four weeks after the plan was generated, and at this point
+    # nobody has trained yet. It is written when started_at is, on their first
+    # logged session or when they move themselves to a week. Setting it now
+    # would expire a plan that was bought and never opened.
+    plan_data["block_ends_at"] = None
 
     # SOFT validation — coaching sense. Attach the outcome rather than raising,
     # so the caller can retry to improve the plan but still deliver THIS plan if
@@ -3652,11 +3652,48 @@ async def create_weight_log(payload: WeightLogCreate):
     # app for a week was shown week 2, having done nothing — and someone who
     # left it a month came back to a block that had already finished. Only the
     # first log sets this; later ones leave it alone.
+    now = datetime.now(timezone.utc)
     await db.plans.update_one(
         {"id": log.plan_id, "started_at": {"$in": [None, ""]}},
-        {"$set": {"started_at": datetime.now(timezone.utc).isoformat()}},
+        {"$set": {
+            "started_at": now.isoformat(),
+            # Keep block_ends_at in step. It is written at generation time, so
+            # someone who buys on the 1st and starts training on the 20th would
+            # otherwise carry an end date nearly three weeks early — harmless
+            # while only the app reads it, wrong the moment the block-end email
+            # starts firing from it.
+            "block_ends_at": (now + timedelta(weeks=BLOCK_WEEKS)).isoformat(),
+        }},
     )
     return log
+
+
+@api_router.post("/plans/{plan_id}/start")
+async def start_block(plan_id: str):
+    """
+    Mark a block as started, if it hasn't been already.
+
+    Logging a set starts the clock, but plenty of people never log one: a
+    bodyweight plan has nothing to type, runners keep their times elsewhere, and
+    many just tick the box and get on with it. Those plans would sit on week 1
+    forever, never progressing, deloading or ending — worse than the original
+    bug, where at least the calendar moved.
+
+    Ticking an exercise off is the one thing everybody does, so it starts the
+    block too. Idempotent: only the first call does anything, so it is safe to
+    fire on every tick without checking first.
+    """
+    now = datetime.now(timezone.utc)
+    result = await db.plans.update_one(
+        {"id": plan_id, "started_at": {"$in": [None, ""]}},
+        {"$set": {
+            "started_at": now.isoformat(),
+            "block_ends_at": (now + timedelta(weeks=BLOCK_WEEKS)).isoformat(),
+        }},
+    )
+    if result.modified_count:
+        logger.info(f"Block started for plan {plan_id}")
+    return {"ok": True, "started": bool(result.modified_count)}
 
 
 @api_router.post("/plans/{plan_id}/set-current-week")
@@ -3680,7 +3717,11 @@ async def set_current_week(plan_id: str, payload: dict):
 
     started = datetime.now(timezone.utc) - timedelta(weeks=week - 1)
     await db.plans.update_one(
-        {"id": plan_id}, {"$set": {"started_at": started.isoformat()}}
+        {"id": plan_id},
+        {"$set": {
+            "started_at": started.isoformat(),
+            "block_ends_at": (started + timedelta(weeks=BLOCK_WEEKS)).isoformat(),
+        }},
     )
     logger.info(f"Plan {plan_id} moved to week {week}")
     return {"ok": True, "week": week, "started_at": started.isoformat()}
