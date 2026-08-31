@@ -471,6 +471,15 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
       }
       return next;
     });
+
+    // Ticking starts the block, not just logging. A bodyweight plan has nothing
+    // to log, runners keep their times elsewhere, and plenty of people only
+    // ever tick — all of them would otherwise sit on week 1 forever, never
+    // progressing or ending. Fire and forget: the endpoint is idempotent and a
+    // failed call must never stop a tick registering.
+    if (planId && !sampleMode && !data.started_at) {
+      axios.post(`${API}/plans/${planId}/start`).catch(() => {});
+    }
   };
 
   // ── Weight/effort logging (backend-stored — this is data people actually
