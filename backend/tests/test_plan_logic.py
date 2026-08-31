@@ -36,7 +36,8 @@ SERVER = os.path.join(os.path.dirname(__file__), "..", "server.py")
 
 # The pure, side-effect-free functions under test.
 WANTED = [
-    "BLOCK_WEEKS", "DELOAD_EXPERIENCE", "PROGRESSION_CEILINGS", "MEASURED_TERMS",
+    "BLOCK_WEEKS", "DELOAD_EXPERIENCE", "PROGRESSION_GROWTH_CAP", "MEASURED_TERMS",
+    "_growth_ceiling",
     "EQUIPMENT_FORBIDDEN", "FACILITY_TERMS", "COMMITMENT_DAY_TERMS", "PARTNER_TERMS",
     "EXPECTED_DAY_ORDER",
     "_is_measured", "_bump_numbers", "_bump_reps", "_is_timed_hold", "_cut_sets",
@@ -206,13 +207,26 @@ def test_time_progression_rejected_on_sets_format():
     assert out["progression"]["type"] == "none", out["progression"]
 
 
-def test_endurance_progression_has_a_ceiling():
-    """Load self-limits when you fail a lift. Duration does not — five minutes a
-    week for six months is a stress fracture with no stop signal."""
-    t = week(["Mon"], [("Easy Run", "35min", "Easy", "time", 5)])
+def test_endurance_growth_is_capped_relative_to_the_start():
+    """A fixed 45-minute ceiling froze a 5k/10k plan's long run: it STARTED at
+    45, so every increment was clamped away while the row still said "add 4
+    minutes next week". The cap is now relative to where the session began."""
+    t = week(["Mon"], [("Long Run", "45min", "Conversational", "time", 4)])
     p = build(t, {"experience": "<1 year", "days": "1"})
-    vals = sets_across(p, 1, 0)
-    assert vals == ["35min", "40min", "45min", "45min"], vals
+    assert sets_across(p, 1, 0)[:3] == ["45min", "49min", "53min"], sets_across(p, 1, 0)
+
+    # ...but it still cannot run away: 75% growth over the block is the ceiling.
+    t2 = week(["Mon"], [("Easy Run", "20min", "Easy", "time", 20)])
+    p2 = build(t2, {"experience": "<1 year", "days": "1"})
+    assert sets_across(p2, 1, 0) == ["20min", "35min", "35min", "35min"], sets_across(p2, 1, 0)
+
+
+def test_endurance_deloads_by_duration_not_sets():
+    """A continuous run has no sets to cut, so _cut_sets left it alone and week
+    4 simply repeated week 3: 30, 33, 36, 36 in a block themed Deload."""
+    t = week(["Mon"], [("Easy Run", "30min", "Easy", "time", 3)])
+    p = build(t, {"experience": "5+ years", "days": "1"})
+    assert sets_across(p, 1, 0) == ["30min", "33min", "36min", "30min"], sets_across(p, 1, 0)
 
 
 def test_duplicate_movement_progresses_once():
