@@ -35,6 +35,16 @@ export default function AdminTestPlan() {
   const [recent, setRecent] = useState([]);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
+
+  // The clock ticks on its own rather than being derived from the polling loop.
+  // Driving it from the loop meant one hung request froze the display at
+  // "0m 0s elapsed" with no way to tell whether anything was still happening.
+  useEffect(() => {
+    if (!loading) return undefined;
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, [loading]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -90,11 +100,13 @@ export default function AdminTestPlan() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setElapsed(0);
     setStatus("Starting generation...");
+    const startedAt = Date.now();
     try {
       // Returns immediately with an id — generation runs in the background, so
-      // the request is no longer held open for 5-6 minutes and cannot be cut
-      // off by the proxy. This is how the paid path has always worked.
+      // the request is not held open for 5-6 minutes and cannot be cut off by
+      // the proxy. This is how the paid path has always worked.
       const res = await axios.post(
         `${API}/plans/generate`,
         { answers },
@@ -102,15 +114,17 @@ export default function AdminTestPlan() {
       );
       const planId = res.data?.id;
       if (!planId) throw new Error("no plan id returned");
+      setStatus("generating");
 
       for (let i = 0; i < 90; i++) {
-        setStatus(`Generating… ${Math.floor((i * 10) / 60)}m ${(i * 10) % 60}s elapsed`);
         // eslint-disable-next-line no-await-in-loop
         await new Promise((r) => setTimeout(r, 10000));
         let s;
         try {
+          // A timeout matters here: without one, a single hung request stalls
+          // the whole loop forever and the screen sits on the same message.
           // eslint-disable-next-line no-await-in-loop
-          s = await axios.get(`${API}/plans/${planId}/status`);
+          s = await axios.get(`${API}/plans/${planId}/status`, { timeout: 15000 });
         } catch {
           continue; // a blip in polling is not a failed generation
         }
@@ -129,7 +143,10 @@ export default function AdminTestPlan() {
         }
       }
       setStatus(null);
-      setError("Still generating after 15 minutes — check Railway logs.");
+      setError(
+        `Still generating after ${Math.round((Date.now() - startedAt) / 60000)} minutes — ` +
+        "check Railway logs. The plan may still appear in the list below."
+      );
     } catch (err) {
       setStatus(null);
       setError(
@@ -285,7 +302,11 @@ export default function AdminTestPlan() {
 
       {status && (
         <div className="mt-6 border border-white/15 bg-white/[0.03] p-4 max-w-2xl">
-          <p className="text-sm text-zinc-300">{status}</p>
+          <p className="text-sm text-zinc-300">
+            {status === "generating"
+              ? `Generating… ${Math.floor(elapsed / 60)}m ${String(elapsed % 60).padStart(2, "0")}s elapsed`
+              : status}
+          </p>
           <p className="text-xs text-zinc-500 mt-1">
             Generation runs in the background, so you can leave this page and pick the plan
             up from the list below. Usually 5-6 minutes.

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import AdminLayout from "@/components/AdminLayout";
-import { FileJson, Copy, Check, RefreshCw } from "lucide-react";
+import { FileJson, Copy, Check, RefreshCw, Download } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -89,6 +89,19 @@ export default function AdminPlanJson() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadJson = () => {
+    const id = extractId(input) || "plan";
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plan-${id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const copyJson = async () => {
@@ -183,6 +196,14 @@ export default function AdminPlanJson() {
                 className="flex items-center gap-1.5 border border-white/15 text-zinc-400 text-xs px-3 py-1.5 hover:border-white/30 hover:text-white transition-colors"
               >
                 <RefreshCw size={12} /> Reload
+              </button>
+              {/* A whole plan is 60-80kb, which does not always survive being
+                  pasted. Downloading it as a file is more reliable. */}
+              <button
+                onClick={downloadJson}
+                className="flex items-center gap-1.5 border border-white/15 text-zinc-400 text-xs px-3 py-1.5 hover:border-white/30 hover:text-white transition-colors"
+              >
+                <Download size={12} /> Download
               </button>
               <button
                 onClick={copyJson}
