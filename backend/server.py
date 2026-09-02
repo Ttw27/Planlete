@@ -5,6 +5,7 @@ load_dotenv()
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 import logging
 import uuid
 import re
@@ -999,6 +1000,12 @@ def autofix_workout_fields(plan_data: dict) -> None:
 # --------------------------------------------------------------------------
 
 BLOCK_WEEKS = 4
+
+# How long an order may sit at "processing" before it is presumed dead and
+# retried. MUST comfortably exceed a real generation (5-6 minutes): it was 180s,
+# set when generation took 2-3, so every poll past three minutes declared a
+# healthy generation dead and started a second one alongside it.
+STUCK_ORDER_SECONDS = 900
 
 # Deload only for people with enough training history to accumulate the fatigue
 # that makes one useful. A beginner deloading in week 4 wastes a quarter of the
@@ -3289,6 +3296,52 @@ class PromoRedeemRequest(BaseModel):
     derived_from: Optional[str] = None
 
 
+@api_router.post("/jobs/recover-stuck-orders")
+async def recover_stuck_orders(background_tasks: BackgroundTasks, _: bool = Depends(require_admin)):
+    """
+    Restart paid orders whose generation died.
+
+    Background tasks run inside the web process, so a Railway deploy, a crash or
+    a restart part-way through a 5-6 minute generation silently loses the work.
+    The order sits at "processing" forever and the customer, who has paid, gets
+    nothing.
+
+    Until now the only recovery lived inside /checkout/confirm, which means it
+    only ran while someone had the page open. Close the tab and the order was
+    orphaned permanently — exactly what happened to the 18:41 order on 2 Sep,
+    killed by a deploy and still sitting there two hours later.
+
+    Safe to run often: anything younger than STUCK_ORDER_SECONDS is left alone,
+    so a healthy generation is never restarted on top of itself.
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=STUCK_ORDER_SECONDS)).isoformat()
+    stuck = await db.pending_orders.find({
+        "status": {"$in": ["processing", "paid"]},
+        "$or": [
+            {"processing_started_at": {"$lt": cutoff}},
+            {"processing_started_at": {"$in": [None, ""]}, "created_at": {"$lt": cutoff}},
+        ],
+    }, {"_id": 0}).to_list(50)
+
+    restarted = []
+    for order in stuck:
+        order_id = order.get("id")
+        # Re-claim it so two sweeps running close together cannot both restart
+        # the same order.
+        claimed = await db.pending_orders.update_one(
+            {"id": order_id, "status": {"$in": ["processing", "paid"]}},
+            {"$set": {"status": "processing",
+                      "processing_started_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        if not claimed.modified_count:
+            continue
+        background_tasks.add_task(process_paid_order, order_id, order)
+        restarted.append(order_id)
+        logger.warning(f"Recovered stuck order {order_id} — restarting generation")
+
+    return {"found": len(stuck), "restarted": restarted}
+
+
 @api_router.post("/jobs/block-ending")
 async def send_block_ending_emails(_: bool = Depends(require_admin)):
     """
@@ -3759,16 +3812,20 @@ async def confirm_checkout(order_id: str, background_tasks: BackgroundTasks, ses
     if order.get("status") == "plan_created":
         return {"status": "plan_created", "plan_id": order.get("plan_id")}
 
-    # "processing" only counts as genuinely in-flight for a short window —
-    # if a deploy happened to kill the server mid-background-task, the order
-    # would otherwise be stuck saying "processing" forever with nothing
-    # actually running. Treat anything older than 3 minutes as dead and retry.
+    # "processing" only counts as in-flight for a window — if a deploy killed
+    # the server mid-background-task the order would otherwise sit there
+    # forever with nothing actually running.
+    #
+    # The window MUST be longer than a real generation. It was 180s, set when
+    # generation took 2-3 minutes. Generation now takes 5-6, so every poll past
+    # three minutes was declaring a perfectly healthy generation dead and
+    # starting another one alongside it.
     if order.get("status") == "processing":
         started_at_str = order.get("processing_started_at")
         if started_at_str:
             started_at = datetime.fromisoformat(started_at_str)
             elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
-            if elapsed < 180:
+            if elapsed < STUCK_ORDER_SECONDS:
                 return {
                     "status": "processing",
                     "stage": order.get("stage", "reading"),
@@ -5049,6 +5106,33 @@ async def startup():
         await db.images.create_index("key", unique=True)
     except Exception as e:
         logger.warning(f"Index ensure: {e}")
+
+    # A deploy is the single most common way a generation dies: the process
+    # restarts and the in-flight background task goes with it, leaving a paid
+    # order stuck at "processing" with nothing running. This is the moment
+    # immediately after that happens, so it is the right place to pick them up.
+    try:
+        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=STUCK_ORDER_SECONDS)).isoformat()
+        stuck = await db.pending_orders.find({
+            "status": {"$in": ["processing", "paid"]},
+            "$or": [
+                {"processing_started_at": {"$lt": cutoff}},
+                {"processing_started_at": {"$in": [None, ""]}, "created_at": {"$lt": cutoff}},
+            ],
+        }, {"_id": 0}).to_list(50)
+        for order in stuck:
+            order_id = order.get("id")
+            await db.pending_orders.update_one(
+                {"id": order_id},
+                {"$set": {"status": "processing",
+                          "processing_started_at": datetime.now(timezone.utc).isoformat()}},
+            )
+            asyncio.create_task(process_paid_order(order_id, order))
+            logger.warning(f"Startup recovery: restarting stuck order {order_id}")
+        if stuck:
+            logger.warning(f"Startup recovery: {len(stuck)} stuck order(s) restarted")
+    except Exception as e:
+        logger.warning(f"Startup recovery failed: {e}")
 
 
 @app.on_event("shutdown")
