@@ -854,18 +854,21 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
 
       <div className="text-center mt-6">
         {planId ? (
-          <>
+          // Deliberately quiet. The page below already has "Build my next
+          // block", which carries their answers and history forward — this
+          // starts the questionnaire from scratch and is almost always the
+          // wrong choice. Three competing buttons in a row made a finished
+          // plan look like a sales page.
+          <p className="text-xs text-zinc-600">
+            Want to start over from scratch instead?{" "}
             <Link
               to="/build"
               data-testid="upgrade-cta"
-              className="inline-flex items-center gap-2 border border-white/20 text-white font-bold uppercase tracking-wider text-xs px-5 py-3 hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+              className="text-zinc-400 underline underline-offset-2 hover:text-[var(--accent)] transition-colors"
             >
-              Create your new plan →
+              Build a fresh plan
             </Link>
-            <p className="text-xs text-zinc-500 mt-3">
-              Goals changed? Injury? Just build a fresh app whenever you need to.
-            </p>
-          </>
+          </p>
         ) : (
           <>
             <Link
@@ -1366,6 +1369,12 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, loggedFr
       return { label: "Log the distance you covered", placeholder: "e.g. 5.2km" };
     }
     if (type === "reps") {
+      // A timed hold is typed as "reps" because it progresses in the same
+      // slot, but it progresses in SECONDS — the row above a wall sit says
+      // "add 5 seconds to each hold" while the box underneath asked for reps.
+      if (/^\s*\d+\s*[xX]\s*\d+\s*(s|sec|secs|seconds)\b/.test(String(w.sets || ""))) {
+        return { label: "Log how long you held it", placeholder: "e.g. 3x35s" };
+      }
       return { label: "Log the reps you managed", placeholder: "e.g. 3x8" };
     }
     if (type === "rounds") {
