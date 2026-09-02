@@ -42,15 +42,38 @@ export default function GeneratedApp() {
 
   useEffect(() => {
     let alive = true;
-    axios
-      .get(`${API}/plans/${id}`)
-      .then((res) => {
-        if (alive) {
-          setPlan(res.data);
-          track("plan_opened");
+
+    // No timeout and no handling of an empty body meant this screen could sit
+    // on "Loading your app…" indefinitely: a hung request never resolves, and a
+    // 200 with a null body sets plan to null, which is the same state as still
+    // loading. Either way the customer waits forever and nothing is reported.
+    const load = async (attempt = 0) => {
+      try {
+        const res = await axios.get(`${API}/plans/${id}`, { timeout: 20000 });
+        if (!alive) return;
+        if (!res.data || !res.data.id) {
+          setError("This plan came back empty. Get in touch and we'll rebuild it.");
+          return;
         }
-      })
-      .catch(() => alive && setError("Plan not found"));
+        setPlan(res.data);
+        track("plan_opened");
+      } catch (err) {
+        if (!alive) return;
+        // One retry covers a server restarting mid-request, which is the most
+        // common cause and resolves within seconds.
+        if (attempt === 0 && err.response?.status !== 404) {
+          setTimeout(() => load(1), 3000);
+          return;
+        }
+        setError(
+          err.response?.status === 404
+            ? "Plan not found"
+            : `Couldn't load this plan (${err.response?.status || err.code || "no response"}).`
+        );
+      }
+    };
+
+    load();
     return () => {
       alive = false;
     };

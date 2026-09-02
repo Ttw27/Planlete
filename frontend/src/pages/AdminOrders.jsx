@@ -60,7 +60,39 @@ export default function AdminOrders() {
         { answers: order.answers },
         { headers: { "X-Admin-Token": token } }
       );
-      setRegenResult((prev) => ({ ...prev, [order.id]: res.data.link }));
+      // /plans/generate returns IMMEDIATELY with a placeholder and generates in
+      // the background — it had to, or the proxy cut the request off mid-way.
+      // Handing out its link straight away meant opening a plan with no
+      // sessions in it yet, which just says "Loading your app…" forever.
+      const planId = res.data?.id;
+      if (!planId) throw new Error("no plan id returned");
+
+      for (let i = 0; i < 90; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 10000));
+        let st;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          st = await axios.get(`${API}/plans/${planId}/status`, { timeout: 15000 });
+        } catch {
+          continue; // a blip in polling is not a failed generation
+        }
+        if (st.data?.status === "ready") {
+          setRegenResult((prev) => ({ ...prev, [order.id]: `/app/u/${planId}` }));
+          return;
+        }
+        if (st.data?.status === "failed") {
+          setRegenResult((prev) => ({
+            ...prev,
+            [order.id]: { error: st.data?.error || "Generation failed — check Railway logs." },
+          }));
+          return;
+        }
+      }
+      setRegenResult((prev) => ({
+        ...prev,
+        [order.id]: { error: "Still generating after 15 minutes — check Railway logs." },
+      }));
     } catch (err) {
       setRegenResult((prev) => ({
         ...prev,

@@ -89,12 +89,33 @@ export default function AdminLoadingPreview() {
           { answers: SAMPLE_ANSWERS },
           { headers: { "X-Admin-Token": token } }
         );
-        // Test endpoint returns the finished plan directly. Real customer flow
-        // polls for stages — here we simulate the stage walk client-side up to
-        // completion so the visual matches, then land on the real result.
+        // NO LONGER returns the finished plan: /plans/generate now responds
+        // immediately with a placeholder and generates in the background, so
+        // this has to wait for it like every other caller. Landing on "ready"
+        // straight away pointed at a plan with no sessions in it.
         if (!alive) return;
         const id = res.data?.plan_id || res.data?.id || (res.data?.link || "").split("/").pop();
         setStage("saving");
+
+        for (let i = 0; i < 90 && alive; i++) {
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, 10000));
+          let st;
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            st = await axios.get(`${API}/plans/${id}/status`, { timeout: 15000 });
+          } catch {
+            continue;
+          }
+          if (!alive) return;
+          if (st.data?.status === "ready") break;
+          if (st.data?.status === "failed") {
+            setErrorMsg(st.data?.error || "Generation failed — check Railway logs.");
+            setFinalTime(Math.floor((Date.now() - startedAt.current) / 1000));
+            return;
+          }
+        }
+        if (!alive) return;
         setPlanId(id);
         setFinalTime(Math.floor((Date.now() - startedAt.current) / 1000));
         setStatus("ready");
