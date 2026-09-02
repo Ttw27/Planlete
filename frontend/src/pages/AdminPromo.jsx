@@ -74,6 +74,25 @@ export default function AdminPromo() {
     }
   };
 
+  // Diagnostic. The customer-facing field said "not recognised" for a code this
+  // very page listed as active with 49 left — the two read the same collection,
+  // so one of them is lying. This calls the exact endpoint the build page uses
+  // and shows the raw answer, which settles it in one click.
+  const [testResult, setTestResult] = useState(null);
+
+  const testCode = async (c) => {
+    setTestResult({ code: c, text: "checking..." });
+    try {
+      const res = await axios.post(`${API}/promo/check`, { code: c });
+      setTestResult({ code: c, text: JSON.stringify(res.data) });
+    } catch (err) {
+      setTestResult({
+        code: c,
+        text: `HTTP ${err.response?.status || "?"} — ${err.response?.data?.detail || err.message}`,
+      });
+    }
+  };
+
   const copyCode = async (c) => {
     try {
       await navigator.clipboard.writeText(c);
@@ -163,6 +182,12 @@ export default function AdminPromo() {
                     {used}/{c.max_uses} used · {left} left
                   </span>
                   <button
+                    onClick={() => testCode(c.code)}
+                    className="text-[10px] uppercase tracking-wider border border-white/15 text-zinc-400 px-2.5 py-1 hover:border-white/30 hover:text-white transition-colors"
+                  >
+                    Test
+                  </button>
+                  <button
                     onClick={() => save({ code: c.code, max_uses: c.max_uses, active: !c.active })}
                     className="text-[10px] uppercase tracking-wider border border-white/15 text-zinc-400 px-2.5 py-1 hover:border-white/30 hover:text-white transition-colors"
                   >
@@ -170,6 +195,11 @@ export default function AdminPromo() {
                   </button>
                 </div>
               </div>
+              {testResult?.code === c.code && (
+                <p className="mt-2 font-mono-display text-[10px] text-zinc-400 break-all">
+                  {testResult.text}
+                </p>
+              )}
               <div className="h-0.5 w-full bg-white/10 mt-3">
                 <div className="h-full bg-[#D4FF00]" style={{ width: `${pct}%` }} />
               </div>

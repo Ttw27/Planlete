@@ -451,22 +451,38 @@ export default function BuildApp() {
   const [promoValid, setPromoValid] = useState(false);
   const [promoMsg, setPromoMsg] = useState(null);
 
-  const checkPromo = async (value) => {
+  // Every keystroke fired a check, so typing FIRST50 put five requests in
+  // flight — FIR, FIRS, FIRST, FIRST5, FIRST50 — with nothing guaranteeing the
+  // order they came back in. When FIRST5's failure landed after FIRST50's
+  // success it overwrote it, and a perfectly valid code sat there reading "not
+  // recognised" until it was retyped. Debounced, and stale replies discarded.
+  const promoSeq = useRef(0);
+  const promoTimer = useRef(null);
+
+  const checkPromo = (value) => {
     setPromo(value);
     setPromoValid(false);
     setPromoMsg(null);
-    if (value.trim().length < 3) return;
-    try {
-      const res = await axios.post(`${API}/promo/check`, { code: value.trim() });
-      setPromoValid(Boolean(res.data?.valid));
-      setPromoMsg(
-        res.data?.valid
-          ? `Free plan applied — ${res.data.remaining} place${res.data.remaining === 1 ? "" : "s"} left`
-          : res.data?.reason || "That code isn't recognised."
-      );
-    } catch {
-      setPromoMsg("Couldn't check that code — try again.");
-    }
+    if (promoTimer.current) clearTimeout(promoTimer.current);
+    const code = value.trim();
+    if (code.length < 3) return;
+
+    const seq = ++promoSeq.current;
+    promoTimer.current = setTimeout(async () => {
+      try {
+        const res = await axios.post(`${API}/promo/check`, { code });
+        if (seq !== promoSeq.current) return; // a newer keystroke has overtaken this
+        setPromoValid(Boolean(res.data?.valid));
+        setPromoMsg(
+          res.data?.valid
+            ? `Free plan applied — ${res.data.remaining} place${res.data.remaining === 1 ? "" : "s"} left`
+            : res.data?.reason || "That code isn't recognised."
+        );
+      } catch {
+        if (seq !== promoSeq.current) return;
+        setPromoMsg("Couldn't check that code — try again.");
+      }
+    }, 400);
   };
 
   useEffect(() => {
