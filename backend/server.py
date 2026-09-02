@@ -3372,10 +3372,19 @@ async def send_block_ending_emails():
     now = datetime.now(timezone.utc)
     window_end = (now + timedelta(days=7)).isoformat()
 
+    # A plan must also be genuinely OLD, not just claiming a finish date in the
+    # next few days. "I'm on this week" backdates started_at, so tapping week 4
+    # out of curiosity moves the end date to a week away and would fire this
+    # email minutes later, on a plan bought that afternoon. A block cannot
+    # really have run four weeks if the plan was created on Tuesday.
+    min_age = (now - timedelta(days=BLOCK_WEEKS * 7 - 7)).isoformat()
+
     candidates = await db.plans.find({
         "block_ends_at": {"$ne": None, "$lte": window_end, "$gte": now.isoformat()},
         "block_ending_email_sent": {"$in": [None, False]},
-    }, {"_id": 0, "id": 1, "answers": 1, "block_ends_at": 1, "brand": 1}).to_list(200)
+        "created_at": {"$lt": min_age},
+    }, {"_id": 0, "id": 1, "answers": 1, "block_ends_at": 1, "brand": 1,
+        "created_at": 1}).to_list(200)
 
     sent = 0
     for plan in candidates:
