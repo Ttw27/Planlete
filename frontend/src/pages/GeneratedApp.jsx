@@ -304,7 +304,7 @@ function PlanFooterActions({ plan, absoluteWeek = 1 }) {
             </Link>
           </div>
         ) : (
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs text-zinc-600 text-center">
             Injury, lost a training day, or away for a while?{" "}
             <Link
               to={`/app/u/${plan.id}/next`}
