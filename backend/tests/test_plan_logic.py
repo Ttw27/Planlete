@@ -457,6 +457,32 @@ def test_log_summary_gives_the_next_block_real_evidence():
     assert S["_summarise_logs_for_prompt"]([]) == ""              # nothing logged, say nothing
 
 
+def test_block_end_reminder_needs_a_genuinely_old_plan():
+    """"I'm on this week" backdates started_at, so tapping week 4 out of
+    curiosity moves the end date a week away and would fire the block-end email
+    minutes later on a plan bought that afternoon. It happened on 2 Sep."""
+    from datetime import datetime, timedelta, timezone
+
+    BLOCK_WEEKS = S["BLOCK_WEEKS"]
+    now = datetime(2026, 9, 2, tzinfo=timezone.utc)
+    window_end = now + timedelta(days=7)
+    min_age = now - timedelta(days=BLOCK_WEEKS * 7 - 7)
+
+    def would_send(created, ends):
+        return now <= ends <= window_end and created < min_age
+
+    # Tapped the week button on a plan bought today: in the date window, but
+    # far too new to have run a four-week block.
+    assert not would_send(now, now + timedelta(days=7))
+    assert not would_send(now - timedelta(days=2), now + timedelta(days=7))
+
+    # A real customer three weeks in, finishing next week.
+    assert would_send(now - timedelta(days=22), now + timedelta(days=7))
+
+    # Old enough, but the block does not end for another three weeks.
+    assert not would_send(now - timedelta(days=25), now + timedelta(days=21))
+
+
 # ---------------------------------------------------------------- runner
 
 def main():
