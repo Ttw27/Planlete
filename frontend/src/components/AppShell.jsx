@@ -909,9 +909,24 @@ function HomeView({ data, days, weekNote = "", noteCollapsed = false, onToggleNo
   // alone) — just default to the first one; day-based plans still pick
   // today's real weekday as before.
   const todayIndex = structureType === "phases" ? 0 : Math.min(new Date().getDay(), days.length - 1);
-  const today = days[todayIndex] || days[0];
+  // If days is empty — a plan saved half-written, or one whose shape does not
+  // match what this view expects — `today` is undefined and reading .workouts
+  // off it takes the whole app down to the error boundary. A blank screen tells
+  // the customer nothing and hides which plan is broken.
+  const today = days[todayIndex] || days[0] || null;
+  if (!today) {
+    return (
+      <div className="px-5 py-16 text-center">
+        <p className="text-overline text-zinc-500 mb-3">This plan didn't save properly</p>
+        <p className="text-sm text-zinc-400 leading-relaxed max-w-sm mx-auto">
+          The sessions are missing from it. Nothing you did caused this and nothing is lost —
+          get in touch and we'll rebuild it.
+        </p>
+      </div>
+    );
+  }
 
-  const todayKeys = today.workouts.map((_, i) => `${weekNumber || 0}-${today.day}-${i}`);
+  const todayKeys = (today.workouts || []).map((_, i) => `${weekNumber || 0}-${today.day}-${i}`);
   const todayDone = todayKeys.filter((k) => completed.has(k)).length;
 
   const heroLabel = structureType === "phases" ? `Current phase · ${today.day}` : `Today · ${today.day}`;
