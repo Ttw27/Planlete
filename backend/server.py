@@ -3711,6 +3711,18 @@ async def process_paid_order(order_id: str, order: dict) -> None:
             datetime.now(timezone.utc) + timedelta(hours=EDIT_WINDOW_HOURS)
         ).isoformat()
 
+        # Last line of defence. Everything upstream validates, but a plan with no
+        # weeks or no days renders as a blank error screen in the customer's app
+        # and there is no way back from that. Better to fail the order loudly —
+        # which alerts you and lets it be retried — than to save something
+        # unusable and let them find it.
+        _weeks = plan_data.get("weeks")
+        if not isinstance(_weeks, list) or not _weeks or not _weeks[0].get("days"):
+            raise ValueError(
+                f"Refusing to save a plan with no sessions "
+                f"(weeks={len(_weeks) if isinstance(_weeks, list) else 'none'})"
+            )
+
         await db.plans.insert_one(plan_data)
 
         await db.pending_orders.update_one(
