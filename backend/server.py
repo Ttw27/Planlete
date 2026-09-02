@@ -3384,7 +3384,7 @@ async def check_promo(payload: dict):
 
 
 @api_router.post("/promo/redeem")
-async def redeem_promo(payload: PromoRedeemRequest, background_tasks: BackgroundTasks):
+async def redeem_promo(payload: PromoRedeemRequest):
     """
     Claim a free plan with a promo code, skipping Stripe entirely.
 
@@ -3425,7 +3425,9 @@ async def redeem_promo(payload: PromoRedeemRequest, background_tasks: Background
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.pending_orders.insert_one(order)
-    background_tasks.add_task(process_paid_order, order_id, order)
+    # Generation is NOT started here. The success page calls /checkout/confirm,
+    # which starts it — exactly as the paid path does. Kicking it off here as
+    # well would have generated the same plan twice, in parallel.
     logger.info(f"Promo redeemed: {code} (use {promo.get('uses', 0) + 1}/{promo['max_uses']}) order {order_id}")
     return {"order_id": order_id, "redirect": f"/build/success?order_id={order_id}"}
 
@@ -3734,7 +3736,7 @@ async def process_paid_order(order_id: str, order: dict) -> None:
 
 
 @api_router.get("/checkout/confirm")
-async def confirm_checkout(session_id: str, order_id: str, background_tasks: BackgroundTasks):
+async def confirm_checkout(order_id: str, background_tasks: BackgroundTasks, session_id: Optional[str] = None):
     """
     Called by the success page after Stripe redirects back. Verifies the
     session was actually paid (never trusts the redirect alone), then hands
@@ -3766,14 +3768,24 @@ async def confirm_checkout(session_id: str, order_id: str, background_tasks: Bac
                 }
         # else: no timestamp recorded (shouldn't happen) or stale — fall through and retry
 
-    try:
-        session = stripe.checkout.Session.retrieve(session_id)
-    except Exception as e:
-        logger.error(f"Stripe session retrieve failed: {e}")
-        raise HTTPException(status_code=400, detail="Could not verify payment.")
+    # A promo redemption never touches Stripe — a 100% discount cannot go
+    # through Checkout in payment mode — so there is no session to verify. The
+    # order was marked paid server-side when the code was claimed, against an
+    # atomic use count, so it is exactly as trustworthy as a Stripe session.
+    if order.get("promo_code"):
+        if order.get("status") not in ("paid", "processing"):
+            raise HTTPException(status_code=400, detail="That free plan couldn't be confirmed.")
+    else:
+        if not session_id:
+            raise HTTPException(status_code=400, detail="Could not verify payment.")
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+        except Exception as e:
+            logger.error(f"Stripe session retrieve failed: {e}")
+            raise HTTPException(status_code=400, detail="Could not verify payment.")
 
-    if session.payment_status != "paid":
-        raise HTTPException(status_code=402, detail="Payment has not completed yet.")
+        if session.payment_status != "paid":
+            raise HTTPException(status_code=402, detail="Payment has not completed yet.")
 
     await db.pending_orders.update_one(
         {"id": order_id},
