@@ -66,6 +66,7 @@ export default function PaymentSuccess() {
 
     let alive = true;
     let timer = null;
+    let failures = 0;
 
     const poll = async () => {
       try {
@@ -83,10 +84,22 @@ export default function PaymentSuccess() {
           return; // stop polling
         }
 
+        failures = 0;
         setStatus("processing");
         timer = setTimeout(poll, 2500);
       } catch (err) {
         if (!alive) return;
+        // A single failed poll used to end everything. Generation runs in the
+        // background and takes minutes, so one blip — a deploy restarting the
+        // server, a dropped connection, a phone changing network — would show
+        // "we couldn't confirm that" on a plan that was building perfectly
+        // well. Only give up after several consecutive failures.
+        failures += 1;
+        const fatal = err.response?.status === 404;
+        if (!fatal && failures < 6) {
+          timer = setTimeout(poll, 5000);
+          return;
+        }
         setStatus("error");
         setErrorMessage(
           err.response?.data?.detail ||
@@ -126,6 +139,16 @@ export default function PaymentSuccess() {
             sessionId={orderInfo.sessionId}
           />
 
+          {/* Generation runs in the background, so the plan has usually been
+              built even when this screen appears — the page just lost contact
+              while waiting. Offer to look again before sending them back to
+              the start, which would make them fill the whole thing in twice. */}
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-block mt-6 mr-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wider text-xs px-6 py-3 hover:bg-white transition-colors"
+          >
+            Check again
+          </button>
           <Link
             to="/build"
             className="inline-block mt-6 border border-white/20 text-white font-bold uppercase tracking-wider text-xs px-6 py-3 hover:border-white transition-colors"
