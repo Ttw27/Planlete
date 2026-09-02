@@ -52,10 +52,14 @@ export default function PaymentSuccess() {
     const orderId = searchParams.get("order_id");
     setOrderInfo({ orderId, sessionId });
 
-    if (!sessionId || !orderId) {
+    // A promo redemption never goes through Stripe, so it arrives with an
+    // order_id and no session_id. Only the order_id is genuinely required —
+    // demanding both sent every free plan to the "we couldn't confirm that"
+    // screen, which is the one thing an advertised free code must not do.
+    if (!orderId) {
       setStatus("error");
       setErrorMessage(
-        "Missing payment details in the link. If you were charged, contact us and we'll sort it."
+        "Missing order details in the link. If you were charged, contact us and we'll sort it."
       );
       return;
     }
@@ -66,7 +70,7 @@ export default function PaymentSuccess() {
     const poll = async () => {
       try {
         const res = await axios.get(`${API}/checkout/confirm`, {
-          params: { session_id: sessionId, order_id: orderId },
+          params: { order_id: orderId, ...(sessionId ? { session_id: sessionId } : {}) },
         });
         if (!alive) return;
 

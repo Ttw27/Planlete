@@ -164,7 +164,7 @@ export default function GeneratedApp() {
         activeWeekIndex={weekIndex}
         sampleMode={Boolean(plan.sample_mode)}
       />
-      {canRebuild && <PlanFooterActions plan={plan} />}
+      {canRebuild && <PlanFooterActions plan={plan} absoluteWeek={absoluteWeek} />}
     </>
   );
 }
@@ -175,7 +175,7 @@ export default function GeneratedApp() {
  * one component — from the customer's point of view "something's wrong" and
  * "something's changed" are the same impulse arriving at different times.
  */
-function PlanFooterActions({ plan }) {
+function PlanFooterActions({ plan, absoluteWeek = 1 }) {
   const [status, setStatus] = useState(null);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -260,20 +260,37 @@ function PlanFooterActions({ plan }) {
           </div>
         )}
 
-        <div>
-          <p className="text-overline text-[#D4FF00] mb-3">Something changed?</p>
-          <p className="text-zinc-400 text-sm leading-relaxed mb-5 max-w-xl">
-            Picked up an injury, lost a training day, away for a fortnight, or just
-            finished the four weeks? We'll build your next block from this one — same
-            goal, same history, adjusted. No questionnaire to fill in again.
+        {/* On day one this is noise: they have just bought a plan and the
+            correction window above is the only thing that matters. It earns
+            its place from week 3, or immediately if something has gone wrong
+            and they need rebuilding around an injury — which is why the quiet
+            link stays available throughout. */}
+        {absoluteWeek >= 3 ? (
+          <div>
+            <p className="text-overline text-[#D4FF00] mb-3">Something changed?</p>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-5 max-w-xl">
+              Picked up an injury, lost a training day, away for a fortnight, or just
+              finished the four weeks? We'll build your next block from this one — same
+              goal, same history, adjusted. No questionnaire to fill in again.
+            </p>
+            <Link
+              to={`/app/u/${plan.id}/next`}
+              className="inline-block border border-[#D4FF00]/40 text-[#D4FF00] text-[11px] font-bold uppercase tracking-wide px-5 py-3 hover:bg-[#D4FF00] hover:text-black transition-colors"
+            >
+              Build my next block
+            </Link>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-600">
+            Injury, lost a training day, or away for a while?{" "}
+            <Link
+              to={`/app/u/${plan.id}/next`}
+              className="text-zinc-400 underline underline-offset-2 hover:text-[#D4FF00] transition-colors"
+            >
+              Rebuild this block around it
+            </Link>
           </p>
-          <Link
-            to={`/app/u/${plan.id}/next`}
-            className="inline-block border border-[#D4FF00]/40 text-[#D4FF00] text-[11px] font-bold uppercase tracking-wide px-5 py-3 hover:bg-[#D4FF00] hover:text-black transition-colors"
-          >
-            Build my next block
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );
