@@ -3296,6 +3296,37 @@ class PromoRedeemRequest(BaseModel):
     derived_from: Optional[str] = None
 
 
+async def _sweep_stuck_orders(run_task) -> dict:
+    """
+    Shared by the endpoint and the internal scheduler. `run_task` is how the
+    caller wants generation started — BackgroundTasks from a request, or
+    asyncio.create_task from the scheduler, which has no request to attach to.
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=STUCK_ORDER_SECONDS)).isoformat()
+    stuck = await db.pending_orders.find({
+        "status": {"$in": ["processing", "paid"]},
+        "$or": [
+            {"processing_started_at": {"$lt": cutoff}},
+            {"processing_started_at": {"$in": [None, ""]}, "created_at": {"$lt": cutoff}},
+        ],
+    }, {"_id": 0}).to_list(50)
+
+    restarted = []
+    for order in stuck:
+        order_id = order.get("id")
+        claimed = await db.pending_orders.update_one(
+            {"id": order_id, "status": {"$in": ["processing", "paid"]}},
+            {"$set": {"status": "processing",
+                      "processing_started_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        if not claimed.modified_count:
+            continue
+        run_task(order_id, order)
+        restarted.append(order_id)
+        logger.warning(f"Recovered stuck order {order_id} — restarting generation")
+    return {"found": len(stuck), "restarted": restarted}
+
+
 @api_router.post("/jobs/recover-stuck-orders")
 async def recover_stuck_orders(background_tasks: BackgroundTasks, _: bool = Depends(require_admin)):
     """
@@ -3314,36 +3345,18 @@ async def recover_stuck_orders(background_tasks: BackgroundTasks, _: bool = Depe
     Safe to run often: anything younger than STUCK_ORDER_SECONDS is left alone,
     so a healthy generation is never restarted on top of itself.
     """
-    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=STUCK_ORDER_SECONDS)).isoformat()
-    stuck = await db.pending_orders.find({
-        "status": {"$in": ["processing", "paid"]},
-        "$or": [
-            {"processing_started_at": {"$lt": cutoff}},
-            {"processing_started_at": {"$in": [None, ""]}, "created_at": {"$lt": cutoff}},
-        ],
-    }, {"_id": 0}).to_list(50)
-
-    restarted = []
-    for order in stuck:
-        order_id = order.get("id")
-        # Re-claim it so two sweeps running close together cannot both restart
-        # the same order.
-        claimed = await db.pending_orders.update_one(
-            {"id": order_id, "status": {"$in": ["processing", "paid"]}},
-            {"$set": {"status": "processing",
-                      "processing_started_at": datetime.now(timezone.utc).isoformat()}},
-        )
-        if not claimed.modified_count:
-            continue
-        background_tasks.add_task(process_paid_order, order_id, order)
-        restarted.append(order_id)
-        logger.warning(f"Recovered stuck order {order_id} — restarting generation")
-
-    return {"found": len(stuck), "restarted": restarted}
+    return await _sweep_stuck_orders(
+        lambda order_id, order: background_tasks.add_task(process_paid_order, order_id, order)
+    )
 
 
 @api_router.post("/jobs/block-ending")
-async def send_block_ending_emails(_: bool = Depends(require_admin)):
+async def send_block_ending_emails_endpoint(_: bool = Depends(require_admin)):
+    """Manual trigger. The same job also runs daily inside the app."""
+    return await send_block_ending_emails()
+
+
+async def send_block_ending_emails():
     """
     Email anyone whose block ends in the next 7 days. Idempotent.
 
@@ -3734,6 +3747,24 @@ async def process_paid_order(order_id: str, order: dict) -> None:
             }}
         )
         logger.info(f"Order {order_id} paid and plan {plan_id} ready (kind={kind})")
+
+        # Tell whoever runs this that a plan sold. Every other alert on this
+        # path is a problem — failed generation, webhook rescue, correction
+        # request — so a plan could be bought and delivered without anyone
+        # hearing a thing.
+        _a = answers or {}
+        _promo = order.get("promo_code")
+        notify_admin(
+            f"{'Free plan claimed' if _promo else 'Plan sold'} — {_a.get('goal') or kind}",
+            f"<p><strong>{_a.get('name') or 'Someone'}</strong> "
+            f"{'claimed a free plan with ' + _promo if _promo else 'bought a plan'}.</p>"
+            f"<p>Goal: {_a.get('goal') or '—'}<br>"
+            f"Experience: {_a.get('experience') or '—'}<br>"
+            f"Days: {_a.get('days') or '—'}<br>"
+            f"Email: {email or '—'}</p>"
+            f"<p>Plan: <a href=\"{FRONTEND_URL}/app/u/{plan_id}\">{plan_id}</a><br>"
+            f"Order: {order_id}</p>",
+        )
 
         if email:
             link = f"{FRONTEND_URL}/app/u/{plan_id}/save-instructions"
@@ -5145,6 +5176,48 @@ async def startup():
             logger.warning(f"Startup recovery: {len(stuck)} stuck order(s) restarted")
     except Exception as e:
         logger.warning(f"Startup recovery failed: {e}")
+
+    # Scheduled work, run in-process. No external cron to configure.
+    asyncio.create_task(_daily_jobs())
+    logger.info("Scheduled jobs started (stuck-order sweep 15min, block-end emails daily)")
+
+
+async def _daily_jobs():
+    """
+    Run the scheduled work from inside the app.
+
+    The alternative was an external scheduler making an authenticated POST once
+    a day, which is one more moving part to set up, forget about, and discover
+    was never running when the first block-end email fails to arrive. This has
+    no setup and no credentials.
+
+    Deliberately simple: sweep stuck orders every 15 minutes, send block-end
+    emails once every 24 hours. Both are idempotent — the sweep ignores anything
+    young enough to still be running, and each plan is marked once its reminder
+    is sent — so running them more often than needed is harmless, and a missed
+    run is caught by the next one.
+    """
+    await asyncio.sleep(60)  # let startup settle before doing anything
+    ticks = 0
+    while True:
+        try:
+            await _sweep_stuck_orders(
+                lambda order_id, order: asyncio.create_task(process_paid_order(order_id, order))
+            )
+        except Exception as e:
+            logger.warning(f"Scheduled stuck-order sweep failed: {e}")
+
+        # 96 fifteen-minute ticks is a day.
+        if ticks % 96 == 0:
+            try:
+                result = await send_block_ending_emails()
+                if result.get("sent"):
+                    logger.info(f"Scheduled block-ending emails: {result}")
+            except Exception as e:
+                logger.warning(f"Scheduled block-ending emails failed: {e}")
+
+        ticks += 1
+        await asyncio.sleep(900)
 
 
 @app.on_event("shutdown")
