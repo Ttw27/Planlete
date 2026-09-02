@@ -3375,8 +3375,16 @@ async def check_promo(payload: dict):
     if not code:
         return {"valid": False, "reason": "Enter a code."}
     promo = await db.promo_codes.find_one({"code": code}, {"_id": 0})
-    if not promo or not promo.get("active", True):
+    # Log the miss. "Not recognised" was showing for a code the admin page
+    # listed as active, and with nothing in the logs there was no way to tell
+    # whether the lookup found nothing or found something it rejected.
+    if not promo:
+        known = await db.promo_codes.distinct("code")
+        logger.warning(f"Promo check MISS for {code!r} — codes in database: {known}")
         return {"valid": False, "reason": "That code isn't recognised."}
+    if not promo.get("active", True):
+        logger.warning(f"Promo check found {code!r} but it is switched off")
+        return {"valid": False, "reason": "That code is switched off."}
     if promo.get("uses", 0) >= promo.get("max_uses", 0):
         return {"valid": False, "reason": "That code has been fully claimed."}
     remaining = promo["max_uses"] - promo.get("uses", 0)
