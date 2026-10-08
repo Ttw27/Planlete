@@ -19,7 +19,7 @@ dict(slug="11_launch", dark=D, label="hello", slides=[
        "The plan is yours, permanently"]),
   dict(kind="statement", head="One payment. No subscription, no renewal, no expired trial."),
   dict(kind="cta", head="Read a full plan before you spend a penny",
-       sub="Four free sample plans. No card, no email wall."),
+       sub="Three free sample plans. No card, no email wall."),
 ]),
 
 # ---------------------------------------------------------------- 12 COACH 3 MIN

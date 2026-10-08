@@ -18,7 +18,7 @@ dict(slug="01_subscription_maths", dark=D, label="pricing", slides=[
        "The plan, permanently. Screenshot it, print it, keep it"]),
   dict(kind="statement", head="No renewal button. Because there is nothing to renew."),
   dict(kind="cta", head="Read a full plan before you spend anything",
-       sub="Four free sample plans. No card, no email wall."),
+       sub="Three free sample plans. No card, no email wall."),
 ]),
 
 # ---------------------------------------------------------------- 2
@@ -35,7 +35,7 @@ dict(slug="02_why_this_exercise", dark=D, label="programming", slides=[
   dict(kind="statement", head="Every exercise in a Planlete plan carries its own reasoning. Tap it, and it tells you.",
        sub="Doing the work is easier when you understand the work."),
   dict(kind="cta", head="See it on a real plan",
-       sub="Free samples: football, rehab, sprints, longevity."),
+       sub="Free samples: football, sprints, longevity."),
 ]),
 
 # ---------------------------------------------------------------- 3

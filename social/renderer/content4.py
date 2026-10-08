@@ -33,7 +33,7 @@ dict(slug="22_the_questions", dark=D, label="personalisation", slides=[
        "How long you have got per session"]),
   dict(kind="statement", head="A questionnaire is not personalisation. Using the answers is."),
   dict(kind="cta", head="See what it does with real answers",
-       sub="Four free sample plans, four very different people."),
+       sub="Three free sample plans, three very different people."),
 ]),
 
 dict(slug="23_three_days", dark=D, label="training", slides=[
