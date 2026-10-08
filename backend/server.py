@@ -2022,6 +2022,7 @@ Rules:
   least one entry in "workouts", including rest days.
 - Every workout entry needs name, sets, load, rest and reason. Exercises also need demo.
 - Never use em dashes in any text. Use a full stop, comma or colon instead.
+- Abbreviations and coaching terms are fine, but explain any a non-coach would not know in plain English in the same sentence, e.g. "full PC (phosphocreatine, your sprint fuel) recovery" or "RFD (how fast you produce force)". Common ones the app already shows (1RM, RPE, AMRAP, reps, sets) need no explanation.
 
 Return ONLY raw JSON (no markdown, no commentary) in this exact shape:
 
@@ -2645,6 +2646,7 @@ Important:
 - "morningRoutine" must be 3-6 real, quick mobility/stretching/activation items (same fields as a workout: name, sets, load, rest, reason) — genuinely appropriate as a short morning routine, not a repeat of the day's main training
 - Return valid JSON only — no markdown, no commentary, no trailing commas
 - Never use em dashes in any text. Use a full stop, comma or colon instead.
+- Abbreviations and coaching terms are fine, but explain any a non-coach would not know in plain English in the same sentence, e.g. "full PC (phosphocreatine, your sprint fuel) recovery" or "RFD (how fast you produce force)". Common ones the app already shows (1RM, RPE, AMRAP, reps, sets) need no explanation.
 - Double-check before responding: every one of the 28 day-entries (4 weeks x 7 days) must be present, in Sun-Mon-Tue-Wed-Thu-Fri-Sat order, and every workout entry must have all five fields (name, sets, load, rest, reason) filled in — an incomplete plan is a failed response
 """
 
