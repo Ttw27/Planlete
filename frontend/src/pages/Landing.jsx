@@ -149,9 +149,9 @@ function PlanCard({ plan, images, c }) {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function Landing() {
   useSeo({
-    title: "Planlete — Personalised 4-Week Training Plans, One Payment",
+    title: "Planlete · Personalised 4-Week Training Plans, One Payment",
     description:
-      "A four-week training plan built around your schedule, equipment and goal — delivered as an app, not a PDF. One payment, no subscription. Beginners to athletes.",
+      "A four-week training plan built around your schedule, equipment and goal, delivered as an app, not a PDF. One payment, no subscription. Beginners to athletes.",
     canonical: "https://www.planlete.co.uk/",
   });
 
@@ -184,14 +184,14 @@ export default function Landing() {
             <span className="block">{c("hero_h1_line3", "In minutes.")}</span>
           </h1>
           <p className="text-zinc-300 text-lg md:text-xl max-w-xl leading-relaxed mb-10">
-            {c("hero_subhead", "Stop screenshot-ing workout plans from Instagram. Get a proper training plan — personalised to you, on your phone, ready to go.")}
+            {c("hero_subhead", "Stop screenshot-ing workout plans from Instagram. Get a proper training plan, personalised to you, on your phone, ready to go.")}
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
               to="/build"
               className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
             >
-              {`${c("hero_primary_cta", "Build my plan")} — ${plan}`}
+              {`${c("hero_primary_cta", "Build my plan")} · ${plan}`}
               <ArrowRight size={16} />
             </Link>
             <a
@@ -211,7 +211,7 @@ export default function Landing() {
 
       {/* ── HOW IT WORKS ── */}
       <section id="how" className="py-24 md:py-32 max-w-7xl mx-auto px-5 md:px-8">
-        <p className="text-overline text-zinc-500 mb-4">— How it works</p>
+        <p className="text-overline text-zinc-500 mb-4">How it works</p>
         <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-16 max-w-2xl">
           <span className="block">{c("how_headline_a", "Three steps.")}</span>
           <span className="block text-[#D4FF00]">{c("how_headline_b", "No friction.")}</span>
@@ -230,7 +230,7 @@ export default function Landing() {
       {/* ── PROGRESSIVE PROGRAMME ── */}
       <section id="progressive" className="py-24 md:py-32 bg-zinc-950 border-y border-white/10">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <p className="text-overline text-zinc-500 mb-4">— {c("progressive_overline", "Built to progress")}</p>
+          <p className="text-overline text-zinc-500 mb-4">{c("progressive_overline", "Built to progress")}</p>
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-12 max-w-2xl">
             <span className="block">{c("progressive_headline_a", "Not a one-week PDF.")}</span>
             <span className="block text-[#D4FF00]">{c("progressive_headline_b", "A programme that builds.")}</span>
@@ -240,35 +240,35 @@ export default function Landing() {
               <p className="text-overline text-[#D4FF00] mb-3">01</p>
               <h3 className="font-display text-xl mb-3">{c("progressive_point1_title", "4 weeks, not 1")}</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                {c("progressive_point1_body", "Three weeks of progressive overload, then a deload week to recover — before it cycles again. A real programme, not a single static week repeated forever.")}
+                {c("progressive_point1_body", "Three weeks of progressive overload, then a deload week to recover, before it cycles again. A real programme, not a single static week repeated forever.")}
               </p>
             </div>
             <div>
               <p className="text-overline text-[#D4FF00] mb-3">02</p>
               <h3 className="font-display text-xl mb-3">{c("progressive_point2_title", "Every exercise explained")}</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                {c("progressive_point2_body", "Tap the (i) next to any exercise in your app and see exactly why it's there — for your goal, your experience level, or any injury you told us about. Nothing thrown in at random.")}
+                {c("progressive_point2_body", "Tap the (i) next to any exercise in your app and see exactly why it's there: for your goal, your experience level, or any injury you told us about. Nothing thrown in at random.")}
               </p>
             </div>
             <div>
               <p className="text-overline text-[#D4FF00] mb-3">03</p>
               <h3 className="font-display text-xl mb-3">{c("progressive_point3_title", "Progressive overload, worked out for you")}</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                {c("progressive_point3_body", "Log your weights each week and your app tells you when to push harder, when you've stalled, and roughly how much more to aim for next time — not just a static number you re-read every week.")}
+                {c("progressive_point3_body", "Log your weights each week and your app tells you when to push harder, when you've stalled, and roughly how much more to aim for next time, not just a static number you re-read every week.")}
               </p>
             </div>
             <div>
               <p className="text-overline text-[#D4FF00] mb-3">04</p>
               <h3 className="font-display text-xl mb-3">{c("progressive_point4_title", "Built-in timers, for everything")}</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                {c("progressive_point4_body", "Rest timers between sets, hold timers for planks and isometric work — no separate stopwatch app, it's already in your plan.")}
+                {c("progressive_point4_body", "Rest timers between sets, hold timers for planks and isometric work. No separate stopwatch app, it's already in your plan.")}
               </p>
             </div>
             <div>
               <p className="text-overline text-[#D4FF00] mb-3">05</p>
               <h3 className="font-display text-xl mb-3">{c("progressive_point5_title", "Stuck on a move? One tap away")}</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
-                {c("progressive_point5_body", "Every exercise has a quick Google or YouTube lookup built right in — nobody's left guessing what an unfamiliar name actually means.")}
+                {c("progressive_point5_body", "Every exercise has a quick Google or YouTube lookup built right in. Nobody's left guessing what an unfamiliar name actually means.")}
               </p>
             </div>
           </div>
@@ -278,7 +278,7 @@ export default function Landing() {
       {/* ── SPORTS COVERED ── */}
       <section id="sports" className="py-24 md:py-32 bg-black">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <p className="text-overline text-zinc-500 mb-4">— {c("sports_overline", "Most sports covered")}</p>
+          <p className="text-overline text-zinc-500 mb-4">{c("sports_overline", "Most sports covered")}</p>
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-10 max-w-2xl">
             <span className="block">{c("sports_headline_a", "Whatever you train for,")}</span>
             <span className="block text-[#D4FF00]">{c("sports_headline_b", "it's covered.")}</span>
@@ -294,7 +294,7 @@ export default function Landing() {
             ))}
           </div>
           <p className="text-zinc-500 text-sm mt-8 max-w-xl">
-            {c("sports_footnote", "Don't see yours listed? Pick \"Something else\" in the questionnaire and tell us — we'll still build it around your sport.")}
+            {c("sports_footnote", "Don't see yours listed? Pick \"Something else\" in the questionnaire and tell us. We'll still build it around your sport.")}
           </p>
         </div>
       </section>
@@ -302,14 +302,14 @@ export default function Landing() {
       {/* ── SAMPLE PLANS ── */}
       <section id="samples" className="py-24 md:py-32 bg-zinc-950">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <p className="text-overline text-zinc-500 mb-4">— Free sample plans</p>
+          <p className="text-overline text-zinc-500 mb-4">Free sample plans</p>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
             <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight">
               <span className="block">Try one free.</span>
               <span className="block text-[#D4FF00]">No sign up needed.</span>
             </h2>
             <p className="text-zinc-400 max-w-sm leading-relaxed">
-              Browse the sample plans. Save one to your phone. See exactly what your personalised app could look like — then build yours for {plan}.
+              Browse the sample plans. Save one to your phone. See exactly what your personalised app could look like, then build yours for {plan}.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -322,13 +322,13 @@ export default function Landing() {
               all three happen to look athletic — which puts off exactly the
               people most likely to buy. Say plainly who this is for. */}
           <div className="mt-14 border-t border-white/10 pt-12">
-            <p className="text-overline text-zinc-500 mb-4">— Who this is actually for</p>
+            <p className="text-overline text-zinc-500 mb-4">Who this is actually for</p>
             <h3 className="font-display text-2xl md:text-3xl uppercase mb-4 max-w-2xl">
               You don't need to be an athlete. Most people using this aren't.
             </h3>
             <p className="text-zinc-400 leading-relaxed max-w-2xl mb-10">
               The samples above are sport-specific because that's what's hardest to get
-              right. But the question we ask first is how much experience you've got —
+              right. But the question we ask first is how much experience you've got,
               and "brand new" is a perfectly normal answer.
             </p>
 
@@ -348,7 +348,7 @@ export default function Landing() {
             </div>
 
             <p className="text-sm text-zinc-500 mt-10 leading-relaxed max-w-2xl">
-              Not on the list? There's a "something else" option and it's read properly —{" "}
+              Not on the list? There's a "something else" option and it's read properly:{" "}
               <Link to="/build" className="text-[var(--accent)] hover:underline">
                 build yours in a couple of minutes
               </Link>
@@ -378,7 +378,7 @@ export default function Landing() {
             to="/build"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            {`Build my plan — ${plan}`}
+            {`Build my plan · ${plan}`}
             <ArrowRight size={16} />
           </Link>
           <p className="mt-4 text-zinc-600 text-xs uppercase tracking-widest">
@@ -390,7 +390,7 @@ export default function Landing() {
       {/* ── FLEXIBILITY / ONE-OFF ── */}
       <section id="flexibility" className="py-24 md:py-32 bg-black border-y border-white/10">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <p className="text-overline text-zinc-500 mb-4">— {c("flex_overline", "One payment. Built to last.")}</p>
+          <p className="text-overline text-zinc-500 mb-4">{c("flex_overline", "One payment. Built to last.")}</p>
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-2xl">
             <span className="block">{c("flex_headline_a", "Life changes.")}</span>
             <span className="block text-[#D4FF00]">{c("flex_headline_b", "So can your plan.")}</span>
@@ -398,7 +398,7 @@ export default function Landing() {
           <p className="text-zinc-400 max-w-2xl leading-relaxed text-lg">
             {c(
               "flex_body",
-              "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition — just build again. Same price, brand new app, made for where you are now."
+              "One-off payment, nothing recurring. If your goals shift, your lifestyle changes, or you pick up an injury or health condition, just build again. Same price, brand new app, made for where you are now."
             )}
           </p>
         </div>
@@ -407,13 +407,13 @@ export default function Landing() {
       {/* ── FOR COACHES ── */}
       <section id="b2b" className="py-24 md:py-32 bg-black">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <p className="text-overline text-zinc-500 mb-4">— For coaches & gyms</p>
+          <p className="text-overline text-zinc-500 mb-4">For coaches & gyms</p>
           <h2 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8 max-w-2xl">
             <span className="block">Build branded plans</span>
             <span className="block text-[#D4FF00]">for your clients.</span>
           </h2>
           <p className="text-zinc-400 max-w-xl leading-relaxed mb-4">
-            {c("coaches_body", "PTs, gyms, sports clubs and rehab clinics — create fully branded training apps for your clients with your own logo, colours and content.")}
+            {c("coaches_body", "PTs, gyms, sports clubs and rehab clinics: create fully branded training apps for your clients with your own logo, colours and content.")}
           </p>
           <p className="text-zinc-500 text-sm max-w-xl leading-relaxed mb-10">
             {c("coaches_no_subscription", "No monthly subscription. No lock-in. Pay only when you create a client plan.")}
@@ -422,7 +422,7 @@ export default function Landing() {
             to="/coach"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            {c("coaches_cta", "Create your first client — free")}
+            {c("coaches_cta", "Create your first client, free")}
             <ArrowRight size={16} />
           </Link>
           {/* Gyms and clinics need more than the single-coach flow — send them
@@ -447,7 +447,7 @@ export default function Landing() {
             to="/build"
             className="inline-flex items-center gap-3 bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors"
           >
-            {`${c("footer_cta", "Build my plan")} — ${plan}`}
+            {`${c("footer_cta", "Build my plan")} · ${plan}`}
             <ArrowRight size={16} />
           </Link>
           <p className="mt-6 text-zinc-600 text-xs uppercase tracking-widest">

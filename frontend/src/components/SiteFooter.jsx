@@ -13,7 +13,7 @@ export default function SiteFooter() {
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-16 md:py-24">
         <div className="grid md:grid-cols-12 gap-12">
           <div className="md:col-span-7">
-            <p className="text-overline mb-6">— Footer / CTA</p>
+            <p className="text-overline mb-6">Footer / CTA</p>
             <h3 className="font-display text-3xl sm:text-5xl lg:text-6xl text-white mb-8 max-w-3xl">
               {headline}
             </h3>
@@ -36,7 +36,7 @@ export default function SiteFooter() {
             <div>
               <p className="text-overline mb-3">Planlete · Built for You</p>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                Training apps built around you — complete beginners, gym
+                Training apps built around you: complete beginners, gym
                 regulars and athletes alike. One-off. No subscription.
               </p>
             </div>
@@ -76,7 +76,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between gap-4 text-xs text-zinc-500 font-mono-display">
-          <p>© {new Date().getFullYear()} PLANLETE — Built for You. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} PLANLETE · Built for You. All rights reserved.</p>
           <div className="flex gap-5">
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>

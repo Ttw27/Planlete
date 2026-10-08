@@ -47,7 +47,7 @@ WANTED = [
     "_parse_minutes", "_parse_bodyweight_kg", "_estimate_session_minutes",
     "validate_plan", "validate_plan_semantics", "_repair_json",
     "_close_truncated_json", "_json_from_message", "autofix_workout_fields",
-    "_summarise_logs_for_prompt",
+    "_summarise_logs_for_prompt", "_strip_em_dashes",
 ]
 
 
@@ -481,6 +481,35 @@ def test_block_end_reminder_needs_a_genuinely_old_plan():
 
     # Old enough, but the block does not end for another three weeks.
     assert not would_send(now - timedelta(days=25), now + timedelta(days=21))
+
+
+def test_no_em_dashes_reach_the_customer():
+    """House style is no em dashes in anything a customer reads, and the model
+    keeps writing them however the prompt asks. Enforced on the finished plan."""
+    strip = S["_strip_em_dashes"]
+    plan = {
+        "tagline": "Football — In-season",
+        "weeks": [{"note": "Easy week—recover.", "days": [{"workouts": [
+            {"rest": "—", "load": "Moderate", "sets": 3, "reason": "Builds — then holds."},
+        ]}]}],
+    }
+    out = strip(plan)
+    assert out["tagline"] == "Football, In-season", out["tagline"]
+    assert out["weeks"][0]["note"] == "Easy week-recover.", out["weeks"][0]["note"]
+    ex = out["weeks"][0]["days"][0]["workouts"][0]
+    assert ex["rest"] == "-", ex["rest"]
+    assert ex["reason"] == "Builds, then holds.", ex["reason"]
+    assert ex["sets"] == 3 and ex["load"] == "Moderate"
+    assert "—" not in json.dumps(out, ensure_ascii=False)
+
+    # And the code that writes plan text itself must not need the sanitiser.
+    t = week(["Mon"], [("Trap Bar Deadlift", "4x5", "Moderate", "load", 5, "kg"),
+                       ("Back Squat", "4x5", "", "load", 5, "kg")])
+    p = build(t, {"experience": "5+ years", "days": "5"})
+    weeks_json = json.dumps(p["weeks"], ensure_ascii=False)
+    assert "—" not in weeks_json, re.findall(r'"[^"]*—[^"]*"', weeks_json)
+    loads = [w["load"] for w in p["weeks"][3]["days"][1]["workouts"]]
+    assert loads == ["Moderate, hold last week's weight", "Hold last week's weight"], loads
 
 
 # ---------------------------------------------------------------- runner

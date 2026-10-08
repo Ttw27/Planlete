@@ -7,7 +7,7 @@ export default function NotFound() {
     <div className="min-h-screen bg-black text-white font-body">
       <SiteHeader />
       <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-24 flex flex-col items-center justify-center text-center">
-        <p className="text-overline text-[#D4FF00] mb-4">— 404</p>
+        <p className="text-overline text-[#D4FF00] mb-4">404</p>
         <h1 className="font-display text-5xl md:text-7xl uppercase leading-none tracking-tight mb-6">
           Page not found
         </h1>

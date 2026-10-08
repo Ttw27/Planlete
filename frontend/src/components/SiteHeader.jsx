@@ -114,7 +114,7 @@ export default function SiteHeader() {
             data-testid="nav-cta-mobile"
             className="bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-5 py-3 inline-block text-center"
           >
-            {`Build my plan — ${plan}`}
+            {`Build my plan · ${plan}`}
           </Link>
         </div>
       )}

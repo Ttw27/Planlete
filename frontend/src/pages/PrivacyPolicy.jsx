@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen bg-black text-white font-body">
       <SiteHeader />
       <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-24">
-        <p className="text-overline text-[#D4FF00] mb-4">— Legal</p>
+        <p className="text-overline text-[#D4FF00] mb-4">Legal</p>
         <h1 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8">
           Privacy Policy
         </h1>
@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-display text-xl mb-3">What we collect</h2>
             <ul className="list-disc pl-5 flex flex-col gap-2">
               <li>Your name and email address, when you build a plan or download a free sample.</li>
-              <li>Your training questionnaire answers — goal, experience level, days available, equipment, session length, and any notes you choose to add (see "Health information" below).</li>
+              <li>Your training questionnaire answers: goal, experience level, days available, equipment, session length, and any notes you choose to add (see "Health information" below).</li>
               <li>Payment is processed entirely by Stripe. We never see or store your card details ourselves.</li>
               <li>Basic technical data (such as your device type and general location) automatically collected by our hosting providers for security and performance purposes.</li>
               <li>Logged training data (e.g. weights or reps you choose to record) associated with your plan.</li>
@@ -38,12 +38,12 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-white font-display text-xl mb-3">Health information — special category data</h2>
+            <h2 className="text-white font-display text-xl mb-3">Health information: special category data</h2>
             <p>
               The questionnaire includes an optional field for injuries, allergies, or other
               health-related notes. Under UK GDPR, this counts as "special category data"
               because it relates to your health. We only ask for it, and only use it, to
-              personalise the exercises and nutrition guidance in your plan — to avoid
+              personalise the exercises and nutrition guidance in your plan, to avoid
               recommending something unsuitable given what you've told us. By entering
               information in this field, you are giving us your explicit consent to process
               it for this specific purpose. You do not have to provide this information, and
@@ -57,7 +57,7 @@ export default function PrivacyPolicy() {
               If you sign up for a coach account, we additionally collect your business name,
               logo, and brand colours (used to present your clients' plans under your own
               branding), your login details, and subscription billing information (handled by
-              Stripe — we don't store your card details). Any client details and plan content
+              Stripe; we don't store your card details). Any client details and plan content
               you enter is stored so it can be delivered to your client, and remains visible to
               you and to the client it was created for.
             </p>
@@ -70,7 +70,7 @@ export default function PrivacyPolicy() {
               finish later", we store what you've entered so far against your email address
               so you can pick it up again on any device. These unfinished drafts are deleted
               after 30 days. Your browser also keeps a copy on your own device so a closed
-              tab doesn't lose your work — that copy never leaves your device and you can
+              tab doesn't lose your work. That copy never leaves your device and you can
               clear it by dismissing the restore prompt or clearing your browser data.
             </p>
           </section>
@@ -81,7 +81,7 @@ export default function PrivacyPolicy() {
               If you lose the link to a plan you've bought, you can ask us to send it again
               from the recovery page. We only ever send plans to the email address they were
               purchased with, and we give the same response whether or not a plan exists for
-              the address entered — so the page can't be used to find out whether somebody
+              the address entered, so the page can't be used to find out whether somebody
               is a customer.
             </p>
           </section>
@@ -90,7 +90,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-display text-xl mb-3">How we measure the site</h2>
             <p>
               We record a small number of anonymous events so we can see where people get
-              stuck — for example, that someone started the builder, or reached the payment
+              stuck: for example, that someone started the builder, or reached the payment
               page. Each event is a name, the page it happened on, and a timestamp. We use no
               advertising or analytics cookies, no third-party trackers, and nothing that
               identifies you personally, which is why you won't see a cookie banner on this
@@ -104,7 +104,7 @@ export default function PrivacyPolicy() {
               <li>To generate your personalised training plan and deliver it to you by email.</li>
               <li>To process your payment via Stripe and keep a record of the transaction.</li>
               <li>To respond to support requests you send us.</li>
-              <li>To improve Planlete — for example, understanding which sample plans are most popular.</li>
+              <li>To improve Planlete: for example, understanding which sample plans are most popular.</li>
               <li>We do not sell your personal information to third parties.</li>
             </ul>
           </section>
@@ -124,7 +124,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-display text-xl mb-3">How long we keep it</h2>
             <p>
               We keep your plan and account information for as long as you might reasonably
-              want to access your app — plans don't expire. If you'd like your data deleted
+              want to access your app; plans don't expire. If you'd like your data deleted
               entirely, contact us (details below) and we'll remove it, save for records we're
               legally required to keep (such as transaction records for tax purposes).
             </p>
@@ -143,8 +143,8 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-display text-xl mb-3">Cookies and local storage</h2>
             <p>
               Planlete does not currently use tracking or advertising cookies. Your app does save
-              a small amount of data directly on your device — such as which exercises you've
-              ticked off — purely so the app remembers your progress between visits. This is
+              a small amount of data directly on your device, such as which exercises you've
+              ticked off, purely so the app remembers your progress between visits. This is
               strictly functional storage, not tracking, and isn't shared with us or anyone else.
               If our use of cookies changes in future, this policy will be updated and, where
               required, we'll ask for your consent first.

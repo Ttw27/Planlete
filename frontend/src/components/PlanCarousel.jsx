@@ -43,7 +43,7 @@ function EmailGate({ planLabel, onClose, onSuccess }) {
         </button>
         <p className="font-display text-2xl uppercase mb-1">Download this sample</p>
         <p className="text-zinc-400 text-sm mb-6">
-          Pop your email in and we'll show you the link — plus how to save it to your phone.
+          Pop your email in and we'll show you the link, plus how to save it to your phone.
         </p>
         <form onSubmit={submit} className="flex flex-col gap-3">
           <input
@@ -78,7 +78,7 @@ function LinkAndInstructions({ link, onClose }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't copy — long-press the link instead");
+      toast.error("Couldn't copy. Long-press the link instead");
     }
   };
 
@@ -115,7 +115,7 @@ function LinkAndInstructions({ link, onClose }) {
           </div>
         </div>
 
-        <p className="text-overline mb-4">— Now save it to your phone</p>
+        <p className="text-overline mb-4">Now save it to your phone</p>
 
         <div className="flex flex-col gap-4">
           {/* iPhone */}
@@ -125,7 +125,7 @@ function LinkAndInstructions({ link, onClose }) {
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Open the link above in Safari</li>
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap the <strong className="text-white">Share</strong> button at the bottom (box with an arrow pointing up)</li>
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Scroll down and tap <strong className="text-white">"Add to Home Screen"</strong></li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Tap <strong className="text-white">Add</strong> — it now sits on your home screen like an app</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Tap <strong className="text-white">Add</strong>, it now sits on your home screen like an app</li>
             </ol>
           </div>
 
@@ -136,7 +136,7 @@ function LinkAndInstructions({ link, onClose }) {
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Open the link above in Chrome</li>
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap the <strong className="text-white">three dots menu</strong> (⋮) top right</li>
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Tap <strong className="text-white">"Add to Home screen"</strong></li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Tap <strong className="text-white">Add</strong> — done</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Tap <strong className="text-white">Add</strong>, done</li>
             </ol>
           </div>
 
@@ -147,7 +147,7 @@ function LinkAndInstructions({ link, onClose }) {
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">01</span>Open the link above</li>
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">02</span>Tap the browser <strong className="text-white">menu</strong> (usually ⋮ or ☰)</li>
               <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">03</span>Look for <strong className="text-white">"Add to Home screen"</strong> or <strong className="text-white">"Install app"</strong></li>
-              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Confirm — it saves to your home screen</li>
+              <li className="flex gap-3"><span className="text-[#D4FF00] font-mono-display shrink-0">04</span>Confirm, it saves to your home screen</li>
             </ol>
           </div>
         </div>
@@ -327,7 +327,7 @@ export default function PlanCarousel({
               to={buildHref}
               className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide px-4 py-2 bg-[#D4FF00] text-black hover:bg-white transition-colors"
             >
-              Build mine — £4.99
+              Build mine · £4.99
             </Link>
           </div>
         </div>

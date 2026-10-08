@@ -23,7 +23,7 @@ const BUSINESS_TYPES = [
 const AVAILABLE_NOW = [
   {
     title: "Your logo. Your colours. Your app.",
-    body: "Upload your logo and set your brand colours, and every client plan renders in them. When your client opens their link, they see your business — not ours.",
+    body: "Upload your logo and set your brand colours, and every client plan renders in them. When your client opens their link, they see your business, not ours.",
   },
   {
     title: "Start from four expert-built templates",
@@ -31,7 +31,7 @@ const AVAILABLE_NOW = [
   },
   {
     title: "Every session exactly as you'd write it",
-    body: "Your exercises, sets, reps, loads and rest. Add the reasoning behind each choice so your client understands why they're doing it — nutrition, recovery and morning routines too.",
+    body: "Your exercises, sets, reps, loads and rest. Add the reasoning behind each choice so your client understands why they're doing it. Nutrition, recovery and morning routines too.",
   },
   {
     title: "One link per client. No app store.",
@@ -39,7 +39,7 @@ const AVAILABLE_NOW = [
   },
   {
     title: "Your client logs every set",
-    body: "They record weights and reps against each exercise and see their own progress build session by session — so they turn up knowing what they lifted last time rather than guessing.",
+    body: "They record weights and reps against each exercise and see their own progress build session by session, so they turn up knowing what they lifted last time rather than guessing.",
   },
   {
     title: "No subscription, ever",
@@ -57,7 +57,7 @@ const BUILDER_TABS = [
   },
   {
     tab: "Train",
-    body: "The sessions. Structure them Monday to Sunday, or as Phase 1, 2, 3 — which is what you want for rehab or return-to-play work that progresses by stage rather than by weekday.",
+    body: "The sessions. Structure them Monday to Sunday, or as Phase 1, 2, 3. That's what you want for rehab or return-to-play work that progresses by stage rather than by weekday.",
   },
   {
     tab: "Morning",
@@ -127,7 +127,7 @@ const IN_DEVELOPMENT = [
 
 export default function ForCoaches() {
   useSeo({
-    title: "Planlete for Coaches, Physios & Gyms — Client Training Apps",
+    title: "Planlete for Coaches, Physios & Gyms · Client Training Apps",
     description:
       "Build client training plans as apps, with your reasoning on every exercise and logging built in. Days or phases for rehab. You build it, you approve it.",
     canonical: "https://www.planlete.co.uk/for-coaches",
@@ -167,7 +167,7 @@ export default function ForCoaches() {
       <SiteHeader />
 
       <section className="max-w-5xl mx-auto px-5 md:px-8 pt-28 pb-16">
-        <p className="text-overline text-[#D4FF00] mb-5">— For coaches, gyms and clinics</p>
+        <p className="text-overline text-[#D4FF00] mb-5">For coaches, gyms and clinics</p>
         <h1 className="font-display text-5xl md:text-7xl uppercase leading-[0.95] tracking-tight mb-8">
           Your programming.
           <br />
@@ -175,7 +175,7 @@ export default function ForCoaches() {
         </h1>
         <p className="text-lg text-zinc-400 leading-relaxed max-w-2xl">
           For PTs, gyms, sports clubs and rehab clinics. Write the plan you'd write anyway and your
-          client gets it as an app in your branding — your logo, your colours — that they save to
+          client gets it as an app in your branding (your logo, your colours) that they save to
           their phone and log their training in. No monthly fee, no lock-in, no app to build.
         </p>
         <div className="flex flex-wrap gap-3 mt-10">
@@ -195,7 +195,7 @@ export default function ForCoaches() {
       </section>
 
       <section className="max-w-5xl mx-auto px-5 md:px-8 py-16 border-t border-white/10">
-        <p className="text-overline text-[#D4FF00] mb-4">— Available today</p>
+        <p className="text-overline text-[#D4FF00] mb-4">Available today</p>
         <h2 className="font-display text-3xl md:text-4xl uppercase mb-4">
           What you can do right now
         </h2>
@@ -219,12 +219,12 @@ export default function ForCoaches() {
       </section>
 
       <section className="max-w-5xl mx-auto px-5 md:px-8 py-16 border-t border-white/10">
-        <p className="text-overline text-[#D4FF00] mb-4">— Inside the builder</p>
+        <p className="text-overline text-[#D4FF00] mb-4">Inside the builder</p>
         <h2 className="font-display text-3xl md:text-4xl uppercase mb-4">
           What you're actually filling in
         </h2>
         <p className="text-sm text-zinc-500 leading-relaxed max-w-2xl mb-10">
-          Five tabs. Fill in what's relevant to how you work and skip the rest — empty
+          Five tabs. Fill in what's relevant to how you work and skip the rest. Empty
           sections don't appear in your client's app at all. A live preview sits beside
           you the whole time, so you see exactly what they'll see before anything is sent.
         </p>
@@ -255,12 +255,12 @@ export default function ForCoaches() {
       </section>
 
       <section className="max-w-5xl mx-auto px-5 md:px-8 py-16 border-t border-white/10">
-        <p className="text-overline text-zinc-500 mb-4">— In development</p>
+        <p className="text-overline text-zinc-500 mb-4">In development</p>
         <h2 className="font-display text-3xl md:text-4xl uppercase mb-4">
           What we're building next
         </h2>
         <p className="text-sm text-zinc-500 leading-relaxed max-w-2xl mb-10">
-          None of this exists yet — we're being straight about that. It's what we'd build for gyms
+          None of this exists yet. We're being straight about that. It's what we'd build for gyms
           and clinics running this at scale, and we'd rather hear from you first than guess.
         </p>
         <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">
@@ -274,7 +274,7 @@ export default function ForCoaches() {
       </section>
 
       <section id="interest" className="max-w-3xl mx-auto px-5 md:px-8 py-16 border-t border-white/10">
-        <p className="text-overline text-[#D4FF00] mb-4">— Register interest</p>
+        <p className="text-overline text-[#D4FF00] mb-4">Register interest</p>
         <h2 className="font-display text-3xl md:text-4xl uppercase mb-5">
           Tell us what you'd need
         </h2>
@@ -285,7 +285,7 @@ export default function ForCoaches() {
 
         {sent ? (
           <div className="border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-6">
-            <p className="text-[#D4FF00] text-sm mb-2">Got it — thanks.</p>
+            <p className="text-[#D4FF00] text-sm mb-2">Got it, thanks.</p>
             <p className="text-sm text-zinc-400 leading-relaxed">
               We'll be in touch. If you want to see it working in the meantime, the coach builder is
               live now and free to look around.

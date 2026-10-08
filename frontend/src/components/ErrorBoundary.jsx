@@ -22,7 +22,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="min-h-screen bg-black text-white font-body flex items-center justify-center p-4">
           <div className="text-center max-w-md">
-            <p className="text-overline text-[#D4FF00] mb-4">— Error</p>
+            <p className="text-overline text-[#D4FF00] mb-4">Error</p>
             <h1 className="font-display text-4xl md:text-5xl uppercase leading-none tracking-tight mb-6">
               Something went wrong
             </h1>

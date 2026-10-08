@@ -71,12 +71,12 @@ export const ATHLETE_APP = {
       workouts: [
         { name: "Assault Bike Intervals", sets: "8 × 60s", load: "Max", rest: "60s" },
         { name: "Sled Push", sets: "5 × 20m", load: "Heavy", rest: "90s" },
-        { name: "Zone 2 Row", sets: "20 min", load: "HR 130-140", rest: "—" },
+        { name: "Zone 2 Row", sets: "20 min", load: "HR 130-140", rest: "-" },
       ],
     },
     { day: "SUN", label: "Recovery", focus: "Mobility · Walk", workouts: [
-      { name: "Morning Movement Flow", sets: "20 min", load: "Easy", rest: "—" },
-      { name: "Zone 1 Walk", sets: "45 min", load: "HR < 120", rest: "—" },
+      { name: "Morning Movement Flow", sets: "20 min", load: "Easy", rest: "-" },
+      { name: "Zone 1 Walk", sets: "45 min", load: "HR < 120", rest: "-" },
     ] },
   ],
   nutrition: {
@@ -135,8 +135,8 @@ export const LONGEVITY_APP = {
       label: "Mobility & Z2",
       focus: "Joints · heart",
       workouts: [
-        { name: "Full body mobility flow", sets: "20 min", load: "Easy", rest: "—" },
-        { name: "Zone 2 cycle", sets: "40 min", load: "HR 120-135", rest: "—" },
+        { name: "Full body mobility flow", sets: "20 min", load: "Easy", rest: "-" },
+        { name: "Zone 2 cycle", sets: "40 min", load: "HR 120-135", rest: "-" },
       ],
     },
     {
@@ -156,8 +156,8 @@ export const LONGEVITY_APP = {
       label: "Walk & Stretch",
       focus: "Recovery",
       workouts: [
-        { name: "Outdoor walk", sets: "60 min", load: "Brisk", rest: "—" },
-        { name: "Hip & T-spine flow", sets: "15 min", load: "Easy", rest: "—" },
+        { name: "Outdoor walk", sets: "60 min", load: "Brisk", rest: "-" },
+        { name: "Hip & T-spine flow", sets: "15 min", load: "Easy", rest: "-" },
       ],
     },
   ],
@@ -215,7 +215,7 @@ const FOOTBALL_MODES = {
         { name: "Face Pull", sets: "3 × 15", load: "Light", rest: "60s" },
       ] },
       { day: "WED", label: "Z2 Engine", focus: "Aerobic base", workouts: [
-        { name: "Zone 2 run", sets: "45 min", load: "HR 130-145", rest: "—" },
+        { name: "Zone 2 run", sets: "45 min", load: "HR 130-145", rest: "-" },
       ] },
       { day: "THU", label: "Power", focus: "Explosive", workouts: [
         { name: "Hang Clean", sets: "5 × 3", load: "70%", rest: "180s" },
@@ -223,8 +223,8 @@ const FOOTBALL_MODES = {
         { name: "Med Ball Slam", sets: "4 × 6", load: "8kg", rest: "60s" },
       ] },
       { day: "SAT", label: "Light Ball", focus: "Touch retention", workouts: [
-        { name: "Rondos", sets: "20 min", load: "Easy", rest: "—" },
-        { name: "Passing drills", sets: "15 min", load: "Easy", rest: "—" },
+        { name: "Rondos", sets: "20 min", load: "Easy", rest: "-" },
+        { name: "Passing drills", sets: "15 min", load: "Easy", rest: "-" },
       ] },
     ],
     nutrition: {
@@ -238,7 +238,7 @@ const FOOTBALL_MODES = {
     days: [
       { day: "MON", label: "Speed Endurance", focus: "Pitch · RSA", workouts: [
         { name: "RSA: 6 × 40m sprints / 30s rest", sets: "3 sets", load: "Max", rest: "3 min" },
-        { name: "Yo-Yo IR1 prep", sets: "10 min", load: "Build", rest: "—" },
+        { name: "Yo-Yo IR1 prep", sets: "10 min", load: "Build", rest: "-" },
       ] },
       { day: "TUE", label: "Strength Maintain", focus: "Gym short", workouts: [
         { name: "Trap Bar Deadlift", sets: "4 × 4", load: "Heavy", rest: "150s" },
@@ -246,17 +246,17 @@ const FOOTBALL_MODES = {
         { name: "Chin-Up", sets: "3 × 6", load: "Heavy", rest: "120s" },
       ] },
       { day: "WED", label: "Ball + Agility", focus: "Pitch session", workouts: [
-        { name: "Possession game", sets: "25 min", load: "High", rest: "—" },
-        { name: "Cone agility ladder", sets: "10 min", load: "Sharp", rest: "—" },
+        { name: "Possession game", sets: "25 min", load: "High", rest: "-" },
+        { name: "Cone agility ladder", sets: "10 min", load: "Sharp", rest: "-" },
       ] },
       { day: "THU", label: "Recovery", focus: "Mobility · pool", workouts: [
-        { name: "Pool walk + flow", sets: "30 min", load: "Easy", rest: "—" },
+        { name: "Pool walk + flow", sets: "30 min", load: "Easy", rest: "-" },
       ] },
       { day: "FRI", label: "Tactical + Set Pieces", focus: "Pitch", workouts: [
-        { name: "11v11 phases", sets: "40 min", load: "Match pace", rest: "—" },
+        { name: "11v11 phases", sets: "40 min", load: "Match pace", rest: "-" },
       ] },
       { day: "SAT", label: "Friendly", focus: "Test fitness", workouts: [
-        { name: "Pre-season fixture", sets: "60-90 min", load: "Match", rest: "—" },
+        { name: "Pre-season fixture", sets: "60-90 min", load: "Match", rest: "-" },
       ] },
     ],
     nutrition: {
@@ -269,27 +269,27 @@ const FOOTBALL_MODES = {
     focus: "Maintain · MD-1 / MD / MD+1",
     days: [
       { day: "MON (MD+1)", label: "Recovery", focus: "Flush + mobility", workouts: [
-        { name: "Pool / bike flush", sets: "20 min", load: "Easy", rest: "—" },
-        { name: "Soft tissue + stretch", sets: "20 min", load: "—", rest: "—" },
+        { name: "Pool / bike flush", sets: "20 min", load: "Easy", rest: "-" },
+        { name: "Soft tissue + stretch", sets: "20 min", load: "-", rest: "-" },
       ] },
       { day: "TUE", label: "Gym Maintain", focus: "Heavy & short", workouts: [
         { name: "Trap Bar Deadlift", sets: "3 × 3", load: "RPE 7", rest: "150s" },
         { name: "Bench Press", sets: "3 × 4", load: "RPE 7", rest: "120s" },
         { name: "Chin-Up", sets: "3 × 5", load: "Heavy", rest: "120s" },
       ] },
-      { day: "WED", label: "Tactical", focus: "Pitch — units", workouts: [
-        { name: "Possession + transitions", sets: "30 min", load: "Match-pace", rest: "—" },
+      { day: "WED", label: "Tactical", focus: "Pitch · units", workouts: [
+        { name: "Possession + transitions", sets: "30 min", load: "Match-pace", rest: "-" },
       ] },
       { day: "THU", label: "Speed (MD-2)", focus: "Sharpness", workouts: [
         { name: "Sprints 6 × 20m", sets: "2 sets", load: "Max", rest: "Full" },
-        { name: "Reactive plyo", sets: "10 min", load: "Sharp", rest: "—" },
+        { name: "Reactive plyo", sets: "10 min", load: "Sharp", rest: "-" },
       ] },
       { day: "FRI (MD-1)", label: "Activation", focus: "Set pieces", workouts: [
-        { name: "Tactical walk-through", sets: "30 min", load: "Light", rest: "—" },
+        { name: "Tactical walk-through", sets: "30 min", load: "Light", rest: "-" },
       ] },
       { day: "SAT (MD)", label: "Match Day", focus: "Compete", workouts: [
-        { name: "Warm-up protocol", sets: "25 min", load: "Build", rest: "—" },
-        { name: "Match", sets: "90 min", load: "Max", rest: "—" },
+        { name: "Warm-up protocol", sets: "25 min", load: "Build", rest: "-" },
+        { name: "Match", sets: "90 min", load: "Max", rest: "-" },
       ] },
     ],
     nutrition: {
@@ -382,9 +382,9 @@ export const SPRINTER_APP = {
       label: "Recovery",
       focus: "Soft tissue · pool",
       workouts: [
-        { name: "Pool walk + flush", sets: "30 min", load: "Easy", rest: "—" },
-        { name: "Sauna + cold contrast", sets: "20 min", load: "—", rest: "—" },
-        { name: "Mobility flow", sets: "20 min", load: "Easy", rest: "—" },
+        { name: "Pool walk + flush", sets: "30 min", load: "Easy", rest: "-" },
+        { name: "Sauna + cold contrast", sets: "20 min", load: "-", rest: "-" },
+        { name: "Mobility flow", sets: "20 min", load: "Easy", rest: "-" },
       ],
     },
   ],
@@ -418,7 +418,7 @@ export const SPRINTER_APP = {
       "Cold plunge 2 min post-session (not before)",
       "Sauna 20 min × 3/week (off-day)",
       "Soft tissue (hamstrings, hips) 4×/week",
-      "10 min sun + walk AM — circadian",
+      "10 min sun + walk AM (circadian)",
       "Sleep 9h minimum during heavy blocks",
     ],
   },

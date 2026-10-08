@@ -52,7 +52,7 @@ export default function CoachAuth() {
           </Link>
 
           <div className="my-12">
-            <p className="text-overline text-[#D4FF00] mb-6">— For coaches</p>
+            <p className="text-overline text-[#D4FF00] mb-6">For coaches</p>
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[0.95]">
               Branded
               <br />
@@ -74,7 +74,7 @@ export default function CoachAuth() {
           </div>
 
           <p className="text-overline text-[10px] text-zinc-600">
-            Planlete — Built for You. By experts you trust.
+            Planlete · Built for You. By experts you trust.
           </p>
         </div>
 

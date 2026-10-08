@@ -70,8 +70,8 @@ export const BASE_QUESTIONS = [
     label: "Are you the parent or guardian buying this?",
     type: "choice",
     options: [
-      "Yes — I'm the parent or guardian and I accept the terms on their behalf",
-      "No — I'm under 18 myself",
+      "Yes, I'm the parent or guardian and I accept the terms on their behalf",
+      "No, I'm under 18 myself",
     ],
     hint: "Under-18 plans have to be bought and supervised by an adult. They never include calorie or weight-loss targets.",
     showIf: (a) => a.age === "Under 18",
@@ -106,7 +106,7 @@ export const BASE_QUESTIONS = [
       "Hotel / travelling",
       "Bodyweight only",
     ],
-    hint: "Hotel gyms vary — pick that and we'll build around dumbbells, a bench and a treadmill, with substitutions if it's more basic.",
+    hint: "Hotel gyms vary. Pick that and we'll build around dumbbells, a bench and a treadmill, with substitutions if it's more basic.",
   },
   {
     id: "facilities",
@@ -121,7 +121,7 @@ export const BASE_QUESTIONS = [
       "Open road or trail",
       "Nothing else",
     ],
-    hint: "Separate from your gym. Tick anything you can actually reach — it changes what we can build.",
+    hint: "Separate from your gym. Tick anything you can actually reach. It changes what we can build.",
     exclusive: "Nothing else",
     goals: SPORT_GOALS,
   },
@@ -163,12 +163,12 @@ export const BASE_QUESTIONS = [
     label: "Do you have a pull-up bar or rings?",
     type: "choice",
     options: [
-      "Yes — a fixed bar",
-      "Yes — bar and rings",
+      "Yes, a fixed bar",
+      "Yes, bar and rings",
       "Rings only",
       "Neither",
     ],
-    hint: "Most bar skills are impossible without one — we'll use floor progressions instead if not.",
+    hint: "Most bar skills are impossible without one. We'll use floor progressions instead if not.",
     goals: ["Calisthenics / skills"],
   },
   {
@@ -181,7 +181,7 @@ export const BASE_QUESTIONS = [
     id: "nutrition",
     label: "Do you want nutrition built in?",
     type: "choice",
-    options: ["Yes — full plan", "Yes — just targets", "No — training only"],
+    options: ["Yes, full plan", "Yes, just targets", "No, training only"],
   },
   {
     id: "bodyweight",
@@ -191,7 +191,7 @@ export const BASE_QUESTIONS = [
     // Somebody answered "85cm" in testing — the height question sits right
     // underneath, and the boxes look identical. Naming the units in the hint is
     // the cheapest guard; the backend rejects length units regardless.
-    hint: "In kg, stone or pounds — not cm. Protein and calorie targets are calculated from this.",
+    hint: "In kg, stone or pounds, not cm. Protein and calorie targets are calculated from this.",
     showIf: (a) => (a.nutrition || "").toLowerCase().startsWith("yes"),
   },
   {
@@ -228,7 +228,7 @@ export const BASE_QUESTIONS = [
     id: "allergies",
     label: "Any food allergies or foods to avoid?",
     type: "text",
-    placeholder: "e.g. nuts, dairy, shellfish — or leave blank",
+    placeholder: "e.g. nuts, dairy, shellfish, or leave blank",
     hint: "We'll keep these out of your nutrition entirely.",
     optional: true,
     showIf: (a) => (a.nutrition || "").toLowerCase().startsWith("yes"),
@@ -238,14 +238,14 @@ export const BASE_QUESTIONS = [
     label: "Who do you train with?",
     type: "choice",
     options: ["On my own", "With a training partner", "With my team or squad"],
-    hint: "This matters — if you train alone we'll never give you a drill that needs someone else.",
+    hint: "This matters: if you train alone we'll never give you a drill that needs someone else.",
   },
   {
     id: "injury",
     label: "Any injuries or areas we should train around?",
     type: "text",
-    placeholder: "e.g. dodgy left knee, recovering shoulder — or leave blank",
-    hint: "We'll build around it and leave that area alone. This isn't rehab — for that you need a physio.",
+    placeholder: "e.g. dodgy left knee, recovering shoulder, or leave blank",
+    hint: "We'll build around it and leave that area alone. This isn't rehab. For that you need a physio.",
     optional: true,
   },
   {
@@ -253,7 +253,7 @@ export const BASE_QUESTIONS = [
     label: "Anything else we should know?",
     type: "text",
     placeholder: "e.g. avoid dairy, only free weekday mornings, training for a specific event",
-    hint: "Optional — allergies, schedule quirks, or your sport if you picked 'Something else'.",
+    hint: "Optional: allergies, schedule quirks, or your sport if you picked 'Something else'.",
     optional: true,
   },
   {
@@ -261,7 +261,7 @@ export const BASE_QUESTIONS = [
     label: "Where should we send your live app link?",
     type: "email",
     placeholder: "you@email.com",
-    hint: "We'll email you a link you can bookmark — no spam.",
+    hint: "We'll email you a link you can bookmark. No spam.",
   },
 ];
 
@@ -274,39 +274,39 @@ export const STAGE_CONFIG = {
     id: "stage",
     label: "What part of your season are you in?",
     options: [
-      "Off-season — building a base",
-      "Pre-season — ramping up",
-      "In-season — competing/playing regularly",
-      "No specific season — just build me a well-rounded plan",
+      "Off-season: building a base",
+      "Pre-season: ramping up",
+      "In-season: competing/playing regularly",
+      "No specific season, just build me a well-rounded plan",
     ],
   },
   "Athlete performance": {
     id: "stage",
     label: "What part of your season are you in?",
     options: [
-      "Off-season — building a base",
-      "Pre-season — ramping up",
-      "In-season — competing/playing regularly",
-      "No specific season — just build me a well-rounded plan",
+      "Off-season: building a base",
+      "Pre-season: ramping up",
+      "In-season: competing/playing regularly",
+      "No specific season, just build me a well-rounded plan",
     ],
   },
   "Sprint / athletics": {
     id: "stage",
     label: "What part of your season are you in?",
     options: [
-      "Off-season — building a base",
-      "Pre-season — ramping up",
-      "In-season — competing regularly",
-      "No specific season — just build me a well-rounded plan",
+      "Off-season: building a base",
+      "Pre-season: ramping up",
+      "In-season: competing regularly",
+      "No specific season, just build me a well-rounded plan",
     ],
   },
   "Bodybuilding (competing)": {
     id: "stage",
     label: "Where are you in your competition prep?",
     options: [
-      "Off-season — building size",
-      "Prep — 12+ weeks out",
-      "Prep — final 8 weeks",
+      "Off-season: building size",
+      "Prep: 12+ weeks out",
+      "Prep: final 8 weeks",
       "Peak week",
     ],
   },
@@ -314,47 +314,47 @@ export const STAGE_CONFIG = {
     id: "stage",
     label: "Are you training for a specific fight?",
     options: [
-      "No — general training",
-      "Yes — 8+ weeks out",
-      "Yes — final 4 weeks (fight camp peak)",
+      "No, general training",
+      "Yes, 8+ weeks out",
+      "Yes, final 4 weeks (fight camp peak)",
     ],
   },
   "Kickboxing / martial arts": {
     id: "stage",
     label: "Are you training for a specific fight?",
     options: [
-      "No — general training",
-      "Yes — 8+ weeks out",
-      "Yes — final 4 weeks (fight camp peak)",
+      "No, general training",
+      "Yes, 8+ weeks out",
+      "Yes, final 4 weeks (fight camp peak)",
     ],
   },
   "Hybrid athlete / HYROX": {
     id: "stage",
     label: "Do you have a race or event coming up?",
     options: [
-      "No — general training",
-      "Yes — several weeks out (building)",
-      "Yes — final weeks (peaking/tapering)",
+      "No, general training",
+      "Yes, several weeks out (building)",
+      "Yes, final weeks (peaking/tapering)",
     ],
   },
   Powerlifting: {
     id: "stage",
     label: "Do you have a meet coming up?",
     options: [
-      "No — building strength generally",
-      "Yes — 8+ weeks out",
-      "Yes — final 4 weeks (peaking)",
-      "Meet week — taper me",
+      "No, building strength generally",
+      "Yes, 8+ weeks out",
+      "Yes, final 4 weeks (peaking)",
+      "Meet week: taper me",
     ],
   },
   "Calisthenics / skills": {
     id: "stage",
     label: "Where are you with the skills?",
     options: [
-      "Beginner — working towards my first pull-up and dip",
-      "Intermediate — strict pull-ups and dips, chasing the muscle-up",
-      "Advanced — muscle-up solid, working levers and handstand",
-      "No specific skill — I just want to train bodyweight properly",
+      "Beginner: working towards my first pull-up and dip",
+      "Intermediate: strict pull-ups and dips, chasing the muscle-up",
+      "Advanced: muscle-up solid, working levers and handstand",
+      "No specific skill, I just want to train bodyweight properly",
     ],
   },
   "Running / endurance": {
@@ -364,16 +364,16 @@ export const STAGE_CONFIG = {
       "5k or 10k",
       "Half marathon",
       "Marathon or longer",
-      "No race — general running fitness",
+      "No race: general running fitness",
     ],
   },
   CrossFit: {
     id: "stage",
     label: "Do you have a competition coming up?",
     options: [
-      "No — general training",
-      "Yes — several weeks out (building)",
-      "Yes — final weeks (peaking)",
+      "No, general training",
+      "Yes, several weeks out (building)",
+      "Yes, final weeks (peaking)",
     ],
   },
 };
@@ -408,7 +408,7 @@ export function buildQuestions(goal) {
         ? {
             ...q,
             label: "How many gym or conditioning sessions do you want?",
-            hint: "Sessions we build for you. Don't count your club training or matches — we ask about those next and fit these around them.",
+            hint: "Sessions we build for you. Don't count your club training or matches. We ask about those next and fit these around them.",
           }
         : q
     );
@@ -420,7 +420,7 @@ export function buildQuestions(goal) {
   const stageQuestion = {
     ...stageConfig,
     type: "choice",
-    hint: "This shapes how your plan is built — pick whatever's actually true right now.",
+    hint: "This shapes how your plan is built. Pick whatever's actually true right now.",
   };
   return [
     ...relevant.slice(0, goalIndex + 1),
@@ -431,7 +431,7 @@ export function buildQuestions(goal) {
 
 export default function BuildApp() {
   useSeo({
-    title: "Build Your Training Plan — Planlete",
+    title: "Build Your Training Plan · Planlete",
     description:
       "Answer a few questions about your schedule, equipment and goal, and get a four-week periodised plan as an app. One payment, no subscription.",
     canonical: "https://www.planlete.co.uk/build",
@@ -475,19 +475,19 @@ export default function BuildApp() {
         setPromoValid(Boolean(res.data?.valid));
         setPromoMsg(
           res.data?.valid
-            ? `Free plan applied — ${res.data.remaining} place${res.data.remaining === 1 ? "" : "s"} left`
+            ? `Free plan applied. ${res.data.remaining} place${res.data.remaining === 1 ? "" : "s"} left`
             : res.data?.reason || "That code isn't recognised."
         );
       } catch {
         if (seq !== promoSeq.current) return;
-        setPromoMsg("Couldn't check that code — try again.");
+        setPromoMsg("Couldn't check that code. Try again.");
       }
     }, 400);
   };
 
   useEffect(() => {
     if (searchParams.get("cancelled") === "1") {
-      toast.info("No problem — checkout was cancelled. Pick up where you left off whenever you're ready.");
+      toast.info("No problem, checkout was cancelled. Pick up where you left off whenever you're ready.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -552,7 +552,7 @@ export default function BuildApp() {
     // A consent question you can answer "no" to and carry on regardless is
     // decoration. Only an adult can buy, so this is where it stops.
     if (q.id === "guardian_consent" && String(answers[q.id]).startsWith("No")) {
-      toast.error("A parent or guardian needs to buy this one — ask them to build it with you.");
+      toast.error("A parent or guardian needs to buy this one. Ask them to build it with you.");
       return;
     }
     if (safeStep < questions.length - 1) {
@@ -602,12 +602,12 @@ export default function BuildApp() {
         <OfferBar />
         <SiteHeader />
         <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-20">
-          <p className="text-overline mb-5">— Let's build your app</p>
+          <p className="text-overline mb-5">Let's build your app</p>
           <h2 className="font-display text-3xl sm:text-5xl lg:text-6xl mb-4">
             How do you want<br />to build your plan?
           </h2>
           <p className="text-zinc-400 mb-12 max-w-xl">
-            Same price either way — {plan}, one-off, either app is yours to keep.
+            Same price either way: {plan}, one-off, either app is yours to keep.
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -618,7 +618,7 @@ export default function BuildApp() {
               <p className="text-overline text-[#D4FF00] mb-3">Not sure what you need?</p>
               <h3 className="font-display text-2xl mb-3">Answer a few questions.</h3>
               <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-                We'll build a personalised 4-week programme for you — training, nutrition,
+                We'll build a personalised 4-week programme for you: training, nutrition,
                 recovery, all worked out based on what you tell us.
               </p>
               <span className="inline-flex items-center gap-2 text-[#D4FF00] text-xs font-bold uppercase tracking-wide group-hover:gap-3 transition-all">
@@ -634,7 +634,7 @@ export default function BuildApp() {
               <h3 className="font-display text-2xl mb-3">Build it yourself.</h3>
               <p className="text-sm text-zinc-400 leading-relaxed mb-6">
                 Already have a plan from your PT, a program you follow, or just know exactly
-                what you want? Type it straight in — same app, same features, your content.
+                what you want? Type it straight in. Same app, same features, your content.
               </p>
               <span className="inline-flex items-center gap-2 text-[#D4FF00] text-xs font-bold uppercase tracking-wide group-hover:gap-3 transition-all">
                 Open the builder <ArrowRight size={14} />
@@ -675,7 +675,7 @@ export default function BuildApp() {
 
         {/* Question */}
         <div key={q.id} className="fade-up">
-          <p className="text-overline mb-5">— Tell us about you</p>
+          <p className="text-overline mb-5">Tell us about you</p>
           <h2
             data-testid="build-question-label"
             className="font-display text-3xl sm:text-5xl lg:text-6xl mb-10"
@@ -754,7 +754,7 @@ export default function BuildApp() {
                 One payment of {plan}. There's no subscription and nothing renews.
               </li>
               <li>
-                Your plan is generated for you and is yours to keep — you can come back
+                Your plan is generated for you and is yours to keep. You can come back
                 to it whenever you like.
               </li>
               <li>
@@ -814,7 +814,7 @@ export default function BuildApp() {
             {submitting
               ? (promoValid ? "Building your plan…" : "Taking you to checkout…")
               : safeStep === questions.length - 1
-              ? (promoValid ? "Get my free plan" : `Continue to payment — ${plan}`)
+              ? (promoValid ? "Get my free plan" : `Continue to payment · ${plan}`)
               : q.optional && !answers[q.id]
               ? "Skip"
               : "Continue"}

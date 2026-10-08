@@ -224,7 +224,7 @@ export default function PaymentSuccess() {
             </div>
 
             <ContactSupportPanel
-              context="Generation running long — customer handed over to email"
+              context="Generation running long: customer handed over to email"
               orderId={orderInfo.orderId}
               sessionId={orderInfo.sessionId}
             />
@@ -244,7 +244,7 @@ export default function PaymentSuccess() {
             <p className="text-overline text-[#D4FF00] mb-3">Payment confirmed</p>
             <h2 className="font-display text-3xl mb-3">Building your app</h2>
             <p className="text-zinc-500 text-sm leading-relaxed">
-              This usually takes 2–3 minutes — we're building a full four-week plan, not pulling a
+              This usually takes 2–3 minutes. We're building a full four-week plan, not pulling a
               template off a shelf. You can close this page if you like; your link is emailed to you
               the moment it's ready.
             </p>
@@ -292,7 +292,7 @@ export default function PaymentSuccess() {
 
           {slow && (
             <p className="text-zinc-500 text-xs text-center mt-10 leading-relaxed">
-              Still going — a good plan is worth the extra moment, and we're checking the detail
+              Still going. A good plan is worth the extra moment, and we're checking the detail
               rather than rushing it. Feel free to close the page; the link is on its way to your
               inbox regardless.
             </p>

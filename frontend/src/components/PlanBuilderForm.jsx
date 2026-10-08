@@ -347,9 +347,9 @@ export default function PlanBuilderForm({
 
   const disclaimerText =
     mode === "coach"
-      ? "I confirm I hold the appropriate professional qualification to give this advice, and that everything in this plan is entirely my own professional work — Planlete has not reviewed, checked, or contributed to this content in any way."
+      ? "I confirm I hold the appropriate professional qualification to give this advice, and that everything in this plan is entirely my own professional work. Planlete has not reviewed, checked, or contributed to this content in any way."
       : mode === "self"
-      ? "This is my own plan — Planlete doesn't check, review, or endorse this content, it's simply running what I've entered myself."
+      ? "This is my own plan. Planlete doesn't check, review, or endorse this content, it's simply running what I've entered myself."
       : "Confirmed for internal/admin use.";
 
   const SECTIONS = [
@@ -368,7 +368,7 @@ export default function PlanBuilderForm({
           <div className="mb-5 border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-4 flex flex-wrap items-center gap-x-4 gap-y-3 justify-between">
             <div className="text-sm text-zinc-200">
               You've got an unfinished plan saved on this device
-              <span className="text-zinc-400"> — {draftAge(foundDraft.savedAt)}.</span>
+              <span className="text-zinc-400"> ({draftAge(foundDraft.savedAt)}).</span>
             </div>
             <div className="flex gap-2 shrink-0">
               <button
@@ -408,35 +408,35 @@ export default function PlanBuilderForm({
               <div className="px-4 pb-5 pt-1 text-sm text-zinc-400 leading-relaxed space-y-3 border-t border-white/10">
                 <p>
                   You're building the app your plan lives in. The preview on the right
-                  updates as you go — that's exactly what you'll see on your phone.
+                  updates as you go. That's exactly what you'll see on your phone.
                 </p>
                 <ol className="space-y-2 list-none">
                   <li>
                     <span className="text-[#D4FF00] font-mono-display text-xs mr-2">01</span>
-                    <span className="text-white">Details</span> — your name, and any notes
+                    <span className="text-white">Details</span>: your name, and any notes
                     you want on the plan.
                   </li>
                   <li>
                     <span className="text-[#D4FF00] font-mono-display text-xs mr-2">02</span>
-                    <span className="text-white">Train</span> — pick a day, give it a
+                    <span className="text-white">Train</span>: pick a day, give it a
                     focus, then add your exercises with sets, reps, load and rest. Add a
                     reason to any exercise and you'll see it in the app when you tap that
                     movement.
                   </li>
                   <li>
                     <span className="text-[#D4FF00] font-mono-display text-xs mr-2">03</span>
-                    <span className="text-white">Morning, Fuel, Recover</span> — optional.
+                    <span className="text-white">Morning, Fuel, Recover</span>: optional.
                     Leave any of them empty and the tab simply won't appear.
                   </li>
                 </ol>
                 <p>
                   Prefer to structure by stage rather than by weekday? Switch from Days to
-                  Phases at the top of the Train tab — better for rehab or a build-up
+                  Phases at the top of the Train tab, better for rehab or a build-up
                   where "week one" matters more than "Monday".
                 </p>
                 <p className="text-zinc-500">
                   Nothing is charged until you check out, and your work saves to this
-                  device as you go — so closing the tab won't lose it.
+                  device as you go, so closing the tab won't lose it.
                 </p>
               </div>
             )}
@@ -449,7 +449,7 @@ export default function PlanBuilderForm({
             <div className="w-full order-last mt-2">
               {draftEmailed ? (
                 <p className="text-xs text-[#D4FF00]">
-                  Link sent — check your inbox. You can close this whenever you like.
+                  Link sent. Check your inbox. You can close this whenever you like.
                 </p>
               ) : emailPromptOpen ? (
                 <div className="flex flex-wrap gap-2 items-center">
@@ -469,7 +469,7 @@ export default function PlanBuilderForm({
                     {emailingDraft ? "Sending…" : "Send me the link"}
                   </button>
                   <span className="text-xs text-zinc-600">
-                    Nothing is charged — you only pay at checkout.
+                    Nothing is charged. You only pay at checkout.
                   </span>
                 </div>
               ) : (
@@ -514,10 +514,10 @@ export default function PlanBuilderForm({
               <div className="border border-[#D4FF00]/20 bg-[#D4FF00]/5 p-4 mb-2">
                 <p className="text-sm text-white font-bold mb-1.5">New to building your own plan?</p>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Don't worry about getting every field perfect — just fill in what you know.
+                  Don't worry about getting every field perfect. Just fill in what you know.
                   Each field has a quick example underneath it. Use the <strong className="text-zinc-300">Train</strong>,{" "}
                   <strong className="text-zinc-300">Fuel</strong>, and <strong className="text-zinc-300">Recover</strong> tabs
-                  above to add your workouts, nutrition, and recovery — you can always come back and edit later.
+                  above to add your workouts, nutrition, and recovery. You can always come back and edit later.
                 </p>
               </div>
             )}
@@ -609,7 +609,7 @@ export default function PlanBuilderForm({
                     }`}
                   >
                     <p className="text-[10px] uppercase tracking-widest">{d.day}</p>
-                    <p className="text-xs mt-1 text-white truncate max-w-[80px]">{d.label || "—"}</p>
+                    <p className="text-xs mt-1 text-white truncate max-w-[80px]">{d.label || "-"}</p>
                     {structureType === "phases" && d.dateRange && (
                       <p className="text-[9px] mt-0.5 text-zinc-500">{d.dateRange}</p>
                     )}
@@ -643,7 +643,7 @@ export default function PlanBuilderForm({
                   className={inputClass}
                   value={days[selectedDay].day}
                   onChange={(e) => updateDay(selectedDay, { day: e.target.value })}
-                  placeholder={structureType === "phases" ? "e.g. Phase 1 — Protect" : "Mon"}
+                  placeholder={structureType === "phases" ? "e.g. Phase 1 · Protect" : "Mon"}
                   disabled={structureType === "days"}
                 />
                 {structureType === "phases" && (
@@ -661,7 +661,7 @@ export default function PlanBuilderForm({
                 <p className={captionClass}>
                   {structureType === "phases"
                     ? "What this phase focuses on, e.g. \"Range of Motion\"."
-                    : "What this day's session is called — or \"Rest\" if it's a rest day."}
+                    : "What this day's session is called, or \"Rest\" if it's a rest day."}
                 </p>
               </div>
               {structureType === "phases" && (
@@ -673,7 +673,7 @@ export default function PlanBuilderForm({
                     onChange={(e) => updateDay(selectedDay, { dateRange: e.target.value })}
                     placeholder="e.g. Weeks 1-2, or 1-14 Jul"
                   />
-                  <p className={captionClass}>Just shown as a guide — you'll still pick the phase manually, nothing switches automatically.</p>
+                  <p className={captionClass}>Just shown as a guide. You'll still pick the phase manually, nothing switches automatically.</p>
                 </div>
               )}
               <div>
@@ -710,7 +710,7 @@ export default function PlanBuilderForm({
                     <div>
                       <label className={labelClass}>Load</label>
                       <input className={inputClass} value={w.load} onChange={(e) => updateWorkout(selectedDay, wi, { load: e.target.value })} placeholder="e.g. Moderate" />
-                      <p className={captionClass}>How heavy — a word like "Light"/"Heavy"/"Bodyweight", or an actual weight.</p>
+                      <p className={captionClass}>How heavy: a word like "Light"/"Heavy"/"Bodyweight", or an actual weight.</p>
                     </div>
                     <div>
                       <label className={labelClass}><Clock size={10} className="inline mr-1" />Rest</label>
@@ -727,12 +727,12 @@ export default function PlanBuilderForm({
                       <label className={labelClass}><Info size={10} className="inline mr-1" />Why this exercise (shown to client)</label>
                       <input className={inputClass} value={w.reason} onChange={(e) => updateWorkout(selectedDay, wi, { reason: e.target.value })} placeholder="Optional but recommended" />
                       {mode === "self" && (
-                        <p className={captionClass}>A note to your future self — e.g. "helps my knee stability".</p>
+                        <p className={captionClass}>A note to your future self: e.g. "helps my knee stability".</p>
                       )}
                     </div>
 
                     <div className="sm:col-span-2 border-t border-white/10 pt-3 mt-1">
-                      <label className={labelClass}>Progressive overload — suggest an increase each time they log</label>
+                      <label className={labelClass}>Progressive overload: suggest an increase each time they log</label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <select
                           className={inputClass}
@@ -795,7 +795,7 @@ export default function PlanBuilderForm({
                 <input className={inputClass} type="number" value={nutrition.fats} onChange={(e) => setNutrition((n) => ({ ...n, fats: e.target.value }))} placeholder="Fats g" />
               </div>
               <p className={captionClass}>
-                Roughly how much to eat per day — total calories, then protein/carbs/fats in grams.
+                Roughly how much to eat per day: total calories, then protein/carbs/fats in grams.
                 {mode === "self" && " Not sure? Skip it and just fill in the meals below instead."}
               </p>
             </div>
@@ -807,7 +807,7 @@ export default function PlanBuilderForm({
 
             <div>
               <p className={labelClass}>Meals</p>
-              <p className={`${captionClass} mb-2`}>What to eat and roughly when — the macro fields (Cal/P/C/F) per meal are optional.</p>
+              <p className={`${captionClass} mb-2`}>What to eat and roughly when. The macro fields (Cal/P/C/F) per meal are optional.</p>
               <div className="flex flex-col gap-3">
                 {nutrition.meals.map((m, i) => (
                   <div key={i} className="border border-white/10 p-4 relative">
@@ -836,7 +836,7 @@ export default function PlanBuilderForm({
             <div>
               <p className={labelClass}>Supplements</p>
               <p className={`${captionClass} mb-2`}>
-                Optional. A disclaimer to consult a doctor first is always shown automatically — no need to add your own.
+                Optional. A disclaimer to consult a doctor first is always shown automatically. No need to add your own.
               </p>
               <div className="flex flex-col gap-3">
                 {nutrition.supplements.map((s, i) => (
@@ -862,7 +862,7 @@ export default function PlanBuilderForm({
             <div className="mb-5 max-w-xl">
               <p className={labelClass}>Morning routine</p>
               <p className={captionClass}>
-                Shows in its own tab in the app, every day — quick stretches, mobility work,
+                Shows in its own tab in the app, every day: quick stretches, mobility work,
                 activation. Same exercise cards as Train, so these get a timer and Google/YouTube
                 lookup too.
               </p>
@@ -884,7 +884,7 @@ export default function PlanBuilderForm({
                     <div>
                       <label className={labelClass}>Sets / duration</label>
                       <input className={inputClass} value={w.sets} onChange={(e) => updateMorningItem(i, { sets: e.target.value })} placeholder="e.g. 2x30s each side" />
-                      <p className={captionClass}>A hold or rep count — "2x30s" or "1x10 reps".</p>
+                      <p className={captionClass}>A hold or rep count: "2x30s" or "1x10 reps".</p>
                     </div>
                     <div>
                       <label className={labelClass}>Load</label>
@@ -892,7 +892,7 @@ export default function PlanBuilderForm({
                     </div>
                     <div>
                       <label className={labelClass}><Clock size={10} className="inline mr-1" />Rest</label>
-                      <input className={inputClass} value={w.rest} onChange={(e) => updateMorningItem(i, { rest: e.target.value })} placeholder="e.g. — or 30s" />
+                      <input className={inputClass} value={w.rest} onChange={(e) => updateMorningItem(i, { rest: e.target.value })} placeholder="e.g. - or 30s" />
                     </div>
                     <div className="flex items-start pt-6">
                       <label className="flex items-center gap-2 text-xs text-zinc-400">
@@ -933,7 +933,7 @@ export default function PlanBuilderForm({
 
             <div>
               <p className={labelClass}>Recovery protocols</p>
-              <p className={`${captionClass} mb-2`}>Things to do to recover well — cold showers, stretching, sauna, whatever you actually do.</p>
+              <p className={`${captionClass} mb-2`}>Things to do to recover well: cold showers, stretching, sauna, whatever you actually do.</p>
               <div className="flex flex-col gap-2">
                 {recovery.protocols.map((p, i) => (
                   <div key={i} className="flex gap-2">
@@ -962,7 +962,7 @@ export default function PlanBuilderForm({
 
       {/* ── Live preview (always visible on desktop, toggled on mobile) ── */}
       <div className={`w-full lg:w-[380px] shrink-0 ${showPreview ? "block" : "hidden lg:block"}`}>
-        <p className="text-overline mb-3 hidden lg:block">Preview — what the client sees</p>
+        <p className="text-overline mb-3 hidden lg:block">Preview · what the client sees</p>
         <div className="border border-white/10 bg-black rounded-[28px] overflow-hidden" style={{ height: 680 }}>
           <AppShell
             data={previewData}

@@ -72,19 +72,19 @@ export default function CoachPlanBuilder() {
       </header>
 
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-10">
-        <p className="text-overline mb-4">— {clientId ? "Edit plan" : "New client plan"}</p>
+        <p className="text-overline mb-4">{clientId ? "Edit plan" : "New client plan"}</p>
         <h1 className="font-display text-3xl sm:text-4xl mb-2">
           {clientId ? "Update their plan" : "Build a plan, exercise by exercise."}
         </h1>
         <p className="text-sm text-zinc-400 mb-8 max-w-xl">
-          Everything here is entirely your own professional input — Planlete doesn't generate,
+          Everything here is entirely your own professional input. Planlete doesn't generate,
           check, or suggest any of this content.
         </p>
 
         {noActiveSubscription && !clientId && (
           <div className="mb-8 border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-4 max-w-xl">
             <p className="text-sm text-white">
-              You don't have an active subscription — this client's plan will need a one-off
+              You don't have an active subscription. This client's plan will need a one-off
               payment from them before it unlocks. Subscribe from your dashboard for unlimited
               clients included.
             </p>

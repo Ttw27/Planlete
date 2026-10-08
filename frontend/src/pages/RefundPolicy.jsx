@@ -7,7 +7,7 @@ export default function RefundPolicy() {
     <div className="min-h-screen bg-black text-white font-body">
       <SiteHeader />
       <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-24">
-        <p className="text-overline text-[#D4FF00] mb-4">— Legal</p>
+        <p className="text-overline text-[#D4FF00] mb-4">Legal</p>
         <h1 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8">
           Refund Policy
         </h1>
@@ -15,16 +15,16 @@ export default function RefundPolicy() {
 
         <div className="flex flex-col gap-8 text-zinc-300 leading-relaxed">
           <section>
-            <h2 className="text-white font-display text-xl mb-3">One-off plan purchases — your right to cancel</h2>
+            <h2 className="text-white font-display text-xl mb-3">One-off plan purchases: your right to cancel</h2>
             <p>
               Under UK consumer law, you normally have a 14-day right to cancel an online
               purchase. However, because Planlete generates and delivers your personalised
               plan immediately (usually within a couple of hours of payment), this right is
-              lost once your plan has been generated and delivered to you — the same way it
+              lost once your plan has been generated and delivered to you, the same way it
               would be for any instantly-delivered digital product. By completing your
               purchase and providing your questionnaire answers, you acknowledge and agree
               that generation begins promptly and that your cancellation right ends once your
-              plan has been delivered. This covers every plan we sell — the AI questionnaire,
+              plan has been delivered. This covers every plan we sell: the AI questionnaire,
               the self-serve builder, and plans built for you by a coach. There is no
               subscription and no recurring billing: you pay once, per plan.
             </p>
@@ -35,9 +35,9 @@ export default function RefundPolicy() {
             <p>
               Separately from any refund, every generated plan comes with a correction
               window: 48 hours from when it's built, or until you log your first session
-              against it, whichever comes first. If something's wrong — the plan doesn't
+              against it, whichever comes first. If something's wrong (the plan doesn't
               match the answers you gave, or it's clearly unsuitable for the experience
-              level you stated — tell us inside that window and we'll put it right. There's
+              level you stated), tell us inside that window and we'll put it right. There's
               no charge for a correction.
             </p>
             <p className="mt-3">
@@ -53,7 +53,7 @@ export default function RefundPolicy() {
               Nothing on this page limits your rights under the Consumer Rights Act 2015.
               Digital content must be of satisfactory quality, fit for purpose, and as
               described. If a plan doesn't meet that standard, you're entitled to a repair
-              or replacement and, where that isn't possible or doesn't fix it, a refund —
+              or replacement and, where that isn't possible or doesn't fix it, a refund,
               regardless of the correction window above having closed.
             </p>
           </section>
@@ -82,7 +82,7 @@ export default function RefundPolicy() {
             <p>
               We don't offer refunds simply because you've changed your mind after receiving a
               working, complete plan, or because the specific exercises or nutrition
-              suggestions weren't to your taste — the whole point of the one-off, low price is
+              suggestions weren't to your taste; the whole point of the one-off, low price is
               that you're welcome to build a fresh plan (charged as a new purchase) any time your
               goals or circumstances change, rather than needing a refund on the original.
             </p>

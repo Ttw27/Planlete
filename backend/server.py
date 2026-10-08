@@ -917,16 +917,39 @@ def autofix_training_days(plan_data: dict, answers: dict) -> None:
                 "name": "Easy walk or light mobility",
                 "sets": "25min",
                 "load": "Easy",
-                "rest": "—",
+                "rest": "-",
                 "demo": "mobility flow",
                 "reason": (
                     "You asked for "
-                    f"{requested} sessions a week, so this day stays easy — recovery is what "
+                    f"{requested} sessions a week, so this day stays easy. Recovery is what "
                     "lets the sessions that matter actually land."
                 ),
             }]
 
     plan_data["_days_autofixed"] = sorted(to_convert)
+
+
+def _strip_em_dashes(obj):
+    """
+    Return a copy of obj with every em dash removed from every string, walking
+    dicts and lists. House style is no em dashes in anything a customer reads,
+    and the prompt asking for that is not enough on its own, so it is enforced
+    here on every generated plan.
+
+    "—" on its own (an empty placeholder, usually "rest") becomes "-",
+    " — " between clauses becomes ", ", and any other "—" becomes "-".
+    """
+    if isinstance(obj, str):
+        if "—" not in obj:
+            return obj
+        if obj.strip() == "—":
+            return "-"
+        return obj.replace(" — ", ", ").replace("—", "-")
+    if isinstance(obj, dict):
+        return {k: _strip_em_dashes(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_strip_em_dashes(v) for v in obj]
+    return obj
 
 
 def autofix_workout_fields(plan_data: dict) -> None:
@@ -1091,16 +1114,16 @@ def _progression_note(prog: dict, week: int, is_final: bool, deload: bool, sets:
 
     if ptype == "measure":
         return (
-            "This one is a test, not a lift. Same volume every week — log your time or "
+            "This one is a test, not a lift. Same volume every week. Log your time or "
             "distance and chase a better number, not more reps."
         )
 
     if deload:
-        return "Deload week. Same movements, less volume — hold last week's weight."
+        return "Deload week. Same movements, less volume. Hold last week's weight."
 
     if is_final:
         # Never "add X next week" — there is no next week in this block.
-        return "Last week of the block — this is the top of your progression. Log it and finish strong."
+        return "Last week of the block. This is the top of your progression. Log it and finish strong."
 
     inc = (prog or {}).get("increment")
     unit = (prog or {}).get("unit", "")
@@ -1292,7 +1315,8 @@ def _progress_exercise(ex: dict, week: int, deload: bool, is_final: bool) -> dic
         # weight" on a plank and "Hard, RPE 7 — hold last week's weight" on a
         # rowing interval.
         if ptype == "load":
-            out["load"] = f"{ex.get('load', '')} — hold last week's weight".strip(" —")
+            _load = str(ex.get("load", "") or "").strip()
+            out["load"] = f"{_load}, hold last week's weight" if _load else "Hold last week's weight"
     elif ptype == "reps" and steps:
         out["sets"] = _bump_reps(str(ex.get("sets", "")), int(inc) * steps, steps)
     elif ptype in ("time", "distance") and steps:
@@ -1432,7 +1456,7 @@ def expand_template(plan_data: dict, answers: dict) -> None:
         # "one well-placed sessions" — singular needs the verb to agree too.
         noun = "session serves" if prescribed == 1 else "sessions serve"
         shortfall_note = (
-            f" You asked for {want} — with everything else already in your week, "
+            f" You asked for {want}. With everything else already in your week, "
             f"{got} well-placed {noun} you better than {want} crammed in."
         )
 
@@ -1997,6 +2021,7 @@ Rules:
 - Every week has all 7 days, in Sun, Mon, Tue, Wed, Thu, Fri, Sat order. Every day has at
   least one entry in "workouts", including rest days.
 - Every workout entry needs name, sets, load, rest and reason. Exercises also need demo.
+- Never use em dashes in any text. Use a full stop, comma or colon instead.
 
 Return ONLY raw JSON (no markdown, no commentary) in this exact shape:
 
@@ -2046,7 +2071,7 @@ async def _call_claude_for_plan(answers: dict, previous_error: Optional[str] = N
     days = answers.get("days", "3")
     equipment = answers.get("equipment", "Full gym")
     session = answers.get("session", "60 min")
-    nutrition_pref = answers.get("nutrition", "No — training only")
+    nutrition_pref = answers.get("nutrition", "No, training only")
     diet_pref = (answers.get("diet") or "").strip()
     allergies = (answers.get("allergies") or "").strip()
 
@@ -2569,8 +2594,8 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
     "protocols": ["...", "...", "...", "..."]
   }},
   "morningRoutine": [
-    {{"name": "Hip flexor stretch", "sets": "2x30s each side", "load": "Bodyweight", "rest": "—", "reason": "Loosens hip flexors that tighten overnight, before any training session."}},
-    {{"name": "Cat-cow stretch", "sets": "1x10 reps", "load": "Bodyweight", "rest": "—", "reason": "..."}},
+    {{"name": "Hip flexor stretch", "sets": "2x30s each side", "load": "Bodyweight", "rest": "-", "reason": "Loosens hip flexors that tighten overnight, before any training session."}},
+    {{"name": "Cat-cow stretch", "sets": "1x10 reps", "load": "Bodyweight", "rest": "-", "reason": "..."}},
     {{"name": "...", "sets": "...", "load": "...", "rest": "...", "demo": "...", "reason": "..."}}
   ],
   "weekNotes": [
@@ -2582,7 +2607,7 @@ Return ONLY raw JSON (no markdown, no code fences) in this EXACT shape:
   "template": {{
     "days": [
       {{"day": "Sun", "label": "Rest", "focus": "Recovery", "workouts": [
-        {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "—", "demo": "brisk walking",
+        {{"name": "Walk", "sets": "30min", "load": "Easy", "rest": "-", "demo": "brisk walking",
           "reason": "Keeps blood flow up without adding fatigue before the training week.",
           "cues": "Keep it conversational. If you're out of breath it's too fast.",
           "mistake": "Turning a recovery walk into a workout.",
@@ -2612,13 +2637,14 @@ Important:
 - Adapt every exercise choice to the stated equipment and experience level
 - "sets" should look like "4x6" (sets x reps) or a duration like "30min" for cardio/rest entries
 - "load" is a short string like "70% 1RM", "Moderate", "Bodyweight", or "Easy" — never leave it blank
-- "rest" must never be blank — use a real value like "90s", "2min", or "—" for entries with no meaningful rest period
+- "rest" must never be blank — use a real value like "90s", "2min", or "-" for entries with no meaningful rest period
 - Every workout entry MUST include a "reason" field: one short sentence (max ~20 words) explaining why THIS exercise was chosen for THIS person's goal, experience level, or any injury noted — not a generic description. Rest/recovery day entries can use "reason" to explain why rest is programmed there too.
 - If any injury, condition or limitation was noted, prioritise safety and note substitutions directly in the exercise name or via a safer alternative exercise choice
-- If nutrition was declined ("No — training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
+- If nutrition was declined ("No, training only"), still include the nutrition object but keep "note" brief and calories/macros as sensible estimates
 - "adjustments" is 2-4 entries covering the day types this person actually has: a rest day always, a match/competition day if they compete, and a hard training day where it matters. The main calorie and macro figures above are the BASELINE for a normal training day, and each adjustment says how that day differs. Keep protein steady across all of them and move carbohydrate — that is how it actually works. Give a real number in "change" (e.g. "carbs up ~80g"), never a vague instruction like "eat a bit more". If someone has no match day and no rest-day variation worth stating, return a rest-day entry only.
 - "morningRoutine" must be 3-6 real, quick mobility/stretching/activation items (same fields as a workout: name, sets, load, rest, reason) — genuinely appropriate as a short morning routine, not a repeat of the day's main training
 - Return valid JSON only — no markdown, no commentary, no trailing commas
+- Never use em dashes in any text. Use a full stop, comma or colon instead.
 - Double-check before responding: every one of the 28 day-entries (4 weeks x 7 days) must be present, in Sun-Mon-Tue-Wed-Thu-Fri-Sat order, and every workout entry must have all five fields (name, sets, load, rest, reason) filled in — an incomplete plan is a failed response
 """
 
@@ -2700,7 +2726,7 @@ Important:
     plan_data["answers"] = answers
     plan_data["created_at"] = datetime.now(timezone.utc).isoformat()
     plan_data.setdefault("brand", f"{name}'s App")
-    tagline_default = f"{goal} — {stage}" if stage and "no specific" not in stage.lower() and "general training" not in stage.lower() else goal
+    tagline_default = f"{goal} · {stage}" if stage and "no specific" not in stage.lower() and "general training" not in stage.lower() else goal
     plan_data.setdefault("tagline", tagline_default)
 
     # Repair misplaced name/sets content on the authored week BEFORE it gets
@@ -2709,6 +2735,13 @@ Important:
 
     # Build the four weeks the app renders from the single authored week.
     expand_template(plan_data, answers)
+
+    # No em dashes in anything the customer reads. Everything except "answers",
+    # which is their own questionnaire input (its option labels contain em
+    # dashes and are matched elsewhere) rather than plan text.
+    for _k in list(plan_data):
+        if _k != "answers":
+            plan_data[_k] = _strip_em_dashes(plan_data[_k])
 
     # HARD validation — structural. A plan missing a day or an exercise is
     # genuinely broken and will error in the customer's app, so this must pass.
@@ -3230,7 +3263,7 @@ async def generate_plan(
     return {
         "id": plan_id,
         "status": "generating",
-        "message": "Generating — poll /api/plans/{id}/status",
+        "message": "Generating. Poll /api/plans/{id}/status",
         "link": f"/app/u/{plan_id}",
     }
 
@@ -3416,7 +3449,7 @@ async def send_block_ending_emails():
                     <h2 style="color: #111;">Hey {name},</h2>
                     <p>Your four-week block wraps up on {ends}. Nice work getting through it.</p>
                     <p style="color: #444; line-height: 1.6;">
-                        You can carry on training with it as long as you like — nothing switches off,
+                        You can carry on training with it as long as you like. Nothing switches off,
                         and everything you've logged stays put. But the plan was built around the
                         answers you gave four weeks ago, and you're not that person any more.
                     </p>
@@ -3432,7 +3465,7 @@ async def send_block_ending_emails():
                         </a>
                     </p>
                     <p style="color: #888; font-size: 12px;">
-                        Not ready yet? Ignore this — your plan keeps working either way.
+                        Not ready yet? Ignore this. Your plan keeps working either way.
                     </p>
                 </div>
             """,
@@ -3555,7 +3588,7 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
         if payload.answers or payload.manual_plan:
             raise HTTPException(
                 status_code=400,
-                detail="A follow-on block inherits its answers — don't send answers or manual_plan.",
+                detail="A follow-on block inherits its answers. Don't send answers or manual_plan.",
             )
         source_plan = await db.plans.find_one({"id": payload.derived_from}, {"_id": 0})
         if not source_plan:
@@ -3578,9 +3611,9 @@ async def create_checkout_session(payload: CheckoutSessionRequest):
         kind = "manual"
 
     product_name = {
-        "ai": "Planlete — Personalised Training App",
-        "manual": "Planlete — Your Own Plan, Built Your Way",
-        "derived": "Planlete — Your Next Block",
+        "ai": "Planlete · Personalised Training App",
+        "manual": "Planlete · Your Own Plan, Built Your Way",
+        "derived": "Planlete · Your Next Block",
     }[kind]
 
     order_id = str(uuid.uuid4())
@@ -3764,13 +3797,13 @@ async def process_paid_order(order_id: str, order: dict) -> None:
         _a = answers or {}
         _promo = order.get("promo_code")
         notify_admin(
-            f"{'Free plan claimed' if _promo else 'Plan sold'} — {_a.get('goal') or kind}",
+            f"{'Free plan claimed' if _promo else 'Plan sold'}: {_a.get('goal') or kind}",
             f"<p><strong>{_a.get('name') or 'Someone'}</strong> "
             f"{'claimed a free plan with ' + _promo if _promo else 'bought a plan'}.</p>"
-            f"<p>Goal: {_a.get('goal') or '—'}<br>"
-            f"Experience: {_a.get('experience') or '—'}<br>"
-            f"Days: {_a.get('days') or '—'}<br>"
-            f"Email: {email or '—'}</p>"
+            f"<p>Goal: {_a.get('goal') or '-'}<br>"
+            f"Experience: {_a.get('experience') or '-'}<br>"
+            f"Days: {_a.get('days') or '-'}<br>"
+            f"Email: {email or '-'}</p>"
             f"<p>Plan: <a href=\"{FRONTEND_URL}/app/u/{plan_id}\">{plan_id}</a><br>"
             f"Order: {order_id}</p>",
         )
@@ -3783,7 +3816,7 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                 html=f"""
                     <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
                         <h2 style="color: #111;">Hey {name},</h2>
-                        <p>Your training app is ready{' — a 4-week programme built around your goal' if kind == 'ai' else ', built exactly the way you put it together'}.</p>
+                        <p>Your training app is ready{': a 4-week programme built around your goal' if kind == 'ai' else ', built exactly the way you put it together'}.</p>
                         <p style="margin: 24px 0;">
                             <a href="{link}" style="background: #D4FF00; color: #000; font-weight: bold;
                                text-decoration: none; padding: 14px 24px; display: inline-block;">
@@ -3793,7 +3826,7 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                         <p style="color: #666; font-size: 13px;">
                             That link will show you exactly how to bookmark it on iPhone, Samsung,
                             or Android so it feels like a real app on your home screen. It's yours to
-                            keep — no subscription, nothing to cancel.
+                            keep. No subscription, nothing to cancel.
                         </p>
 
                         <div style="border: 1px solid #e5e5e5; padding: 16px; margin: 28px 0;">
@@ -3801,14 +3834,14 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                                 Want something changed? You have {EDIT_WINDOW_HOURS} hours.
                             </p>
                             <p style="margin: 0 0 8px; color: #444; font-size: 13px; line-height: 1.5;">
-                                If something in the plan doesn't fit — a day that clashes, an exercise you
-                                can't do, equipment we've got wrong — open your app and use
+                                If something in the plan doesn't fit (a day that clashes, an exercise you
+                                can't do, equipment we've got wrong), open your app and use
                                 <strong>Request a change</strong>. A real person reads every one.
                             </p>
                             <p style="margin: 0; color: #444; font-size: 13px; line-height: 1.5;">
                                 Two things close that window: {EDIT_WINDOW_HOURS} hours passing, or you
                                 logging your first session. Once you've started training the plan locks,
-                                even if you're still inside the {EDIT_WINDOW_HOURS} hours — so if
+                                even if you're still inside the {EDIT_WINDOW_HOURS} hours, so if
                                 anything looks off, tell us <em>before</em> your first session rather than after.
                             </p>
                         </div>
@@ -3841,7 +3874,7 @@ async def process_paid_order(order_id: str, order: dict) -> None:
                     <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
                         <p>Hey {name},</p>
                         <p>We hit a snag building your training app. Our team's already been notified
-                           and is on it — you'll hear from us again shortly with your link.</p>
+                           and is on it. You'll hear from us again shortly with your link.</p>
                         <p>Sorry for the delay, and thanks for your patience.</p>
                     </div>
                 """
@@ -3997,7 +4030,7 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
                         "Order generated via webhook fallback",
                         f"<p>Order {order_id} was paid but the customer never reached the "
                         f"success page, so generation was started from the webhook instead.</p>"
-                        f"<p>Worth a glance — if this happens often, the redirect is broken.</p>",
+                        f"<p>Worth a glance: if this happens often, the redirect is broken.</p>",
                     )
 
     elif event_type in ("customer.subscription.deleted", "customer.subscription.updated"):
@@ -4310,7 +4343,7 @@ async def create_tweak_request(plan_id: str, payload: TweakRequestCreate):
             detail=(
                 "This plan is locked. You can build a follow-on block from it instead."
                 if status["reason"] != "not_available"
-                else "Corrections aren't available for this plan — please contact support."
+                else "Corrections aren't available for this plan. Please contact support."
             ),
         )
 
@@ -4330,7 +4363,7 @@ async def create_tweak_request(plan_id: str, payload: TweakRequestCreate):
 
     # Time-limited by design, so this one can't wait for you to check the panel.
     notify_admin(
-        "Correction requested — 48h window open",
+        "Correction requested: 48h window open",
         f"<p>Plan: {plan_id}<br>From: {email}</p>"
         f"<p><strong>What they said:</strong><br>{req.message}</p>"
         f'<p><a href="{FRONTEND_URL}/app/u/{plan_id}">Open their plan</a> · '
@@ -4341,7 +4374,7 @@ async def create_tweak_request(plan_id: str, payload: TweakRequestCreate):
         to=email,
         subject="We've got your correction request",
         html=(
-            "<p>Thanks — we've received your request and we'll look at your plan "
+            "<p>Thanks, we've received your request and we'll look at your plan "
             "personally.</p><p>Your plan stays exactly where it is in the meantime: "
             f'<a href="{FRONTEND_URL}/app/u/{plan_id}">open it here</a>.</p>'
         ),
@@ -4370,7 +4403,7 @@ async def save_plan_draft(payload: PlanDraftCreate):
         html=(
             "<p>Here's the link back to the plan you started building:</p>"
             f'<p><a href="{link}">Pick up where you left off</a></p>'
-            "<p>The link works for 30 days. Nothing has been charged — you only "
+            "<p>The link works for 30 days. Nothing has been charged. You only "
             "pay when you finish and check out.</p>"
         ),
     )
@@ -4732,7 +4765,7 @@ async def create_client_plan_checkout(client_id: str):
             line_items=[{
                 "price_data": {
                     "currency": "gbp",
-                    "product_data": {"name": f"Training plan — {coach.get('brand_name', 'Coach') if coach else 'Coach'}"},
+                    "product_data": {"name": f"Training plan · {coach.get('brand_name', 'Coach') if coach else 'Coach'}"},
                     "unit_amount": COACH_CLIENT_PLAN_PENCE,
                 },
                 "quantity": 1,

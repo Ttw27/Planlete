@@ -151,7 +151,7 @@ export default function RebuildPlan() {
           Something changed?
         </h1>
         <p className="text-zinc-400 leading-relaxed mb-10 max-w-xl">
-          We'll build your next four weeks from the plan you've already got — same goal,
+          We'll build your next four weeks from the plan you've already got: same goal,
           same history, adjusted for whatever's different. You won't have to answer the
           questionnaire again.
         </p>
@@ -224,7 +224,7 @@ export default function RebuildPlan() {
           />
           <p className="text-xs text-zinc-600 mt-3">
             Anything health-related you mention is only ever used to build your plan safely.
-            If something's painful, get it looked at by a professional — this doesn't replace that.
+            If something's painful, get it looked at by a professional. This doesn't replace that.
           </p>
         </div>
 
@@ -262,7 +262,7 @@ export default function RebuildPlan() {
 
         <div className="border-t border-white/10 pt-8">
           <p className="text-sm text-zinc-400 mb-5 leading-relaxed">
-            Your new block is a separate plan at its own link — the one you're on now
+            Your new block is a separate plan at its own link. The one you're on now
             keeps working, so nothing you've logged is lost.
           </p>
           <button
@@ -270,7 +270,7 @@ export default function RebuildPlan() {
             disabled={submitting || !reasons.length}
             className="w-full sm:w-auto bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-sm px-8 py-4 hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? "Starting checkout…" : `Build my next block — ${planPrice}`}
+            {submitting ? "Starting checkout…" : `Build my next block · ${planPrice}`}
           </button>
         </div>
       </div>

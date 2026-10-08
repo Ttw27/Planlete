@@ -42,7 +42,7 @@ export default function LongevityApp() {
     <div className="min-h-screen bg-black text-white">
       {samplePlan && (
         <div className="max-w-4xl mx-auto px-5 md:px-8 pt-24 pb-12">
-          <p className="text-overline text-[#D4FF00] mb-4">— Sample plan</p>
+          <p className="text-overline text-[#D4FF00] mb-4">Sample plan</p>
           <h1 className="font-display text-4xl md:text-5xl uppercase leading-tight mb-4">
             {samplePlan.title}
           </h1>

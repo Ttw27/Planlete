@@ -26,7 +26,7 @@ export default function ContactSupportPanel({ context = "", orderId = null, sess
   const [submitted, setSubmitted] = useState(false);
 
   const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-    "Planlete — need some help"
+    "Planlete: need some help"
   )}&body=${encodeURIComponent(context ? `${context}\n\n` : "")}`;
 
   const submit = async (e) => {
@@ -54,10 +54,10 @@ export default function ContactSupportPanel({ context = "", orderId = null, sess
       <div className="border border-[#D4FF00]/30 bg-[#D4FF00]/5 p-5 text-left">
         <div className="flex items-center gap-2 mb-2">
           <Check size={16} className="text-[#D4FF00]" />
-          <p className="text-sm font-bold text-white">Got it — we'll reply within the hour</p>
+          <p className="text-sm font-bold text-white">Got it, we'll reply within the hour</p>
         </div>
         <p className="text-xs text-zinc-400">
-          If you were charged, that's already logged against your message — nothing extra to do.
+          If you were charged, that's already logged against your message. Nothing extra to do.
         </p>
       </div>
     );
@@ -88,7 +88,7 @@ export default function ContactSupportPanel({ context = "", orderId = null, sess
           disabled={submitting}
           className="w-full bg-[#D4FF00] text-black font-bold uppercase tracking-wide text-xs px-4 py-3 hover:bg-white transition-colors disabled:opacity-50"
         >
-          {submitting ? "Sending…" : "Send — we reply within the hour"}
+          {submitting ? "Sending…" : "Send · we reply within the hour"}
         </button>
       </form>
       <a

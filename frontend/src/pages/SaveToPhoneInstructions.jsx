@@ -144,10 +144,10 @@ export default function SaveToPhoneInstructions() {
         {/* Tips */}
         <div className="space-y-4 text-sm text-zinc-500">
           <p>
-            <strong className="text-zinc-300">💡 Tip:</strong> Bookmark this link or check your email — we sent you a link you can save.
+            <strong className="text-zinc-300">💡 Tip:</strong> Bookmark this link or check your email. We sent you a link you can save.
           </p>
           <p>
-            <strong className="text-zinc-300">⚡ Fast to load:</strong> Once bookmarked, it opens straight to your plan — no app store, no download.
+            <strong className="text-zinc-300">⚡ Fast to load:</strong> Once bookmarked, it opens straight to your plan, no app store, no download.
           </p>
           <p>
             <strong className="text-zinc-300">🔄 Updates:</strong> New features arrive automatically whenever we push updates.

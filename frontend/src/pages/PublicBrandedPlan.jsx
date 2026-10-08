@@ -33,7 +33,7 @@ function PayToUnlock({ coach, client, onPaid }) {
           {client.client_name}'s plan is ready.
         </h2>
         <p className="text-zinc-400 text-sm leading-relaxed mb-8">
-          One-off payment to unlock your app — training, nutrition, and recovery, built by{" "}
+          One-off payment to unlock your app: training, nutrition, and recovery, built by{" "}
           {coach.brand_name}.
         </p>
         <button

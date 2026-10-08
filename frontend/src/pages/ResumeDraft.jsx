@@ -76,12 +76,12 @@ export default function ResumeDraft() {
     <div className="min-h-screen bg-[#050505] text-white">
       <SiteHeader />
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-28 pb-20">
-        <p className="text-overline mb-4">— Picking up where you left off</p>
+        <p className="text-overline mb-4">Picking up where you left off</p>
         <h1 className="font-display text-3xl sm:text-4xl mb-2">
           Right, back to it.
         </h1>
         <p className="text-sm text-zinc-400 mb-10 max-w-xl">
-          Everything you'd entered is still here. Nothing has been charged — you only
+          Everything you'd entered is still here. Nothing has been charged. You only
           pay when you finish.
         </p>
 
@@ -90,7 +90,7 @@ export default function ResumeDraft() {
           initialData={initialData}
           onSubmit={handleSubmit}
           submitting={submitting}
-          submitLabel={`Continue to payment — ${plan}`}
+          submitLabel={`Continue to payment · ${plan}`}
         />
       </div>
     </div>

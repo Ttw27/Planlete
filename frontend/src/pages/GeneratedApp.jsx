@@ -142,10 +142,10 @@ export default function GeneratedApp() {
 
     if (cycleNumber === 1) {
       weekLabel = ` · Week ${weekIndex + 1}/${weeks.length}${
-        currentWeek?.theme ? ` — ${currentWeek.theme}` : ""
+        currentWeek?.theme ? `: ${currentWeek.theme}` : ""
       }`;
     } else {
-      weekLabel = ` · Cycle ${cycleNumber} · Week ${weekIndex + 1}/${weeks.length} — same sessions, aim heavier`;
+      weekLabel = ` · Cycle ${cycleNumber} · Week ${weekIndex + 1}/${weeks.length}: same sessions, aim heavier`;
     }
   }
 
@@ -244,7 +244,7 @@ function PlanFooterActions({ plan, absoluteWeek = 1 }) {
             </p>
             {sent ? (
               <p className="text-sm text-zinc-300 leading-relaxed">
-                Got it — we'll look at your plan personally and come back to you by email.
+                Got it. We'll look at your plan personally and come back to you by email.
                 Your plan stays exactly as it is in the meantime.
               </p>
             ) : (
@@ -293,7 +293,7 @@ function PlanFooterActions({ plan, absoluteWeek = 1 }) {
             <p className="text-overline text-[#D4FF00] mb-3">Something changed?</p>
             <p className="text-zinc-400 text-sm leading-relaxed mb-5 max-w-xl">
               Picked up an injury, lost a training day, away for a fortnight, or just
-              finished the four weeks? We'll build your next block from this one — same
+              finished the four weeks? We'll build your next block from this one: same
               goal, same history, adjusted. No questionnaire to fill in again.
             </p>
             <Link

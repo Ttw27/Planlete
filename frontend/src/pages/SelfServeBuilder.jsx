@@ -22,7 +22,7 @@ const API = `${BACKEND_URL}/api`;
  */
 export default function SelfServeBuilder() {
   useSeo({
-    title: "Build Your Own Plan Your Way — Planlete",
+    title: "Build Your Own Plan Your Way · Planlete",
     description:
       "Already know what you want to train? Enter your own sessions and get them as an app on your phone, with logging and rest timers built in.",
     canonical: "https://www.planlete.co.uk/build/manual",
@@ -62,12 +62,12 @@ export default function SelfServeBuilder() {
         <Link to="/build" className="inline-flex items-center gap-2 text-overline text-zinc-400 hover:text-[#D4FF00] mb-8">
           <ArrowLeft size={14} /> Back
         </Link>
-        <p className="text-overline mb-4">— Build it your way</p>
+        <p className="text-overline mb-4">Build it your way</p>
         <h1 className="font-display text-3xl sm:text-4xl mb-2">
           Type it in. We'll build the app.
         </h1>
         <p className="text-sm text-zinc-400 mb-10 max-w-xl">
-          Same features as the AI-built apps — timer, logging, progress tracking — just running
+          Same features as the AI-built apps (timer, logging, progress tracking), just running
           exactly what you enter. {plan}, one-off, yours to keep.
         </p>
 
@@ -75,7 +75,7 @@ export default function SelfServeBuilder() {
           mode="self"
           onSubmit={handleSubmit}
           submitting={submitting}
-          submitLabel={`Continue to payment — ${plan}`}
+          submitLabel={`Continue to payment · ${plan}`}
         />
 
         {/* Shown before payment, deliberately. Finding out what you bought

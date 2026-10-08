@@ -108,7 +108,7 @@ export default function CoachDashboard() {
               <span className="text-[#D4FF00]">for your clients.</span>
             </h1>
             <p className="text-sm text-zinc-400 mt-4 max-w-xl">
-              No subscription, no lock-in — each client plan is a one-off £4.99 payment, paid
+              No subscription, no lock-in: each client plan is a one-off £4.99 payment, paid
               by your client when they open their link. Add your logo and colours in the Brand
               tab so every plan looks like yours.
             </p>
@@ -399,7 +399,7 @@ function BrandTab({ coach, setCoach }) {
 
       {/* Colours + preview */}
       <div className="bg-[#0a0a0a] p-6 md:p-8">
-        <p className="text-overline mb-6">— Brand colours</p>
+        <p className="text-overline mb-6">Brand colours</p>
         <div className="grid grid-cols-2 gap-5 mb-8">
           <ColorPicker
             label="Primary (accent)"

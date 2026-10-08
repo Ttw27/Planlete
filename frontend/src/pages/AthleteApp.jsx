@@ -5,7 +5,7 @@ const SLIDES = [
   {
     imageKey: "athlete_carousel_1",
     fallback: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80",
-    caption: "Six day split — strength, power and conditioning",
+    caption: "Six day split: strength, power and conditioning",
   },
   {
     imageKey: "athlete_carousel_2",
@@ -20,7 +20,7 @@ const SLIDES = [
   {
     imageKey: "athlete_carousel_4",
     fallback: "https://images.unsplash.com/photo-1581009137042-c552e485697a?w=1200&q=80",
-    caption: "Recovery protocols — sleep, HRV and morning movement",
+    caption: "Recovery protocols: sleep, HRV and morning movement",
   },
 ];
 

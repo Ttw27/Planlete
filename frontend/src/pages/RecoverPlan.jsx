@@ -15,7 +15,7 @@ const API = `${BACKEND_URL}/api`;
  */
 export default function RecoverPlan() {
   useSeo({
-    title: "Lost Your Plan? — Planlete",
+    title: "Lost Your Plan? · Planlete",
     description:
       "Enter the email you bought your plan with and we will send the link again.",
     canonical: "https://www.planlete.co.uk/recover",
@@ -69,7 +69,7 @@ export default function RecoverPlan() {
           <>
             <p className="text-zinc-400 leading-relaxed mb-8">
               Enter the email you used when you bought your plan and we'll send the
-              link back to you. Your plan hasn't gone anywhere — it's exactly where
+              link back to you. Your plan hasn't gone anywhere. It's exactly where
               you left it, logged sessions and all.
             </p>
             <div className="flex flex-wrap gap-3">

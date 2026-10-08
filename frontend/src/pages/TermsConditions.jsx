@@ -7,7 +7,7 @@ export default function TermsConditions() {
     <div className="min-h-screen bg-black text-white font-body">
       <SiteHeader />
       <div className="max-w-3xl mx-auto px-5 md:px-8 pt-32 pb-24">
-        <p className="text-overline text-[#D4FF00] mb-4">— Legal</p>
+        <p className="text-overline text-[#D4FF00] mb-4">Legal</p>
         <h1 className="font-display text-4xl md:text-6xl uppercase leading-none tracking-tight mb-8">
           Terms & Conditions
         </h1>
@@ -62,7 +62,7 @@ export default function TermsConditions() {
               medical condition, or are pregnant. If any exercise causes pain, stop immediately
               and seek appropriate advice. Some sample plans and generated programmes may
               include contact/combat-sport elements (such as sparring) intended only for
-              suitably experienced individuals training in a supervised, appropriate setting —
+              suitably experienced individuals training in a supervised, appropriate setting;
               you are responsible for assessing whether any activity is suitable for you.
             </p>
           </section>
@@ -73,7 +73,7 @@ export default function TermsConditions() {
               Plans are sold as a one-off payment (currently discounted as a launch offer; the
               standard price is shown at checkout). This is a single payment for a single generated plan, not
               a subscription. If your goals, circumstances, or health change, you're welcome to
-              purchase a new plan at any time — each plan is independently generated and
+              purchase a new plan at any time; each plan is independently generated and
               charged for separately. Payments are processed securely by Stripe; we do not
               store your card details.
             </p>
@@ -83,7 +83,7 @@ export default function TermsConditions() {
             <h2 className="text-white font-display text-xl mb-3">4a. Corrections, and when your plan is fixed</h2>
             <p>
               Once your plan has been generated you have a short window in which to tell us
-              something is wrong with it — 48 hours from generation, or until you log your
+              something is wrong with it: 48 hours from generation, or until you log your
               first training session against the plan, whichever happens first. Within that
               window, contact us through your plan and we will correct genuine errors: for
               example, a plan that doesn't match the answers you gave, or one that's clearly
@@ -92,14 +92,14 @@ export default function TermsConditions() {
             <p className="mt-3">
               After that window closes, your plan is fixed and we will not amend it. This is
               because a plan you have started training on is no longer a plan with a mistake
-              in it — it is a programme you are part-way through, and changing it means
+              in it; it is a programme you are part-way through, and changing it means
               building a new one. If you want a different plan at that point, you can buy a
               follow-on block (see 4b) or start again from the questionnaire.
             </p>
             <p className="mt-3">
               Nothing in this section affects your legal rights if a plan is faulty, not as
               described, or not fit for purpose. Those rights are set out in the Consumer
-              Rights Act 2015 and cannot be limited by these terms — see our{" "}
+              Rights Act 2015 and cannot be limited by these terms. See our{" "}
               <Link to="/refunds" className="text-[#D4FF00] underline">Refund Policy</Link>.
             </p>
           </section>
@@ -108,7 +108,7 @@ export default function TermsConditions() {
             <h2 className="text-white font-display text-xl mb-3">4b. Follow-on blocks</h2>
             <p>
               If you already own a generated plan, you can buy a follow-on block built from
-              it — for instance because you've picked up an injury, your training days have
+              it, for instance because you've picked up an injury, your training days have
               changed, you're away from your usual gym, or you've finished the four weeks.
               A follow-on block is charged at the same one-off price as any other plan and
               is delivered as a separate plan at its own link. Your existing plan continues
@@ -121,11 +121,11 @@ export default function TermsConditions() {
             <p>
               Coaches and physios may create an account to build branded plans for their own
               clients. Each client plan is charged as a one-off fee, processed securely via Stripe.
-              No subscription or recurring billing — you simply pay for each plan you create.
+              No subscription or recurring billing: you simply pay for each plan you create.
             </p>
             <p className="mt-3">
               Any exercise, nutrition, or recovery content a coach enters is entirely their own
-              professional input — Planlete does not write, review, check, or endorse this
+              professional input; Planlete does not write, review, check, or endorse this
               content, and the coach is solely responsible for its accuracy and suitability for
               their client. Coaches confirm this explicitly before any client plan is saved.
               Content must be lawful, must be the coach's own original work (or content they
@@ -162,7 +162,7 @@ export default function TermsConditions() {
           <section>
             <h2 className="text-white font-display text-xl mb-3">9. Acceptable use</h2>
             <p>
-              You agree not to misuse Planlete — including attempting to access other
+              You agree not to misuse Planlete, including attempting to access other
               customers' plans, reverse-engineer the service, or use it in any way that could
               harm the platform or other users.
             </p>

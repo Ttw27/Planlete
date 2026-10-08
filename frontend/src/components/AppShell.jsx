@@ -55,14 +55,14 @@ function getProgressNudge(exerciseHistory, currentWeek) {
   if (latestNum === null || prevNum === null) return null;
 
   if (latestNum > prevNum) {
-    return { tone: "up", text: `Up from ${previous.value} last time — nice progress 💪` };
+    return { tone: "up", text: `Up from ${previous.value} last time. Nice progress 💪` };
   }
 
   if (latestNum === prevNum) {
-    return { tone: "flat", text: `Same as last time (${previous.value}) — try pushing a little more` };
+    return { tone: "flat", text: `Same as last time (${previous.value}). Try pushing a little more` };
   }
 
-  return { tone: "down", text: `Lower than last time (${previous.value}) — that's fine, listen to your body` };
+  return { tone: "down", text: `Lower than last time (${previous.value}). That's fine, listen to your body` };
 }
 
 // Proactively suggests a next value BEFORE they log this week, based on
@@ -166,7 +166,7 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
         It doesn't stop. It goes round again, heavier.
       </h2>
       <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-        Week {(totalWeeks || 4) + 1} starts the block over — the same sessions below, in the same
+        Week {(totalWeeks || 4) + 1} starts the block over: the same sessions below, in the same
         order. Stop following the weekly increases and go by feel instead: add a little when a
         session is comfortably within reach, hold the weight when it isn't.
       </p>
@@ -210,7 +210,7 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
       <div className="border-t border-white/10 pt-4">
         <p className="text-overline text-zinc-500 mb-3">When to build a fresh block</p>
         <p className="text-sm text-zinc-400 leading-relaxed mb-4">
-          Repeating earns its keep for a couple of cycles. After that the gap starts to show —
+          Repeating earns its keep for a couple of cycles. After that the gap starts to show:
           you're stronger than the person who filled the questionnaire in, your season has moved
           on, and the plan hasn't. A new block is built around where you are now, not where you
           started.
@@ -223,7 +223,7 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
         </a>
         {sessionsLogged > 0 && (
           <p className="text-xs text-zinc-600 leading-relaxed mt-3 text-center">
-            Take your numbers above into the questionnaire — it asks what you're lifting now.
+            Take your numbers above into the questionnaire. It asks what you're lifting now.
           </p>
         )}
       </div>
@@ -235,7 +235,7 @@ function OngoingPanel({ history, logs, totalWeeks, cycleNumber, sampleMode = fal
         <div className="border-t border-white/10 pt-4 mt-6">
           <p className="text-overline text-zinc-500 mb-1">What week {(totalWeeks || 4) + 1} looks like</p>
           <p className="text-xs text-zinc-600 leading-relaxed mb-4">
-            The same week you started on. Numbers are where week 1 had them — go by feel from here.
+            The same week you started on. Numbers are where week 1 had them. Go by feel from here.
           </p>
           <div className="flex flex-col gap-2">
             {weekOneDays.map((d) => {
@@ -313,9 +313,9 @@ function BlockCompleteBanner({ cycleNumber = 1, totalWeeks = 4 }) {
           </p>
           <p className="text-sm leading-relaxed text-white/90">
             {stale
-              ? `You've been running this block for ${weeksDone} weeks. It's done its job — a fresh
+              ? `You've been running this block for ${weeksDone} weeks. It's done its job. A fresh
                  one built around where you are now will get you further than repeating this again.`
-              : `Nice work — that's ${weeksDone} weeks done. This block now repeats: the same
+              : `Nice work. That's ${weeksDone} weeks done. This block now repeats: the same
                  sessions, but you should be beating the numbers you logged last time.`}
           </p>
           <div className="flex flex-wrap gap-3 mt-4">
@@ -541,7 +541,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
       // of them here and leaving the rest reading from the old timestamp.
       window.location.reload();
     } catch {
-      toast.error("Couldn't move you to that week — check your connection.");
+      toast.error("Couldn't move you to that week. Check your connection.");
       setMovingWeek(false);
     }
   };
@@ -560,7 +560,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
         rpe,
       });
     } catch {
-      toast.error("Couldn't save that log — check your connection and try again.");
+      toast.error("Couldn't save that log. Check your connection and try again.");
     }
   };
 
@@ -676,7 +676,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
             {isPreviewWeek && (
               <div className="px-5 pb-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-zinc-500">
-                  Viewing week {viewingWeek + 1} — you're on week {activeWeekIndex + 1}.
+                  Viewing week {viewingWeek + 1}. You're on week {activeWeekIndex + 1}.
                   Ticking and logging stay on your current week.
                 </p>
                 {/* Training isn't a calendar. People miss a week, repeat one, or
@@ -705,12 +705,12 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           {isLockedWeek && (
             <div className="px-5 py-10 text-center">
               <Lock size={22} className="mx-auto text-[var(--accent)] mb-4" />
-              <p className="text-overline text-zinc-500 mb-3">Week {viewingWeek + 1} — sample</p>
+              <p className="text-overline text-zinc-500 mb-3">Week {viewingWeek + 1} · sample</p>
               <h2 className="font-display text-2xl leading-tight mb-4">
                 The rest of the block is in the full version.
               </h2>
               <p className="text-sm text-zinc-400 leading-relaxed mb-6 max-w-xs mx-auto">
-                Weeks 2 to {allWeeks.length} build on week 1 — same movements, climbing loads, and a
+                Weeks 2 to {allWeeks.length} build on week 1: same movements, climbing loads, and a
                 deload week to recover before it starts again. Build your own and it's made around
                 your sport, your kit and your schedule.
               </p>
@@ -730,7 +730,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
               <p className="text-overline text-[var(--accent)]">Carrying on</p>
               <p className="text-sm text-white mt-2 leading-relaxed">
                 Your block is done, so the weekly increases stop here. Same sessions, logged the
-                same way — add a little when one feels comfortably within reach, and hold when it
+                same way. Add a little when one feels comfortably within reach, and hold when it
                 doesn't.
               </p>
               <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
@@ -919,8 +919,8 @@ function HomeView({ data, days, weekNote = "", noteCollapsed = false, onToggleNo
       <div className="px-5 py-16 text-center">
         <p className="text-overline text-zinc-500 mb-3">This plan didn't save properly</p>
         <p className="text-sm text-zinc-400 leading-relaxed max-w-sm mx-auto">
-          The sessions are missing from it. Nothing you did caused this and nothing is lost —
-          get in touch and we'll rebuild it.
+          The sessions are missing from it. Nothing you did caused this and nothing is lost.
+          Get in touch and we'll rebuild it.
         </p>
       </div>
     );
@@ -1334,7 +1334,7 @@ function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber, e
       // Last time was a grind — hold the weight and consolidate rather than push.
       return {
         text: `Hold ${num}${unit}`,
-        sub: "last cycle felt hard — nail it before adding weight",
+        sub: "last cycle felt hard, nail it before adding weight",
       };
     }
     if (rpe === "easy") base *= 2; // room to move faster
@@ -1349,7 +1349,7 @@ function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber, e
   if (rpe === "hard") {
     return {
       text: `Repeat ${reference.value}`,
-      sub: "last cycle felt hard — match it cleanly first",
+      sub: "last cycle felt hard, match it cleanly first",
     };
   }
   return {
@@ -1374,7 +1374,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, loggedFr
   const logPrompt = (() => {
     const type = w.progression?.type || "none";
     if (type === "measure") {
-      return { label: "Log your time or distance — this one is about the number",
+      return { label: "Log your time or distance: this one is about the number",
                placeholder: "e.g. 3.4s, or 2.15m" };
     }
     if (type === "time") {
@@ -1677,7 +1677,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, loggedFr
                 onClick={() => setLogInput(suggested)}
                 className="mb-2 inline-flex items-center gap-1.5 text-[11px] text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/10 px-2 py-1 transition-colors"
               >
-                Suggested: {suggested} — tap to use
+                Suggested: {suggested} · tap to use
               </button>
             ) : null;
           })()}
@@ -1749,7 +1749,7 @@ function NutritionView({ nutrition }) {
   const fPct = total > 0 ? 100 - pPct - cPct : 0;
 
   const FALLBACK_DISCLAIMER =
-    "Always speak to your GP or a qualified healthcare professional before starting any new supplement — especially if you have an existing health condition, take medication, or are pregnant or breastfeeding.";
+    "Always speak to your GP or a qualified healthcare professional before starting any new supplement, especially if you have an existing health condition, take medication, or are pregnant or breastfeeding.";
 
   return (
     <div className="flex flex-col">
