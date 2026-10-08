@@ -1,0 +1,172 @@
+D, L = True, False
+
+LOWER_W1 = [("Back squat","4x5","80kg","3 min"),
+            ("Romanian deadlift","3x8","65kg","2 min"),
+            ("Bulgarian split squat","3x10","18kg DB","90 sec"),
+            ("Standing calf raise","3x12","40kg","60 sec")]
+LOWER_W3 = [("Back squat","4x5","90kg","3 min"),
+            ("Romanian deadlift","3x8","75kg","2 min"),
+            ("Bulgarian split squat","3x10","24kg DB","90 sec"),
+            ("Standing calf raise","3x12","50kg","60 sec")]
+LOWER_W4 = [("Back squat","3x5","72.5kg","3 min"),
+            ("Romanian deadlift","2x8","60kg","2 min"),
+            ("Bulgarian split squat","2x10","18kg DB","90 sec")]
+
+BATCH9 = [
+
+dict(slug="97_tab_morning", dark=D, label="the app", slides=[
+  dict(kind="cover", eyebrow="the morning tab", head="Ten minutes before anything else"),
+  dict(kind="phone", layout="bleed", eyebrow="morning", head="If you use one, it is in the plan",
+       view="morning", data=dict(subtitle="Your plan · Week 2", hero="TUESDAY · MORNING",
+       header="Before breakfast",
+       items=[("Weigh in", "1 min", "Same time, same conditions, before eating or drinking"),
+              ("Hip flow", "4 min", "90/90 switches and a couch stretch each side"),
+              ("Thoracic opener", "3 min", "Foam roller extensions, then open books"),
+              ("Ten minute walk", "10 min", "Outside if you can. Light on the eyes early helps sleep later")])),
+  dict(kind="statement", head="Not a second app. Not a separate document. It is a tab in the same plan."),
+  dict(kind="statement", head="No morning routine in your answers? The tab is not there.",
+       sub="You only get what applies to you."),
+  dict(kind="cta", head="Built to what you asked for", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="98_tab_fuel", dark=D, label="the app", slides=[
+  dict(kind="cover", eyebrow="the fuel tab", head="Nutrition, sat next to the training it is fuelling"),
+  dict(kind="phone", layout="bleed", eyebrow="fuel", head="Meals, timings, macros",
+       view="fuel", data=dict(subtitle="Muscle building · Week 2", hero="TUESDAY · FUEL",
+       header="Today",
+       items=[("Breakfast · 7:30", "620 kcal", "Greek yoghurt, oats, berries, honey · 42g protein"),
+              ("Lunch · 12:30", "740 kcal", "Chicken, rice, roasted veg, olive oil · 55g protein"),
+              ("Pre-training · 16:00", "280 kcal", "Banana and a whey shake · 25g protein"),
+              ("Dinner · 19:30", "810 kcal", "Salmon, potatoes, greens · 48g protein")])),
+  dict(kind="statement", head="Not a meal plan you follow to the gram. A shape for the day that supports the training."),
+  dict(kind="statement", head="Not interested in nutrition? Say so and the tab never appears.",
+       sub="We are not going to make you look at it."),
+  dict(kind="cta", head="One app, not three", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="99_tab_recover", dark=D, label="the app", slides=[
+  dict(kind="cover", eyebrow="the recover tab", head="Recovery is programmed, not left to good intentions"),
+  dict(kind="phone", layout="bleed", eyebrow="recover", head="Alongside the training, not instead of it",
+       view="recover", data=dict(subtitle="Strength · Week 3", hero="TUESDAY · RECOVER",
+       header="This week",
+       items=[("Sleep target", "7.5–8h", "The single biggest lever, and the one people skip"),
+              ("Post-session", "10 min", "Walk down rather than straight into the car"),
+              ("Rest days", "Wed, Sun", "Genuinely easy. Not secretly a cardio day"),
+              ("Week 4", "Deload", "Volume drops so the fitness you built can show up")])),
+  dict(kind="statement", head="Training is the stimulus. This is where the adaptation actually happens."),
+  dict(kind="cta", head="Both halves in one place", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="100_app_timer_running", dark=D, label="the app", slides=[
+  dict(kind="cover", eyebrow="mid-set", head="Stop timing your rest on a phone stopwatch"),
+  dict(kind="phone", layout="bleed", eyebrow="rest", head="Already set to what that exercise needs",
+       view="timer", data=dict(subtitle="Strength · Week 2", hero="MONDAY · LOWER STRENGTH",
+       focus="Lower strength", rows=LOWER_W3,
+       timer="2:14", timer_frac=0.62, timer_label="REST · SET 2 OF 4")),
+  dict(kind="statement", head="Three minutes on the squat. Sixty seconds on calves. You do not have to remember which."),
+  dict(kind="cta", head="Tap the set, it counts you down", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="101_week_one_vs_three", dark=D, label="progression", slides=[
+  dict(kind="cover", eyebrow="same session", head="Week one and week three, side by side"),
+  dict(kind="phone", layout="bleed", eyebrow="week one", head="Where you start",
+       view="train", data=dict(subtitle="Strength · Week 1", hero="MONDAY · LOWER STRENGTH",
+       focus="Lower strength", rows=LOWER_W1)),
+  dict(kind="phone", layout="bleed", eyebrow="week three", head="Same session, two weeks later",
+       view="train", data=dict(subtitle="Strength · Week 3", hero="MONDAY · LOWER STRENGTH",
+       focus="Lower strength", rows=LOWER_W3)),
+  dict(kind="statement", head="Same movements. Same order. Ten kilos on the squat.",
+       sub="That is what progressive overload actually looks like written down."),
+  dict(kind="cta", head="Familiarity is the feature", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="102_deload_week", dark=D, label="programming", slides=[
+  dict(kind="cover", eyebrow="week four", head="What a deload actually looks like"),
+  dict(kind="phone", layout="bleed", eyebrow="week four", head="Fewer sets, lighter, still there",
+       view="train", data=dict(subtitle="Strength · Week 4", hero="MONDAY · DELOAD",
+       focus="Deload", rows=LOWER_W4,
+       reason_on=0,
+       reason="Three sets at eighty percent of week three. Enough to keep the pattern and the habit, little enough that the fatigue you have built up clears.")),
+  dict(kind="statement", head="Not a week off. Not the same week lighter for no reason."),
+  dict(kind="statement", head="Then you test, and the next block starts from a real number."),
+  dict(kind="cta", head="Built into every block", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="103_upper_vs_lower", dark=D, label="programming", slides=[
+  dict(kind="cover", eyebrow="the split", head="What an upper day and a lower day should actually contain"),
+  dict(kind="phone", layout="bleed", eyebrow="lower", head="Lower day",
+       view="train", data=dict(subtitle="Strength · Week 2", hero="MONDAY · LOWER",
+       focus="Lower strength", rows=LOWER_W3)),
+  dict(kind="phone", layout="bleed", eyebrow="upper", head="Upper day",
+       view="train", data=dict(subtitle="Strength · Week 2", hero="THURSDAY · UPPER",
+       focus="Upper body",
+       rows=[("Weighted pull-up","4x6","+10kg","3 min"),
+             ("Incline dumbbell press","3x8","32kg","2 min"),
+             ("Seated row","3x10","65kg","90 sec"),
+             ("Face pull","3x15","20kg","60 sec")],
+       reason_on=0,
+       reason="Pulling first on upper days, because almost everyone has more pressing volume than pulling already and whatever goes first gets your best effort.")),
+  dict(kind="statement", head="A heavy compound, then support work for what it did not cover. That is the whole logic."),
+  dict(kind="cta", head="Not a list of favourites", sub="Free sample previews in the bio."),
+]),
+
+dict(slug="104_phases_view", dark=L, label="for physios", slides=[
+  dict(kind="cover", eyebrow="for physios", head="Structure by phase, not by weekday"),
+  dict(kind="phone", layout="bleed", eyebrow="phases", head="They move on when they are ready",
+       view="phases", data=dict(subtitle="Return to play · Phase 2", hero="PHASE 2 · CAPACITY",
+       header="The block",
+       items=[("Phase 1: Tolerance", "Done", "Low load, high control, daily frequency"),
+              ("Phase 2: Capacity", "Current", "Volume climbs, load steady, three times a week"),
+              ("Phase 3: Load", "Locked", "Intensity introduced, criteria-based entry"),
+              ("Phase 4: Consolidate", "Locked", "Back off, reassess, return to sport")])),
+  dict(kind="statement", head="A calendar does not know whether your patient is ready. You do."),
+  dict(kind="statement", head="You build it, you approve it, and clinical judgement stays entirely with you."),
+  dict(kind="cta", head="Physios, DM me for a look", sub="Days or phases, your call."),
+]),
+
+dict(slug="105_part_done", dark=D, label="the app", slides=[
+  dict(kind="cover", eyebrow="mid-session", head="Halfway through, and it knows exactly where you are"),
+  dict(kind="phone", layout="bleed", eyebrow="today", head="Two down, two to go",
+       view="today", data=dict(subtitle="Strength · Week 2", hero="TODAY · MON", done="2/4 done")),
+  dict(kind="statement", head="Put your phone down between sets and pick it up where you left off."),
+  dict(kind="statement", head="Nothing to re-find. Nothing to scroll back through."),
+  dict(kind="cta", head="Built to be used in a gym", sub="Not read at a desk."),
+]),
+
+dict(slug="106_coach_client_view", dark=L, label="for coaches", slides=[
+  dict(kind="cover", eyebrow="for coaches", head="What your client opens on Monday morning"),
+  dict(kind="phone", layout="bleed", eyebrow="their view", head="Your programme, your notes",
+       view="train", data=dict(subtitle="James · Block 2 · Week 1", hero="MONDAY · LOWER",
+       focus="Lower body", rows=LOWER_W3,
+       reason_on=2,
+       reason="Coach's note: your left side has been lagging since the ankle. Single-leg work is deliberately before the calf raise so it gets your best effort, not your leftovers.")),
+  dict(kind="statement", head="Your coaching, in a format they will actually open on the gym floor."),
+  dict(kind="cta", head="Coaches, DM me for a look", sub="Five minutes, no pitch."),
+]),
+
+dict(slug="107_hotel_fuel", dark=D, label="travelling", slides=[
+  dict(kind="cover", eyebrow="away", head="Eating well away from home, without pretending you have a kitchen"),
+  dict(kind="phone", layout="bleed", eyebrow="fuel", head="Built around what you can actually get",
+       view="fuel", data=dict(subtitle="Travelling · Week 1", hero="WEDNESDAY · FUEL",
+       header="On the road",
+       items=[("Breakfast", "Hotel buffet", "Eggs, fruit, yoghurt. Skip the pastries or do not. It is a week"),
+              ("Lunch", "Whatever is near", "Aim for a protein source and something green. That is the whole rule"),
+              ("Snack", "Portable", "Nuts, a shake, or a supermarket meal deal"),
+              ("Dinner", "Eat properly", "You are on holiday. This is the bit not to over-think")])),
+  dict(kind="statement", head="Two weeks of imperfect eating changes nothing. Two weeks of stressing about it ruins the trip."),
+  dict(kind="cta", head="Tell it you are travelling", sub="It plans for reality."),
+]),
+
+dict(slug="108_whole_block", dark=D, label="the app", slides=[
+  dict(kind="cover", eyebrow="all four weeks", head="You can see the whole block from day one"),
+  dict(kind="phone", layout="bleed", eyebrow="week two of four", head="Nothing hidden behind a paywall",
+       view="today", data=dict(subtitle="Football · Week 2 of 4", hero="TODAY · MON", done="0/4 done")),
+  dict(kind="list", eyebrow="what that means", head="No drip feed", items=[
+       "Every week is there the moment you buy it",
+       "Look ahead if you want to",
+       "Screenshot it, print it, keep it",
+       "Nothing expires and nothing renews"]),
+  dict(kind="statement", head="You paid once. It is yours."),
+  dict(kind="cta", head="One payment, whole block", sub="Free sample previews in the bio."),
+]),
+]

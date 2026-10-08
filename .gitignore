@@ -86,3 +86,8 @@ android-sdk/
 credentials.json
 *.key
 .credentials
+
+# Rendered social images (1,066 PNGs, ~300MB). Live in R2; regenerate with social/renderer/render.py
+social/renderer/instagram_1080x1350/
+social/renderer/tiktok_1080x1920/
+social/out/
