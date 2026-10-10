@@ -70,6 +70,7 @@ POSTS = {
     "planlete-track-day": ("Track day at Loughborough. Every rep planned. planlete.co.uk", "speed"),
     "planlete-new-year-new-plan": ("New year, new plan. Two minutes of questions, four weeks built around you, on your phone. One payment, no subscription. planlete.co.uk", "app"),
     "planlete-new-year-fuel": ("Train for it, eat for it. Your plan's Fuel tab puts meals and macros right next to the training they're fuelling. planlete.co.uk", "app"),
+    "planlete-sprint-day-oct": ("Sprint day on the track. Full effort every rep, full recovery between them. Sprint, gym or pitch, every session planned. planlete.co.uk", "speed_us"),
     "p07_christmas": ("Christmas week. Train if you want, rest if you need. The plan picks up when you do. planlete.co.uk", "photo"),
     "p08_next_block": ("January isn't a reset. It's the next block. Build yours from what you've already done at planlete.co.uk", "photo"),
     "p06_season": ("Train for the season you're in. Off-season, pre-season or in-season, your plan changes with it. planlete.co.uk", "photo"),
@@ -130,7 +131,7 @@ SCHEDULES = {
         ("2027-01-16", "planlete-muscle-saturday"), ("2027-01-17", "53_genetics"), ("2027-01-18", "planlete-inside-the-app~rerun"),
         ("2027-01-20", "planlete-same-app-any-sport~rerun"), ("2027-01-22", "103_upper_vs_lower"),
         ("2027-01-23", "planlete-track-day"), ("2027-01-24", "50_fasted_training"), ("2027-01-25", "planlete-football-tuesday~rerun"),
-        ("2027-01-27", "planlete-sprint-wednesday~rerun"), ("2027-01-29", "52_perfect_form"),
+        ("2027-01-27", "planlete-sprint-day-oct"), ("2027-01-29", "52_perfect_form"),
         ("2027-01-30", "planlete-football-friday~rerun"), ("2027-01-31", "56_rebuild_feature"),
     ],
 }
