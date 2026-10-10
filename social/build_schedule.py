@@ -149,7 +149,7 @@ TIMES = {"Sat": "19:00", "Sun": "19:00", "Mon": "20:00", "Wed": "14:00", "Fri": 
 
 def old_carousel_rows():
     rows = {}
-    for f in sorted(glob.glob(os.path.join(HERE, "schedules", "socialpilot-*.csv"))):
+    for f in sorted(glob.glob(os.path.join(HERE, "schedules", "old", "socialpilot-*.csv"))):
         for r in csv.reader(open(f, encoding="utf-8-sig", newline="")):
             m = re.search(r"posts/(?:ig|tt)/([^/]+)/", r[1])
             if m: rows.setdefault(m.group(1), {})[r[3]] = r
