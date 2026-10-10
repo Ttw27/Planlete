@@ -45,6 +45,7 @@ POSTS = {
     "planlete-muscle-week": ("A muscle building week, start to finish. Every session, every set, every rest period, and why each exercise is there. planlete.co.uk", "app"),
     "planlete-run-week": ("A 5k and 10k week, planned. Easy runs, intervals, a long run, and the strength work that keeps you running. planlete.co.uk", "running_us"),
     "planlete-sprint-the-plan-said-v2": ("Monday said acceleration. 6 x 15m, full recovery between every rep. The plan tells you what, and it tells you why. Free sprint sample plan at planlete.co.uk, no card, no sign up.", "speed"),
+    "planlete-why-i-built-it": ("Why I built Planlete. Pen and paper round the gym, a different sheet for every workout, print-outs, screenshots on my phone, and progressive overload that was impossible to track. So I built an app, custom made for me, with exercises I didn't know would help. Now it's yours too. planlete.co.uk", "app"),
     "p01_follow_the_plan": ("The plan you follow beats the perfect plan you don't. Four weeks, built around your week, your gym and your body. planlete.co.uk", "photo"),
     "p02_week_four": ("Week four is lighter on purpose. That's where the work from weeks one to three turns into progress. Every Planlete block has a deload built in. planlete.co.uk", "photo"),
     "p03_rest_is_training": ("Rest is part of the programme. Sleep, recovery days and rest periods are planned, not left to chance. planlete.co.uk", "photo"),
@@ -66,7 +67,7 @@ SCHEDULES = {
     "socialpilot-reels-17oct-13nov-2026.csv": [
         ("2026-10-17", "planlete-athlete-tuesday"), ("2026-10-18", "38_cardio_myth"), ("2026-10-19", "planlete-how-it-works"),
         ("2026-10-21", "planlete-hyrox-monday"), ("2026-10-23", "planlete-sprint-monday"),
-        ("2026-10-24", "planlete-football-tuesday"), ("2026-10-25", "p01_follow_the_plan"), ("2026-10-26", "planlete-inside-the-app"),
+        ("2026-10-24", "planlete-football-tuesday"), ("2026-10-25", "planlete-why-i-built-it"), ("2026-10-26", "planlete-inside-the-app"),
         ("2026-10-28", "planlete-sprint-wednesday"), ("2026-10-30", "37_rest_times"),
         ("2026-10-31", "planlete-2026-so-far"), ("2026-11-01", "46_women_lifting"), ("2026-11-02", "planlete-muscle-week"),
         ("2026-11-04", "planlete-run-week"), ("2026-11-06", "p02_week_four"),
@@ -150,6 +151,10 @@ def main():
     old = old_carousel_rows()
 
     def write(path, rs):
+        # SocialPilot silently mis-schedules "Nov 3": every date must be "Nov 03, 2026 19:00".
+        for r in rs:
+            assert re.fullmatch(r"[A-Z][a-z]{2} \d{2}, \d{4} \d{2}:\d{2}", r[2]), f"bad date {r[2]!r} in {path}"
+            assert len(r) == 6 and "\n" not in r[0], f"bad row in {path}"
         with open(path, "w", encoding="utf-8-sig", newline="") as fh:
             csv.writer(fh, lineterminator="\r\n").writerows(rs)
 
