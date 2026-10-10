@@ -105,9 +105,11 @@ for k, v in RERUNS.items():
 # file -> [(date, slug)]. Sat 19:00, Sun 19:00, Mon 20:00, Wed 14:00 (US slot), Fri 19:30.
 SCHEDULES = {
     "socialpilot-reels-17oct-13nov-2026.csv": [
-        ("2026-10-17", "planlete-athlete-tuesday"), ("2026-10-18", "38_cardio_myth"), ("2026-10-19", "planlete-how-it-works"),
+        ("2026-10-11", "planlete-why-i-built-it"), ("2026-10-12", "planlete-how-it-works"),
+        ("2026-10-14", "60_goal_powerlifting"), ("2026-10-16", "p02_week_four"),
+        ("2026-10-17", "planlete-athlete-tuesday"), ("2026-10-18", "38_cardio_myth"), ("2026-10-19", "99_tab_recover"),
         ("2026-10-21", "planlete-hyrox-monday"), ("2026-10-23", "planlete-sprint-monday"),
-        ("2026-10-24", "planlete-football-tuesday"), ("2026-10-25", "planlete-why-i-built-it"), ("2026-10-26", "planlete-inside-the-app"),
+        ("2026-10-24", "planlete-football-tuesday"), ("2026-10-25", "105_part_done"), ("2026-10-26", "planlete-inside-the-app"),
         ("2026-10-28", "planlete-sprint-wednesday"), ("2026-10-30", "37_rest_times"),
         ("2026-10-31", "planlete-2026-so-far"), ("2026-11-01", "46_women_lifting"), ("2026-11-02", "planlete-muscle-week"),
         ("2026-11-04", "planlete-run-week"), ("2026-11-06", "p13_week_three"),
@@ -255,18 +257,16 @@ def main():
     for f in glob.glob(os.path.join(HERE, "schedules", "socialpilot-reels-*.csv")):
         os.remove(f)  # replaced by the monthly files below
     by_month = {}
-    for r in all_rows:
+    for r in all_rows[3:]:  # first post lives in the test file
         by_month.setdefault(datetime.strptime(r[2], "%b %d, %Y %H:%M").strftime("%Y-%m"), []).append(r)
     for ym, rs in sorted(by_month.items()):
         name = f"socialpilot-planlete-{ym}-{datetime.strptime(ym, '%Y-%m').strftime('%B').lower()}.csv"
         write(os.path.join(HERE, "schedules", name), rs)
         print(f"{len(rs) // 3:3d} posts ({len(rs)} rows) -> {name}")
     rows = first
-    # Test file: one video post on all three accounts, two days out so nothing goes live by surprise.
-    test_rows = [list(r) for r in rows[:3]]
-    for r, delta in zip(test_rows, (0, 30, 90)):
-        r[2] = (datetime(2026, 10, 12, 21, 0) + timedelta(minutes=delta)).strftime("%b %d, %Y %H:%M")
-    write(os.path.join(HERE, "schedules", "socialpilot-TEST-3-rows.csv"), test_rows)
+    # Test file = the real first post (its three rows). The October file leaves those rows out, so importing
+    # the test and then October never doubles up.
+    write(os.path.join(HERE, "schedules", "socialpilot-TEST-3-rows.csv"), [list(r) for r in rows[:3]])
 
 
 if __name__ == "__main__":
