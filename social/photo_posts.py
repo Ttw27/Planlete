@@ -21,6 +21,9 @@ POSTS = [
     ("p01_follow_the_plan", "01_", "the honest truth", "The plan you follow beats the perfect plan you don't."),
     ("p02_week_four", "13_", "deload week", "Week four is lighter on purpose."),
     ("p03_rest_is_training", "04_", "recovery", "Rest is part of the programme."),
+    ("p04_need_a_plan", "26_", "be honest", "You don't need more motivation. You need a plan."),
+    ("p05_next_four", "25_", "how it works", "Four weeks. Then the next four."),
+    ("p06_season", "33_", "in season or off", "Train for the season you're in."),
 ]
 
 

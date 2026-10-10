@@ -48,19 +48,42 @@ POSTS = {
     "p01_follow_the_plan": ("The plan you follow beats the perfect plan you don't. Four weeks, built around your week, your gym and your body. planlete.co.uk", "photo"),
     "p02_week_four": ("Week four is lighter on purpose. That's where the work from weeks one to three turns into progress. Every Planlete block has a deload built in. planlete.co.uk", "photo"),
     "p03_rest_is_training": ("Rest is part of the programme. Sleep, recovery days and rest periods are planned, not left to chance. planlete.co.uk", "photo"),
+    "planlete-football-friday": ("Football plan, Friday. Pre-match sharpening: close control, small touches, head up, then quick passing. Low cost, high touch, ready for Saturday. planlete.co.uk", "football"),
+    "planlete-same-app-any-sport": ("Same app, any sport. Football, sprint, athlete, HYROX, muscle building, 5k and 10k. Every week built around your sport and your schedule. planlete.co.uk", "app"),
+    "planlete-sprint-with-a-mate": ("Sprint plan, Monday. Acceleration day. Stay low out of the start, then race it. Better with a mate. planlete.co.uk", "speed"),
+    "planlete-every-exercise-explained": ("Every exercise explained. Why it's in, how to do it, what to watch for, plus an easier and a harder option. Depth jumps to dribble weaves, it's all in the plan. planlete.co.uk", "app"),
+    "planlete-football-club-night": ("Got club tonight? Your Planlete football plan knows. Thursday is club training, so nothing gets added on top. Your sessions fit round your club, not the other way round. planlete.co.uk", "football"),
+    "planlete-same-drill-eight-months": ("Same work. February, August, October. Eight months of starts and sprints, still going. Every session planned. planlete.co.uk", "speed_us"),
+    "planlete-gym-night": ("Gym night. Sled first, then the rest. Gym, pitch or track, four weeks built around you. One payment, no subscription. planlete.co.uk", "photo"),
+    "planlete-same-cross-every-time": ("Same cross. Every time. Reps build players. Plans built around your sport at planlete.co.uk", "football"),
+    "p04_need_a_plan": ("You don't need more motivation. You need a plan. Four weeks, built around your week, your gym and your body. planlete.co.uk", "photo"),
+    "p05_next_four": ("Four weeks. Then the next four. Each block builds on what you logged in the last one. planlete.co.uk", "photo"),
+    "p06_season": ("Train for the season you're in. Off-season, pre-season or in-season, your plan changes with it. planlete.co.uk", "photo"),
 }
 
-# date, slug. Sat 19:00, Sun 19:00, Mon 20:00, Wed 14:00 (US slot), Fri 19:30.
-SCHEDULE = [
-    ("2026-10-17", "planlete-athlete-tuesday"), ("2026-10-18", "38_cardio_myth"), ("2026-10-19", "planlete-how-it-works"),
-    ("2026-10-21", "planlete-hyrox-monday"), ("2026-10-23", "planlete-sprint-monday"),
-    ("2026-10-24", "planlete-football-tuesday"), ("2026-10-25", "p01_follow_the_plan"), ("2026-10-26", "planlete-inside-the-app"),
-    ("2026-10-28", "planlete-sprint-wednesday"), ("2026-10-30", "37_rest_times"),
-    ("2026-10-31", "planlete-2026-so-far"), ("2026-11-01", "46_women_lifting"), ("2026-11-02", "planlete-muscle-week"),
-    ("2026-11-04", "planlete-run-week"), ("2026-11-06", "p02_week_four"),
-    ("2026-11-07", "planlete-sprint-the-plan-said-v2"), ("2026-11-08", "48_consistency"), ("2026-11-09", "102_deload_week"),
-    ("2026-11-11", "45_over_40"), ("2026-11-13", "p03_rest_is_training"),
-]
+# file -> [(date, slug)]. Sat 19:00, Sun 19:00, Mon 20:00, Wed 14:00 (US slot), Fri 19:30.
+SCHEDULES = {
+    "socialpilot-reels-17oct-13nov-2026.csv": [
+        ("2026-10-17", "planlete-athlete-tuesday"), ("2026-10-18", "38_cardio_myth"), ("2026-10-19", "planlete-how-it-works"),
+        ("2026-10-21", "planlete-hyrox-monday"), ("2026-10-23", "planlete-sprint-monday"),
+        ("2026-10-24", "planlete-football-tuesday"), ("2026-10-25", "p01_follow_the_plan"), ("2026-10-26", "planlete-inside-the-app"),
+        ("2026-10-28", "planlete-sprint-wednesday"), ("2026-10-30", "37_rest_times"),
+        ("2026-10-31", "planlete-2026-so-far"), ("2026-11-01", "46_women_lifting"), ("2026-11-02", "planlete-muscle-week"),
+        ("2026-11-04", "planlete-run-week"), ("2026-11-06", "p02_week_four"),
+        ("2026-11-07", "planlete-sprint-the-plan-said-v2"), ("2026-11-08", "48_consistency"), ("2026-11-09", "102_deload_week"),
+        ("2026-11-11", "45_over_40"), ("2026-11-13", "p03_rest_is_training"),
+    ],
+    "socialpilot-reels-14nov-11dec-2026.csv": [
+        ("2026-11-14", "planlete-football-friday"), ("2026-11-15", "39_soreness"), ("2026-11-16", "p04_need_a_plan"),
+        ("2026-11-18", "planlete-same-app-any-sport"), ("2026-11-20", "40_warm_ups"),
+        ("2026-11-21", "planlete-sprint-with-a-mate"), ("2026-11-22", "43_beginner_mistakes"), ("2026-11-23", "44_plateau"),
+        ("2026-11-25", "planlete-every-exercise-explained"), ("2026-11-27", "p05_next_four"),
+        ("2026-11-28", "planlete-football-club-night"), ("2026-11-29", "47_run_and_lift"), ("2026-11-30", "49_machines_vs_free"),
+        ("2026-12-02", "planlete-same-drill-eight-months"), ("2026-12-04", "51_more_isnt_better"),
+        ("2026-12-05", "planlete-gym-night"), ("2026-12-06", "41_sleep"), ("2026-12-07", "p06_season"),
+        ("2026-12-09", "planlete-same-cross-every-time"), ("2026-12-11", "101_week_one_vs_three"),
+    ],
+}
 TIMES = {"Sat": "19:00", "Sun": "19:00", "Mon": "20:00", "Wed": "14:00", "Fri": "19:30"}
 
 
@@ -98,10 +121,9 @@ def one_line(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
-def main():
-    old = old_carousel_rows()
+def build_rows(schedule, old):
     rows = []
-    for date, slug in SCHEDULE:
+    for date, slug in schedule:
         d = datetime.strptime(date, "%Y-%m-%d")
         at = datetime.strptime(f"{date} {TIMES[d.strftime('%a')]}", "%Y-%m-%d %H:%M")
         stamp = lambda t: t.strftime("%b %d, %Y %H:%M")
@@ -121,19 +143,28 @@ def main():
         rows.append([caption, media[IG], stamp(at), IG, tags, ""])
         rows.append([caption, media[FB], stamp(at + timedelta(minutes=30)), FB, tags, ""])
         rows.append([caption + " " + tags, media[TT], stamp(at + timedelta(minutes=90)), TT, "", ""])
+    return rows
+
+
+def main():
+    old = old_carousel_rows()
 
     def write(path, rs):
         with open(path, "w", encoding="utf-8-sig", newline="") as fh:
             csv.writer(fh, lineterminator="\r\n").writerows(rs)
 
-    out = os.path.join(HERE, "schedules", "socialpilot-reels-17oct-13nov-2026.csv")
-    write(out, rows)
+    first = None
+    for name, schedule in SCHEDULES.items():
+        rows = build_rows(schedule, old)
+        write(os.path.join(HERE, "schedules", name), rows)
+        print(f"{len(rows)} rows -> {name}")
+        first = first or rows
+    rows = first
     # Test file: one video post on all three accounts, two days out so nothing goes live by surprise.
     test_rows = [list(r) for r in rows[:3]]
     for r, delta in zip(test_rows, (0, 30, 90)):
         r[2] = (datetime(2026, 10, 12, 21, 0) + timedelta(minutes=delta)).strftime("%b %d, %Y %H:%M")
     write(os.path.join(HERE, "schedules", "socialpilot-TEST-3-rows.csv"), test_rows)
-    print(f"{len(rows)} rows -> {out}")
 
 
 if __name__ == "__main__":

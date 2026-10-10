@@ -6,15 +6,15 @@ reused carousels load from R2.
 
     python3 social/review_page.py
 """
-import csv, html, os, re
+import csv, glob, html, os, re
 from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CSV = os.path.join(HERE, "schedules", "socialpilot-reels-17oct-13nov-2026.csv")
+CSVS = sorted(glob.glob(os.path.join(HERE, "schedules", "socialpilot-reels-*.csv")), key=lambda f: datetime.strptime(next(csv.reader(open(f, encoding="utf-8-sig")))[2], "%b %d, %Y %H:%M"))
 R2 = "https://pub-3ad74abe28dc4a4e90f5065bb7df55a6.r2.dev/"
 NAMES = {"2642874": "Instagram", "2642875": "Facebook", "2642876": "TikTok"}
 
-rows = list(csv.reader(open(CSV, encoding="utf-8-sig", newline="")))
+rows = [r for f in CSVS for r in csv.reader(open(f, encoding="utf-8-sig", newline=""))]
 posts = []
 for i in range(0, len(rows), 3):
     ig, fb, tt = rows[i], rows[i + 1], rows[i + 2]
