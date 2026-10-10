@@ -34,7 +34,7 @@ TAGS = {
 
 # kind, slug, caption, tag set. Video files come from REELS/<slug>.mp4 (or OLD_REEL).
 POSTS = {
-    "planlete-athlete-tuesday": ("Tuesday on the athlete plan. A-skips, high knees, 10m sprints, depth jumps, broad jumps. Every one of them is in the session, and every one comes with a reason it's there. Build yours at planlete.co.uk. One payment, no subscription.", "speed"),
+    "planlete-athlete-tuesday": ("Tuesday on the athlete plan. A-skips, high knees, 10m sprints, depth jumps, broad jumps. Every one of them is in the session, and every one comes with a reason it's there. Build yours at planlete.co.uk.", "speed"),
     "planlete-how-it-works": ("How it works. Answer a few questions, get four weeks built around you, open it on your phone and train. No PDF, no subscription. planlete.co.uk", "app"),
     "planlete-hyrox-monday": ("HYROX plan, Monday. Sled day. Low shin angle, short choppy steps, legs not arms. It's all written in the plan, right next to the sets. Build yours around your race at planlete.co.uk", "hyrox_us"),
     "planlete-sprint-monday": ("Monday is acceleration day. Starts first while you're fresh, then 30m sprints with full recovery. The plan tells you why it's first, how to do it and what to watch for. planlete.co.uk", "speed"),
@@ -55,7 +55,7 @@ POSTS = {
     "planlete-every-exercise-explained": ("Every exercise explained. Why it's in, how to do it, what to watch for, plus an easier and a harder option. Depth jumps to dribble weaves, it's all in the plan. planlete.co.uk", "app"),
     "planlete-football-club-night": ("Got club tonight? Your Planlete football plan knows. Thursday is club training, so nothing gets added on top. Your sessions fit round your club, not the other way round. planlete.co.uk", "football"),
     "planlete-same-drill-eight-months": ("Same work. February, August, October. Eight months of starts and sprints, still going. Every session planned. planlete.co.uk", "speed_us"),
-    "planlete-gym-night": ("Gym night. Sled first, then the rest. Gym, pitch or track, four weeks built around you. One payment, no subscription. planlete.co.uk", "photo"),
+    "planlete-gym-night": ("Gym night. Sled first, then the rest. Gym, pitch or track, four weeks built around you. planlete.co.uk", "photo"),
     "planlete-same-cross-every-time": ("Same cross. Every time. Reps build players. Plans built around your sport at planlete.co.uk", "football"),
     "p04_need_a_plan": ("You don't need more motivation. You need a plan. Four weeks, built around your week, your gym and your body. planlete.co.uk", "photo"),
     "p05_next_four": ("Four weeks. Then the next four. Each block builds on what you logged in the last one. planlete.co.uk", "photo"),
@@ -68,7 +68,7 @@ POSTS = {
     "planlete-gym-jan-to-mar": ("January to March in the gym. Every session planned, every set logged. planlete.co.uk", "app"),
     "planlete-indoor-speed": ("Dark nights, still training. Speed work moves indoors, the plan moves with it. planlete.co.uk", "speed"),
     "planlete-track-day": ("Track day at Loughborough. Every rep planned. planlete.co.uk", "speed"),
-    "planlete-new-year-new-plan": ("New year, new plan. Two minutes of questions, four weeks built around you, on your phone. One payment, no subscription. planlete.co.uk", "app"),
+    "planlete-new-year-new-plan": ("New year, new plan. Two minutes of questions, four weeks built around you, on your phone. planlete.co.uk", "app"),
     "planlete-new-year-fuel": ("Train for it, eat for it. Your plan's Fuel tab puts meals and macros right next to the training they're fuelling. planlete.co.uk", "app"),
     "planlete-sprint-day-oct": ("Sprint day on the track. Full effort every rep, full recovery between them. Sprint, gym or pitch, every session planned. planlete.co.uk", "speed_us"),
     "p09_show_up": ("Show up. Log it. Repeat. That's the whole secret, and the plan makes the logging easy. planlete.co.uk", "photo"),
@@ -76,7 +76,7 @@ POSTS = {
     "p11_strong_for_everyone": ("Strong is for everyone. Plans built around your goal, your gym and your week. planlete.co.uk", "photo"),
     "p12_every_set_a_reason": ("Every set has a reason, and your plan tells you what it is. Nothing thrown in at random. planlete.co.uk", "photo"),
     "p13_week_three": ("Week three, heavier than week one. That's progressive overload, built into every block. planlete.co.uk", "photo"),
-    "p14_built_around_you": ("New year, same rule: built around you, not a template. Four weeks, one payment. planlete.co.uk", "photo"),
+    "p14_built_around_you": ("New year, same rule: built around you, not a template. Four weeks, built for you. planlete.co.uk", "photo"),
     "p15_logged": ("Logged, not guessed. Every set you log sets the targets for your next block. planlete.co.uk", "photo"),
     "planlete-sprint-day-tim": ("Sprint day. Full effort every rep, full recovery between them. Training alongside the people I build plans for. planlete.co.uk", "speed_us"),
     "planlete-sprint-day-ethan": ("Sprint day on the track. Every rep full effort, every rep planned. planlete.co.uk", "speed"),
@@ -131,7 +131,7 @@ SCHEDULES = {
         ("2026-12-23", "planlete-every-exercise-explained-muscle"), ("2026-12-25", "p07_christmas"),
         ("2026-12-26", "planlete-gym-jan-to-mar"), ("2026-12-27", "54_supplements"), ("2026-12-28", "planlete-how-it-works~rerun"),
         ("2026-12-30", "planlete-new-year-new-plan"), ("2027-01-01", "p14_built_around_you"),
-        ("2027-01-02", "planlete-muscle-wednesday"), ("2027-01-03", "108_whole_block"), ("2027-01-04", "planlete-new-year-fuel"),
+        ("2027-01-02", "planlete-muscle-wednesday"), ("2027-01-03", "59_goal_calisthenics"), ("2027-01-04", "planlete-new-year-fuel"),
         ("2027-01-06", "planlete-athlete-tuesday~rerun"), ("2027-01-08", "96_sess_three_day"),
     ],
     "socialpilot-reels-09jan-31jan-2027.csv": [
@@ -156,13 +156,42 @@ def old_carousel_rows():
     return rows
 
 
+MUSIC = os.path.expanduser("~/Clips/planlete/music")
+# Pixabay tracks checked as not Content ID registered (see music/credits.csv). Track, start offset in seconds.
+TRACKS = {"speed": [("speed-sport.mp3", 0), ("speed-drive-breakbeat.mp3", 4)],
+          "gym": [("gym-iron-pump.mp3", 8), ("gym-rock.mp3", 2)],
+          "app": [("app-upbeat-corporate.mp3", 3)]}
+
+
+def music_for(slug):
+    s = slug.lower()
+    if any(k in s for k in ("muscle", "gym", "hyrox")):
+        kind = "gym"
+    elif any(k in s for k in ("how-it-works", "inside", "week", "same-app", "explained", "new-year", "why")):
+        kind = "app"
+    else:
+        kind = "speed"  # sprint, track, athlete, football, best-of
+    options = TRACKS[kind]
+    return options[sum(map(ord, slug)) % len(options)]  # stable rotation so neighbours vary
+
+
 def export_video(slug):
+    """Upload copy = the silent original + a quiet Pixabay bed (fade in/out), ready for SocialPilot.
+    The originals in ~/Clips/output stay silent for posting by hand with a trending sound."""
     src = OLD_REEL if slug.endswith("-v2") else os.path.join(REELS, slug + ".mp4")
     dst = os.path.join(UPLOAD, "posts", "reels", slug, slug + ".mp4")
     if not os.path.exists(dst):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        subprocess.run([FF, "-v", "error", "-y", "-i", src, "-c:v", "libx264", "-preset", "slow", "-crf", "21",
-                        "-maxrate", "10M", "-bufsize", "20M", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", dst], check=True)
+        dur = float(subprocess.run([os.path.join(os.path.dirname(FF), "ffprobe"), "-v", "error", "-show_entries", "format=duration",
+                                    "-of", "csv=p=0", src], capture_output=True, text=True).stdout)
+        track, start = music_for(slug)
+        fade = max(0.0, dur - 1.5)
+        subprocess.run([FF, "-v", "error", "-y", "-i", src, "-ss", str(start), "-i", os.path.join(MUSIC, track),
+                        "-filter_complex", f"[1:a]atrim=0:{dur:.2f},asetpts=PTS-STARTPTS,afade=t=in:d=0.4,"
+                                           f"afade=t=out:st={fade:.2f}:d=1.5,loudnorm=I=-16:TP=-1.5:LRA=11[a]",
+                        "-map", "0:v", "-map", "[a]", "-c:v", "libx264", "-preset", "slow", "-crf", "21",
+                        "-maxrate", "10M", "-bufsize", "20M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
+                        "-shortest", "-movflags", "+faststart", dst], check=True)
     return f"{R2}/posts/reels/{slug}/{slug}.mp4"
 
 
