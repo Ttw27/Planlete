@@ -24,6 +24,8 @@ POSTS = [
     ("p04_need_a_plan", "26_", "be honest", "You don't need more motivation. You need a plan."),
     ("p05_next_four", "25_", "how it works", "Four weeks. Then the next four."),
     ("p06_season", "33_", "in season or off", "Train for the season you're in."),
+    ("p07_christmas", "21_", "christmas week", "Train if you want. Rest if you need."),
+    ("p08_next_block", "23_", "january", "Not a reset. The next block."),
 ]
 
 

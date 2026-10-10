@@ -59,8 +59,38 @@ POSTS = {
     "planlete-same-cross-every-time": ("Same cross. Every time. Reps build players. Plans built around your sport at planlete.co.uk", "football"),
     "p04_need_a_plan": ("You don't need more motivation. You need a plan. Four weeks, built around your week, your gym and your body. planlete.co.uk", "photo"),
     "p05_next_four": ("Four weeks. Then the next four. Each block builds on what you logged in the last one. planlete.co.uk", "photo"),
+    "planlete-muscle-monday": ("Muscle building plan, Monday. Push day: bench press first, then pressing and shoulders. Every exercise has a reason, and the plan tells you what it is. planlete.co.uk", "app"),
+    "planlete-muscle-tuesday": ("Muscle building plan, Tuesday. Leg day: leg press, walking lunges, then accessories. Four weeks of it, built around your gym. planlete.co.uk", "app"),
+    "planlete-muscle-wednesday": ("Muscle building plan, Wednesday. Pull day. Rows, slow on the way down, then back work. The plan explains why the lowering matters. planlete.co.uk", "app"),
+    "planlete-muscle-friday": ("Muscle building plan, Friday. Hinge day and Bulgarian split squats, to find and fix the weaker side. planlete.co.uk", "app"),
+    "planlete-muscle-saturday": ("Muscle building plan, Saturday. Arms and delts. Overhead triceps for the long head, then arms and delts to finish. planlete.co.uk", "app"),
+    "planlete-every-exercise-explained-muscle": ("Every exercise explained, muscle building edition. Bench press, leg press, rows, split squats, overhead triceps: why each one is in your plan and how to do it. planlete.co.uk", "app"),
+    "planlete-gym-jan-to-mar": ("January to March in the gym. Every session planned, every set logged. planlete.co.uk", "app"),
+    "planlete-indoor-speed": ("Dark nights, still training. Speed work moves indoors, the plan moves with it. planlete.co.uk", "speed"),
+    "planlete-track-day": ("Track day at Loughborough. Every rep planned. planlete.co.uk", "speed"),
+    "planlete-new-year-new-plan": ("New year, new plan. Two minutes of questions, four weeks built around you, on your phone. One payment, no subscription. planlete.co.uk", "app"),
+    "planlete-new-year-fuel": ("Train for it, eat for it. Your plan's Fuel tab puts meals and macros right next to the training they're fuelling. planlete.co.uk", "app"),
+    "p07_christmas": ("Christmas week. Train if you want, rest if you need. The plan picks up when you do. planlete.co.uk", "photo"),
+    "p08_next_block": ("January isn't a reset. It's the next block. Build yours from what you've already done at planlete.co.uk", "photo"),
     "p06_season": ("Train for the season you're in. Off-season, pre-season or in-season, your plan changes with it. planlete.co.uk", "photo"),
 }
+
+RERUNS = {
+    "planlete-how-it-works~rerun": "January plan? Here's how it works. Answer a few questions, get four weeks built around you, open it and train. planlete.co.uk",
+    "planlete-athlete-tuesday~rerun": "The plan said react. A-skips, high knees, sprints, depth jumps and broad jumps, every one with a reason. planlete.co.uk",
+    "planlete-why-i-built-it~rerun": "Why Planlete exists: pen and paper, print-outs and screenshots weren't cutting it. So I built an app. Now it's yours too. planlete.co.uk",
+    "planlete-hyrox-monday~rerun": "HYROX season is coming. Sled day: low shin angle, short steps, legs not arms. Build your race plan at planlete.co.uk",
+    "planlete-inside-the-app~rerun": "Everything in one place: Today, Train, Morning, Fuel and Recover. Your plan, on your phone. planlete.co.uk",
+    "planlete-same-app-any-sport~rerun": "Football, sprint, athlete, HYROX, muscle, running. Same app, any sport, built around you. planlete.co.uk",
+    "planlete-football-tuesday~rerun": "Second half of the season. Brake hard, cut, sprint, repeat. Football plans built round your fixtures at planlete.co.uk",
+    "planlete-sprint-wednesday~rerun": "Top speed Wednesday. Wall drills, then flying sprints: build up and relax into it. planlete.co.uk",
+    "planlete-football-friday~rerun": "Friday before a match: close control and quick passing, nothing heavy. planlete.co.uk",
+}
+TAG_FOR = {"planlete-how-it-works": "app", "planlete-athlete-tuesday": "speed", "planlete-why-i-built-it": "app", "planlete-hyrox-monday": "hyrox_us",
+           "planlete-inside-the-app": "app", "planlete-same-app-any-sport": "app", "planlete-football-tuesday": "football",
+           "planlete-sprint-wednesday": "speed_us", "planlete-football-friday": "football"}
+for k, v in RERUNS.items():
+    POSTS[k] = (v, TAG_FOR[k.split("~")[0]])
 
 # file -> [(date, slug)]. Sat 19:00, Sun 19:00, Mon 20:00, Wed 14:00 (US slot), Fri 19:30.
 SCHEDULES = {
@@ -83,6 +113,25 @@ SCHEDULES = {
         ("2026-12-02", "planlete-same-drill-eight-months"), ("2026-12-04", "51_more_isnt_better"),
         ("2026-12-05", "planlete-gym-night"), ("2026-12-06", "41_sleep"), ("2026-12-07", "p06_season"),
         ("2026-12-09", "planlete-same-cross-every-time"), ("2026-12-11", "101_week_one_vs_three"),
+    ],
+    "socialpilot-reels-12dec-08jan-2027.csv": [
+        ("2026-12-12", "planlete-muscle-monday"), ("2026-12-13", "98_tab_fuel"), ("2026-12-14", "97_tab_morning"),
+        ("2026-12-16", "planlete-indoor-speed"), ("2026-12-18", "100_app_timer_running"),
+        ("2026-12-19", "planlete-muscle-tuesday"), ("2026-12-20", "58_travel_plans"), ("2026-12-21", "107_hotel_fuel"),
+        ("2026-12-23", "planlete-every-exercise-explained-muscle"), ("2026-12-25", "p07_christmas"),
+        ("2026-12-26", "planlete-gym-jan-to-mar"), ("2026-12-27", "54_supplements"), ("2026-12-28", "planlete-how-it-works~rerun"),
+        ("2026-12-30", "planlete-new-year-new-plan"), ("2027-01-01", "p08_next_block"),
+        ("2027-01-02", "planlete-muscle-wednesday"), ("2027-01-03", "108_whole_block"), ("2027-01-04", "planlete-new-year-fuel"),
+        ("2027-01-06", "planlete-athlete-tuesday~rerun"), ("2027-01-08", "96_sess_three_day"),
+    ],
+    "socialpilot-reels-09jan-31jan-2027.csv": [
+        ("2027-01-09", "planlete-muscle-friday"), ("2027-01-10", "42_training_age"), ("2027-01-11", "planlete-why-i-built-it~rerun"),
+        ("2027-01-13", "planlete-hyrox-monday~rerun"), ("2027-01-15", "p01_follow_the_plan"),
+        ("2027-01-16", "planlete-muscle-saturday"), ("2027-01-17", "53_genetics"), ("2027-01-18", "planlete-inside-the-app~rerun"),
+        ("2027-01-20", "planlete-same-app-any-sport~rerun"), ("2027-01-22", "103_upper_vs_lower"),
+        ("2027-01-23", "planlete-track-day"), ("2027-01-24", "50_fasted_training"), ("2027-01-25", "planlete-football-tuesday~rerun"),
+        ("2027-01-27", "planlete-sprint-wednesday~rerun"), ("2027-01-29", "52_perfect_form"),
+        ("2027-01-30", "planlete-football-friday~rerun"), ("2027-01-31", "56_rebuild_feature"),
     ],
 }
 TIMES = {"Sat": "19:00", "Sun": "19:00", "Mon": "20:00", "Wed": "14:00", "Fri": "19:30"}
@@ -139,7 +188,7 @@ def build_rows(schedule, old):
             u = export_photo(slug)
             media = {IG: u[""], FB: u[""], TT: u["_tt"]}
         else:
-            v = export_video(slug)
+            v = export_video(slug.split("~")[0])
             media = {IG: v, FB: v, TT: v}
         rows.append([caption, media[IG], stamp(at), IG, tags, ""])
         rows.append([caption, media[FB], stamp(at + timedelta(minutes=30)), FB, tags, ""])
