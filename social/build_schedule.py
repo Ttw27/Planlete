@@ -192,7 +192,7 @@ def build_rows(schedule, old):
         caption, tagset = POSTS[slug]
         caption, tags = one_line(caption), TAGS[tagset]
         assert "—" not in caption, slug
-        if slug.startswith("p0"):
+        if re.match(r"p\d\d_", slug):
             u = export_photo(slug)
             media = {IG: u[""], FB: u[""], TT: u["_tt"]}
         else:
