@@ -10,7 +10,7 @@ import csv, glob, html, os, re
 from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CSVS = sorted(glob.glob(os.path.join(HERE, "schedules", "socialpilot-reels-*.csv")), key=lambda f: datetime.strptime(next(csv.reader(open(f, encoding="utf-8-sig")))[2], "%b %d, %Y %H:%M"))
+CSVS = sorted(glob.glob(os.path.join(HERE, "schedules", "socialpilot-planlete-*.csv")), key=lambda f: datetime.strptime(next(csv.reader(open(f, encoding="utf-8-sig")))[2], "%b %d, %Y %H:%M"))
 R2 = "https://pub-3ad74abe28dc4a4e90f5065bb7df55a6.r2.dev/"
 NAMES = {"2642874": "Instagram", "2642875": "Facebook", "2642876": "TikTok"}
 

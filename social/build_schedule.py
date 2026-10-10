@@ -246,12 +246,21 @@ def main():
         with open(path, "w", encoding="utf-8-sig", newline="") as fh:
             csv.writer(fh, lineterminator="\r\n").writerows(rs)
 
-    first = None
+    # One file per calendar month, so Tim can import at the start of each month and stay under SocialPilot's queue limit.
+    all_rows, first = [], None
     for name, schedule in SCHEDULES.items():
         rows = build_rows(schedule, old)
-        write(os.path.join(HERE, "schedules", name), rows)
-        print(f"{len(rows)} rows -> {name}")
+        all_rows += rows
         first = first or rows
+    for f in glob.glob(os.path.join(HERE, "schedules", "socialpilot-reels-*.csv")):
+        os.remove(f)  # replaced by the monthly files below
+    by_month = {}
+    for r in all_rows:
+        by_month.setdefault(datetime.strptime(r[2], "%b %d, %Y %H:%M").strftime("%Y-%m"), []).append(r)
+    for ym, rs in sorted(by_month.items()):
+        name = f"socialpilot-planlete-{ym}-{datetime.strptime(ym, '%Y-%m').strftime('%B').lower()}.csv"
+        write(os.path.join(HERE, "schedules", name), rs)
+        print(f"{len(rs) // 3:3d} posts ({len(rs)} rows) -> {name}")
     rows = first
     # Test file: one video post on all three accounts, two days out so nothing goes live by surprise.
     test_rows = [list(r) for r in rows[:3]]
