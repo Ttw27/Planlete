@@ -10,7 +10,7 @@ import { useSeo } from "@/lib/useSeo";
 
 // ─── Marquee ────────────────────────────────────────────────────────────────
 const MARQUEE_ITEMS = [
-  "Rehab & Recovery", "Longevity & Fitness", "Football Specific",
+  "Muscle Building", "Longevity & Fitness", "Football Specific",
   "Sprint Training", "Strength & Conditioning", "One-off payment",
   "Personalised Plans", "Built For You",
 ];

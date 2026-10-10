@@ -134,11 +134,18 @@ deploy — confirmed working on a real orphaned order.
 Admin suite at `/admin`: plan JSON viewer with download, promo codes, orders, test plan
 generator, loading preview, funnel analytics.
 
+Funnel analytics (Oct 2026): every event carries `metadata.src` (`s` source, `m` medium, `c` campaign),
+worked out once per tab from `utm_` tags or the referrer and kept in sessionStorage only (cookieless,
+no consent banner). `/admin/funnel` returns `by_source`. `payment_succeeded` fires on the success page
+after the first 200 from `/checkout/confirm`; before Oct 2026 nothing sent it, so "Paid" always read 0.
+Bio links should carry `?utm_source=instagram` / `tiktok` / `facebook`.
+
 ### Outstanding
 
-- The 4 sample plan URLs are not generated or wired up.
-- Self-serve and coach client-pays payment paths never tested with real transactions.
-- Coach signup and the client-pays screen have no Terms agreement.
+- Self-serve and coach client-pays payment paths never tested with real transactions. Tim to run one
+  real low-value purchase on each.
+- (Done) Three sample plans are live and linked: longevity, football, sprinter. Rehab was removed on purpose.
+- (Done) Coach signup and the client-pays screen both carry a Terms line; client-pays also links Refunds.
 - **Solicitor review of the legal suite.** Tim has decided against this. I made Terms,
   Privacy and Refund internally consistent with the product and added parental-consent
   wording for under-18s, backed by an actual blocking question in the questionnaire. That

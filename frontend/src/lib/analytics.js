@@ -29,6 +29,44 @@ function sessionId() {
   }
 }
 
+// Where this visit came from, worked out once per tab from the landing URL's utm_ tags or the referrer,
+// so the funnel can say "Instagram sent 40 visits and 2 sales". sessionStorage only, like the session id:
+// nothing persists after the tab closes and nothing identifies a person.
+const REFERRERS = [
+  [/(^|\.)instagram\.com$/, "instagram"],
+  [/(^|\.)facebook\.com$|(^|\.)fb\.com$/, "facebook"],
+  [/(^|\.)tiktok\.com$/, "tiktok"],
+  [/(^|\.)google\./, "google"],
+  [/(^|\.)bing\.com$/, "bing"],
+  [/(^|\.)t\.co$|(^|\.)x\.com$|(^|\.)twitter\.com$/, "x"],
+  [/(^|\.)youtube\.com$/, "youtube"],
+];
+
+function source() {
+  try {
+    const saved = sessionStorage.getItem("pl_src");
+    if (saved) return JSON.parse(saved);
+    const params = new URLSearchParams(window.location.search);
+    let s = (params.get("utm_source") || "").toLowerCase().trim();
+    if (!s && document.referrer) {
+      const host = new URL(document.referrer).hostname.replace(/^www\./, "");
+      if (host && host !== window.location.hostname.replace(/^www\./, "")) {
+        const hit = REFERRERS.find(([re]) => re.test(host));
+        s = hit ? hit[1] : host;
+      }
+    }
+    const src = {
+      s: s || "direct",
+      m: (params.get("utm_medium") || "").toLowerCase().trim() || undefined,
+      c: (params.get("utm_campaign") || "").toLowerCase().trim() || undefined,
+    };
+    sessionStorage.setItem("pl_src", JSON.stringify(src));
+    return src;
+  } catch {
+    return { s: "unknown" };
+  }
+}
+
 function send(event, meta) {
   try {
     const body = JSON.stringify({
@@ -36,7 +74,7 @@ function send(event, meta) {
       session_id: sessionId(),
       path: window.location.pathname,
       timestamp: new Date().toISOString(),
-      metadata: meta || {},
+      metadata: { ...(meta || {}), src: source() },
     });
     const url = `${BACKEND_URL}/api/analytics/track`;
 

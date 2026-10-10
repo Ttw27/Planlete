@@ -109,10 +109,46 @@ export default function AdminFunnel() {
               <div className="mt-10 border border-white/10 p-5">
                 <p className="text-overline text-[#D4FF00] mb-2">Biggest drop-off</p>
                 <p className="text-sm text-zinc-300">
-                  {LABELS[worst.step] || worst.step} — only{" "}
+                  {LABELS[worst.step] || worst.step}: only{" "}
                   <span className="text-white">{worst.conversion_from_previous}%</span> of
                   people get this far from the step before. That's where to look first.
                 </p>
+              </div>
+            )}
+
+            {data.by_source?.length > 0 && (
+              <div className="mt-12">
+                <p className="text-overline text-[#D4FF00] mb-2">Where they came from</p>
+                <p className="text-xs text-zinc-500 mb-4">
+                  Visitors per source, then how many started, reached payment and paid. Use
+                  ?utm_source=instagram (or tiktok, facebook) on bio links so they show by name.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-zinc-500 text-xs">
+                        <th className="py-2 pr-4 font-normal">Source</th>
+                        <th className="py-2 pr-4 font-normal text-right">Visits</th>
+                        <th className="py-2 pr-4 font-normal text-right">Started</th>
+                        <th className="py-2 pr-4 font-normal text-right">Payment page</th>
+                        <th className="py-2 font-normal text-right">Paid</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.by_source.map((row) => (
+                        <tr key={row.source} className="border-t border-white/10">
+                          <td className="py-2 pr-4 text-zinc-300">{row.source}</td>
+                          <td className="py-2 pr-4 text-right font-mono-display">{row.page_view}</td>
+                          <td className="py-2 pr-4 text-right font-mono-display">{row.builder_started}</td>
+                          <td className="py-2 pr-4 text-right font-mono-display">{row.checkout_opened}</td>
+                          <td className="py-2 text-right font-mono-display text-[#D4FF00]">
+                            {row.payment_succeeded}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 

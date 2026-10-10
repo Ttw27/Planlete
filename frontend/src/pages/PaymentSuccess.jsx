@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import { Check, X, Loader2 } from "lucide-react";
 import ContactSupportPanel from "@/components/ContactSupportPanel";
+import { track } from "@/lib/analytics";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -46,6 +47,7 @@ export default function PaymentSuccess() {
   const [errorMessage, setErrorMessage] = useState("");
   const [orderInfo, setOrderInfo] = useState({ orderId: null, sessionId: null });
   const startedAt = useRef(Date.now());
+  const paidTracked = useRef(false);
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -76,6 +78,12 @@ export default function PaymentSuccess() {
         if (!alive) return;
 
         const data = res.data || {};
+        // /checkout/confirm only answers 200 once Stripe says the session is paid (or a free promo order is
+        // confirmed), so the first good answer is the sale. The funnel's "Paid" step reads this event.
+        if (!paidTracked.current) {
+          paidTracked.current = true;
+          track("payment_succeeded", { kind: sessionId ? "paid" : "promo" });
+        }
         if (data.stage) setStage(data.stage);
 
         if (data.status === "plan_created" && data.plan_id) {

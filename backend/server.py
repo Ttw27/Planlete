@@ -4233,7 +4233,23 @@ async def admin_funnel(days: int = 30, _: bool = Depends(require_admin)):
         })
         if n:
             previous = n
-    return {"days": days, "funnel": funnel, "raw": counts}
+
+    # Same steps split by where the visit came from (metadata.src.s, set once per tab by the frontend from
+    # utm_source or the referrer). Events recorded before source tracking existed have no src.
+    src_pipeline = [
+        {"$match": {"timestamp": {"$gte": since}, "event": {"$in": order}}},
+        {"$group": {"_id": {"event": "$event", "session": "$session_id",
+                            "src": {"$ifNull": ["$metadata.src.s", "before tracking"]}}}},
+        {"$group": {"_id": {"event": "$_id.event", "src": "$_id.src"}, "sessions": {"$sum": 1}}},
+    ]
+    by_source = {}
+    for r in await db.analytics_events.aggregate(src_pipeline).to_list(2000):
+        by_source.setdefault(r["_id"]["src"], {})[r["_id"]["event"]] = r["sessions"]
+    sources = sorted(
+        ({"source": s, **{step: c.get(step, 0) for step in order}} for s, c in by_source.items()),
+        key=lambda row: (-row["page_view"], row["source"]),
+    )
+    return {"days": days, "funnel": funnel, "raw": counts, "by_source": sources}
 
 
 @api_router.get("/config/pricing")

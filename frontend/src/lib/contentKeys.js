@@ -30,7 +30,7 @@ export const CONTENT_GROUPS = [
       { key: "how_headline_a", label: "Headline line 1", default: "Three steps." },
       { key: "how_headline_b", label: "Headline line 2 (accent)", default: "No friction." },
       { key: "how_step1_title", label: "Step 1 title", default: "Pick your goal" },
-      { key: "how_step1_body", label: "Step 1 body", default: "Athlete, longevity, football, sprint or rehab, or something else entirely.", long: true },
+      { key: "how_step1_body", label: "Step 1 body", default: "Athlete, longevity, football, sprint, muscle building, or something else entirely.", long: true },
       { key: "how_step2_title", label: "Step 2 title", default: "Answer a few questions" },
       { key: "how_step2_body", label: "Step 2 body", default: "Eight questions. Two minutes. We do the rest.", long: true },
       { key: "how_step3_title", label: "Step 3 title", default: "Get your app" },

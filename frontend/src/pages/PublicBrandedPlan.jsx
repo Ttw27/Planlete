@@ -47,7 +47,12 @@ function PayToUnlock({ coach, client, onPaid }) {
           By unlocking this plan, you agree to our{" "}
           <Link to="/terms" className="text-[#D4FF00] hover:underline">
             Terms & Conditions
+          </Link>{" "}
+          and{" "}
+          <Link to="/refunds" className="text-[#D4FF00] hover:underline">
+            Refund Policy
           </Link>
+          .
         </p>
       </div>
     </div>
