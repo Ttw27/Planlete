@@ -78,6 +78,8 @@ POSTS = {
     "p13_week_three": ("Week three, heavier than week one. That's progressive overload, built into every block. planlete.co.uk", "photo"),
     "p14_built_around_you": ("New year, same rule: built around you, not a template. Four weeks, one payment. planlete.co.uk", "photo"),
     "p15_logged": ("Logged, not guessed. Every set you log sets the targets for your next block. planlete.co.uk", "photo"),
+    "planlete-sprint-day-tim": ("Sprint day. Full effort every rep, full recovery between them. Training alongside the people I build plans for. planlete.co.uk", "speed_us"),
+    "planlete-sprint-day-ethan": ("Sprint day on the track. Every rep full effort, every rep planned. planlete.co.uk", "speed"),
     "p07_christmas": ("Christmas week. Train if you want, rest if you need. The plan picks up when you do. planlete.co.uk", "photo"),
     "p08_next_block": ("January isn't a reset. It's the next block. Build yours from what you've already done at planlete.co.uk", "photo"),
     "p06_season": ("Train for the season you're in. Off-season, pre-season or in-season, your plan changes with it. planlete.co.uk", "photo"),
@@ -134,12 +136,12 @@ SCHEDULES = {
     ],
     "socialpilot-reels-09jan-31jan-2027.csv": [
         ("2027-01-09", "planlete-muscle-friday"), ("2027-01-10", "42_training_age"), ("2027-01-11", "planlete-why-i-built-it~rerun"),
-        ("2027-01-13", "planlete-hyrox-monday~rerun"), ("2027-01-15", "p15_logged"),
+        ("2027-01-13", "planlete-sprint-day-tim"), ("2027-01-15", "p15_logged"),
         ("2027-01-16", "planlete-muscle-saturday"), ("2027-01-17", "53_genetics"), ("2027-01-18", "planlete-inside-the-app~rerun"),
         ("2027-01-20", "planlete-same-app-any-sport~rerun"), ("2027-01-22", "103_upper_vs_lower"),
         ("2027-01-23", "planlete-track-day"), ("2027-01-24", "50_fasted_training"), ("2027-01-25", "planlete-football-tuesday~rerun"),
         ("2027-01-27", "planlete-sprint-day-oct"), ("2027-01-29", "52_perfect_form"),
-        ("2027-01-30", "planlete-football-friday~rerun"), ("2027-01-31", "56_rebuild_feature"),
+        ("2027-01-30", "planlete-sprint-day-ethan"), ("2027-01-31", "56_rebuild_feature"),
     ],
 }
 TIMES = {"Sat": "19:00", "Sun": "19:00", "Mon": "20:00", "Wed": "14:00", "Fri": "19:30"}
