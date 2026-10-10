@@ -3984,13 +3984,7 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
             # in case they never make it back to the plan page after paying.
             client_plan_id = metadata.get("client_plan_id")
             if client_plan_id:
-                plan = await db.client_plans.find_one({"id": client_plan_id})
-                if plan and plan.get("payment_status") == "pending_payment":
-                    await db.client_plans.update_one(
-                        {"id": client_plan_id},
-                        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
-                    )
-                    logger.info(f"Stripe webhook: client plan {client_plan_id} confirmed paid")
+                await _mark_client_plan_paid(client_plan_id, via="Stripe webhook")
 
         elif metadata.get("coach_id") and (data_object.get("mode") == "subscription" if isinstance(data_object, dict) else data_object.mode == "subscription"):
             # Coach subscription checkout completed — capture the Stripe
@@ -4799,6 +4793,34 @@ async def create_client_plan_checkout(client_id: str):
     return {"checkout_url": session.url}
 
 
+async def _mark_client_plan_paid(client_plan_id: str, via: str) -> None:
+    """
+    Flip a client-pays plan to paid and alert Tim, exactly once. The webhook and the
+    client's return to the plan page can both arrive for the same payment, so the update
+    only matches a plan still pending: whichever lands second changes nothing and sends nothing.
+    """
+    from html import escape
+    result = await db.client_plans.update_one(
+        {"id": client_plan_id, "payment_status": "pending_payment"},
+        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if result.modified_count != 1:
+        return
+    logger.info(f"Client plan {client_plan_id} confirmed paid via {via}")
+    try:
+        plan = await db.client_plans.find_one({"id": client_plan_id}, {"_id": 0, "client_name": 1, "coach_id": 1})
+        coach = await db.coaches.find_one({"id": (plan or {}).get("coach_id")}, {"_id": 0, "brand_name": 1, "email": 1})
+        notify_admin(
+            f"Client plan sold: {(coach or {}).get('brand_name') or 'a coach'}",
+            f"<p><strong>{escape((plan or {}).get('client_name') or 'A client')}</strong> paid to unlock their plan "
+            f"from <strong>{escape((coach or {}).get('brand_name') or 'a coach')}</strong>"
+            f" ({escape((coach or {}).get('email') or 'no email')}).</p>"
+            f"<p>Amount: £{COACH_CLIENT_PLAN_PENCE / 100:.2f}<br>Plan: {client_plan_id}<br>Confirmed via: {via}</p>",
+        )
+    except Exception as e:  # the alert must never break the payment it is reporting
+        logger.error(f"Client plan sale alert failed for {client_plan_id}: {e}")
+
+
 @api_router.get("/coach/clients/{client_id}/checkout/confirm")
 async def confirm_client_plan_checkout(client_id: str, session_id: str):
     """Called from the client's plan page after Stripe redirects back."""
@@ -4818,10 +4840,7 @@ async def confirm_client_plan_checkout(client_id: str, session_id: str):
     if session.payment_status != "paid":
         raise HTTPException(status_code=402, detail="Payment has not completed yet.")
 
-    await db.client_plans.update_one(
-        {"id": client_id},
-        {"$set": {"payment_status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}}
-    )
+    await _mark_client_plan_paid(client_id, via="return to plan page")
     return {"payment_status": "paid"}
 
 
