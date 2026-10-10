@@ -92,3 +92,4 @@ social/renderer/instagram_1080x1350/
 social/renderer/tiktok_1080x1920/
 social/out/
 social/upload/
+social/.env
