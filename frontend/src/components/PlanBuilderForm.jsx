@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { track } from "@/lib/analytics";
-import { Plus, Trash2, Eye, EyeOff, Clock, Info } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, Clock, Info, ChevronUp, ChevronDown } from "lucide-react";
 import AppShell from "@/components/AppShell";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -246,6 +246,19 @@ export default function PlanBuilderForm({
       prev.map((d, i) => {
         if (i !== dayIndex) return d;
         const workouts = d.workouts.map((w, j) => (j === workoutIndex ? { ...w, ...patch } : w));
+        return { ...d, workouts };
+      })
+    );
+  };
+  // Swap an exercise with its neighbour (direction -1 = up, +1 = down). New exercises always land at the
+  // bottom of the day, so without this the only way to reorder was delete and re-add.
+  const moveWorkout = (dayIndex, workoutIndex, direction) => {
+    setDays((prev) =>
+      prev.map((d, i) => {
+        const target = workoutIndex + direction;
+        if (i !== dayIndex || target < 0 || target >= d.workouts.length) return d;
+        const workouts = [...d.workouts];
+        [workouts[workoutIndex], workouts[target]] = [workouts[target], workouts[workoutIndex]];
         return { ...d, workouts };
       })
     );
@@ -691,12 +704,36 @@ export default function PlanBuilderForm({
             <div className="flex flex-col gap-3">
               {days[selectedDay].workouts.map((w, wi) => (
                 <div key={wi} className="border border-white/10 p-4 relative">
-                  <button
-                    onClick={() => removeWorkout(selectedDay, wi)}
-                    className="absolute top-3 right-3 text-zinc-600 hover:text-red-400"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="absolute top-3 right-3 flex items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label="Move exercise up"
+                      title="Move up"
+                      onClick={() => moveWorkout(selectedDay, wi, -1)}
+                      disabled={wi === 0}
+                      className="text-zinc-500 hover:text-[#D4FF00] disabled:opacity-25 disabled:hover:text-zinc-500"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Move exercise down"
+                      title="Move down"
+                      onClick={() => moveWorkout(selectedDay, wi, 1)}
+                      disabled={wi === days[selectedDay].workouts.length - 1}
+                      className="text-zinc-500 hover:text-[#D4FF00] disabled:opacity-25 disabled:hover:text-zinc-500"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Delete exercise"
+                      onClick={() => removeWorkout(selectedDay, wi)}
+                      className="text-zinc-600 hover:text-red-400"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                   <div className="grid sm:grid-cols-2 gap-3 mb-3">
                     <div className="sm:col-span-2">
                       <label className={labelClass}>Exercise name</label>
