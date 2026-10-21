@@ -748,6 +748,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           )}
           {!isLockedWeek && view === "home" && (
             <HomeView
+              reasonLabel={reasonLabel}
               data={data}
               days={days}
               weekNote={weekNote}
@@ -772,6 +773,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           )}
           {!isLockedWeek && view === "training" && (
             <TrainingView
+              reasonLabel={reasonLabel}
               days={days}
               weekNumber={logWeek}
               completed={completed}
@@ -789,6 +791,7 @@ export default function AppShell({ data, mode, modeToggle = null, planId = null,
           )}
           {!isLockedWeek && view === "morning" && (
             <MorningView
+              reasonLabel={reasonLabel}
               morningRoutine={morningRoutine}
               completed={completed}
               onToggleDone={toggleDone}
@@ -904,7 +907,7 @@ function BottomTab({ id, label, icon, view, setView }) {
   );
 }
 
-function HomeView({ data, days, weekNote = "", noteCollapsed = false, onToggleNote = () => {}, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
+function HomeView({ reasonLabel = "Why", data, days, weekNote = "", noteCollapsed = false, onToggleNote = () => {}, morningRoutine, nutrition, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, setView, brandLogo, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
   // Phases have no auto-detection (nobody knows "which phase" from a date
   // alone) — just default to the first one; day-based plans still pick
   // today's real weekday as before.
@@ -1095,7 +1098,7 @@ function HomeView({ data, days, weekNote = "", noteCollapsed = false, onToggleNo
   );
 }
 
-function MorningView({ morningRoutine, completed, onToggleDone, logs, history, onSaveLog, canLog, weekNumber , totalWeeks = null, cycleNumber = 1, experience = null}) {
+function MorningView({ reasonLabel = "Why", morningRoutine, completed, onToggleDone, logs, history, onSaveLog, canLog, weekNumber , totalWeeks = null, cycleNumber = 1, experience = null}) {
   const items = morningRoutine || [];
   const doneCount = items.filter((_, i) => completed.has(`morning-${i}`)).length;
 
@@ -1140,7 +1143,7 @@ function MorningView({ morningRoutine, completed, onToggleDone, logs, history, o
   );
 }
 
-function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
+function TrainingView({ reasonLabel = "Why", days, weekNumber, completed, onToggleDone, logs, history, onSaveLog, canLog, initialSelectedDay = null, structureType = "days" , totalWeeks = null, cycleNumber = 1, experience = null}) {
   const isPhases = structureType === "phases";
   const todayIndex = isPhases ? -1 : Math.min(new Date().getDay(), days.length - 1); // -1 = no "today" concept for phases
   const [selected, setSelected] = useState(initialSelectedDay ?? (isPhases ? 0 : todayIndex));
