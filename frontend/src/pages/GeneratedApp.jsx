@@ -186,6 +186,8 @@ export default function GeneratedApp() {
         allWeeks={weeks}
         activeWeekIndex={weekIndex}
         sampleMode={Boolean(plan.sample_mode)}
+        // Hand-built plans use this field for general notes, not the AI's "why this exercise".
+        reasonLabel={plan.manually_authored ? "Notes" : "Why"}
       />
       {canRebuild && <PlanFooterActions plan={plan} absoluteWeek={absoluteWeek} />}
     </>

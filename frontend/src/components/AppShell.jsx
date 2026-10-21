@@ -338,7 +338,7 @@ function BlockCompleteBanner({ cycleNumber = 1, totalWeeks = 4 }) {
   );
 }
 
-export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, allWeeks = null, activeWeekIndex = 0, sampleMode = false, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null }) {
+export default function AppShell({ data, mode, modeToggle = null, planId = null, weekNumber = null, absoluteWeek = null, cycleNumber = 1, totalWeeks = null, allWeeks = null, activeWeekIndex = 0, sampleMode = false, initialView = "home", initialTrainingDay = null, compact = false, brandLogo = null, reasonLabel = "Why" }) {
   const [view, setRawView] = useState(initialView);
 
   // Which week is being LOOKED at. Defaults to the one they are actually in.
@@ -998,6 +998,7 @@ function HomeView({ data, days, weekNote = "", noteCollapsed = false, onToggleNo
         <div className="flex flex-col gap-2">
           {today.workouts.slice(0, 4).map((w, i) => (
             <WorkoutRow
+              reasonLabel={reasonLabel}
               key={i}
               w={w}
               checked={completed.has(`${weekNumber || 0}-${today.day}-${i}`)}
@@ -1119,6 +1120,7 @@ function MorningView({ morningRoutine, completed, onToggleDone, logs, history, o
               const key = `morning-${i}`;
               return (
                 <WorkoutRow
+                  reasonLabel={reasonLabel}
                   key={i}
                   w={w}
                   checked={completed.has(key)}
@@ -1206,6 +1208,7 @@ function TrainingView({ days, weekNumber, completed, onToggleDone, logs, history
         <div className="flex flex-col gap-2">
           {d.workouts.map((w, j) => (
             <WorkoutRow
+              reasonLabel={reasonLabel}
               key={j}
               w={w}
               checked={completed.has(`${weekNumber || 0}-${d.day}-${j}`)}
@@ -1358,7 +1361,7 @@ function getCycleTarget(exerciseHistory, currentWeek, totalWeeks, cycleNumber, e
   };
 }
 
-function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, loggedFromWeek = null, exerciseHistory, currentWeek, totalWeeks = null, cycleNumber = 1, experience = null, onSaveLog, canLog = false }) {
+function WorkoutRow({ w, reasonLabel = "Why", checked = false, onToggleChecked, loggedValue, loggedFromWeek = null, exerciseHistory, currentWeek, totalWeeks = null, cycleNumber = 1, experience = null, onSaveLog, canLog = false }) {
   const [panel, setPanel] = useState(null); // null | "reason" | "lookup" | "timer" | "log"
   const [logInput, setLogInput] = useState("");
   const [logRpe, setLogRpe] = useState(null); // "easy" | "right" | "hard"
@@ -1572,7 +1575,7 @@ function WorkoutRow({ w, checked = false, onToggleChecked, loggedValue, loggedFr
         <div className="px-3 pb-3 -mt-1">
           <div className="border-t border-white/5 pt-2 flex flex-col gap-2">
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">Why:</span>
+              <span className="text-[var(--accent)] font-bold uppercase tracking-wide mr-1">{reasonLabel}:</span>
               {w.reason}
             </p>
             {w.cues && (
